@@ -1,0 +1,33 @@
+<!-- templates/superadmin_data_form.html -->
+{% extends "base.html" %}
+
+{% block title %}{% if action == 'add' %}Add Record{% else %}Edit Record{% endif %} - {{ table_name | capitalize }}{% endblock %}
+
+{% block content %}
+    <h1 class="text-4xl font-bold mb-6">
+        {% if action == 'add' %}Add New Record to{% else %}Edit Record in{% endif %} Table: {{ table_name | capitalize }}
+    </h1>
+
+    <form method="POST" action="{% if action == 'add' %}{{ url_for('main.superadmin_data_view', table_name=table_name) }}{% else %}{{ url_for('main.superadmin_data_edit', table_name=table_name, id=record[pk_column_name]) }}{% endif %}" class="space-y-4">
+        {% for col in columns %}
+            {% if col != pk_column_name or action == 'edit' %} {# Don't show PK for add if auto-increment #}
+                <div>
+                    <label for="{{ col }}" class="block text-sm font-medium text-white mb-1">{{ col | capitalize }}</label>
+                    <input type="text" id="{{ col }}" name="{{ col }}"
+                           value="{{ record[col] if record[col] is not none else '' }}"
+                           {% if col == pk_column_name and action == 'edit' %}readonly class="bg-gray-600 cursor-not-allowed"{% endif %}
+                           class="w-full px-4 py-2 bg-white bg-opacity-20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-white placeholder-white placeholder-opacity-70">
+                </div>
+            {% endif %}
+        {% endfor %}
+
+        <button type="submit"
+                class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg">
+            {% if action == 'add' %}Add Record{% else %}Save Changes{% endif %}
+        </button>
+    </form>
+
+    <a href="{{ url_for('main.superadmin_data_view', table_name=table_name) }}" class="block w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg mt-8">
+        Back to Data View
+    </a>
+{% endblock %}

@@ -1,0 +1,8 @@
+Aug 13 13:55:35 localhost systemd[1]: Stopping nginx.service - A high performance web server and a reverse proxy server...
+Aug 13 13:55:35 localhost systemd[1]: nginx.service: Deactivated successfully.
+Aug 13 13:55:35 localhost systemd[1]: Stopped nginx.service - A high performance web server and a reverse proxy server.
+Aug 13 14:02:21 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mnginx.service: Unit cannot be reloaded because it is inactive.[0m
+Aug 13 14:03:14 localhost systemd[1]: Starting nginx.service - A high performance web server and a reverse proxy server...
+Aug 13 14:03:14 localhost nginx[9893]: 2025/08/13 14:03:14 [warn] 9893#9893: could not build optimal proxy_headers_hash, you should increase either proxy_headers_hash_max_size: 512 or proxy_headers_hash_bucket_size: 64; ignoring proxy_headers_hash_bucket_size
+Aug 13 14:03:14 localhost nginx[9895]: 2025/08/13 14:03:14 [warn] 9895#9895: could not build optimal proxy_headers_hash, you should increase either proxy_headers_hash_max_size: 512 or proxy_headers_hash_bucket_size: 64; ignoring proxy_headers_hash_bucket_size
+Aug 13 14:03:14 localhost systemd[1]: Started nginx.service - A high performance web server and a reverse proxy server.

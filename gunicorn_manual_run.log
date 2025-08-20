@@ -1,0 +1,6 @@
+[2025-08-13 13:51:09 +0000] [9683] [INFO] Starting gunicorn 23.0.0
+[2025-08-13 13:51:09 +0000] [9683] [INFO] Listening at: unix:/var/www/member/tmp/gunicorn.sock (9683)
+[2025-08-13 13:51:09 +0000] [9683] [INFO] Using worker: sync
+[2025-08-13 13:51:09 +0000] [9685] [INFO] Booting worker with pid: 9685
+[2025-08-13 13:51:09 +0000] [9686] [INFO] Booting worker with pid: 9686
+[2025-08-13 13:51:09 +0000] [9687] [INFO] Booting worker with pid: 9687

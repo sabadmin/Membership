@@ -1,0 +1,24 @@
+root@localhost:~# sudo certbot --nginx -d closers.unfc.it -d liconnects.unfc.it -d lieg.unfc.it -d member.unfc.it
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Requesting a certificate for closers.unfc.it and 3 more domains
+
+Successfully received certificate.
+Certificate is saved at: /etc/letsencrypt/live/closers.unfc.it/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/closers.unfc.it/privkey.pem
+This certificate expires on 2025-11-11.
+These files will be updated when the certificate renews.
+Certbot has set up a scheduled task to automatically renew this certificate in the background.
+
+Deploying certificate
+Successfully deployed certificate for closers.unfc.it to /etc/nginx/sites-enabled/unfc.it
+Successfully deployed certificate for liconnects.unfc.it to /etc/nginx/sites-enabled/unfc.it
+Successfully deployed certificate for lieg.unfc.it to /etc/nginx/sites-enabled/unfc.it
+Successfully deployed certificate for member.unfc.it to /etc/nginx/sites-enabled/unfc.it
+Congratulations! You have successfully enabled HTTPS on https://closers.unfc.it, https://liconnects.unfc.it, https://lieg.unfc.it, and https://member.unfc.it
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+If you like Certbot, please consider supporting our work by:
+ * Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+ * Donating to EFF:                    https://eff.org/donate-le
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+root@localhost:~# 

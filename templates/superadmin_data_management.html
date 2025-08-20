@@ -1,0 +1,29 @@
+<!-- templates/superadmin_data_management.html -->
+{% extends "base.html" %}
+
+{% block title %}Superadmin Data Management{% endblock %}
+
+{% block content %}
+    <h1 class="text-4xl font-bold mb-6">Superadmin Data Management ({{ tenant_id | capitalize }})</h1>
+    <p class="text-lg mb-8">Select a table to view and manage its data.</p>
+
+    <h2 class="text-2xl font-semibold mb-4 text-white">Database Tables:</h2>
+    {% if table_names %}
+        <ul class="list-disc list-inside text-left text-lg space-y-2">
+            {% for table_name in table_names %}
+                <li>
+                    <a href="{{ url_for('main.superadmin_data_view', table_name=table_name) }}"
+                       class="text-blue-300 hover:text-blue-100 font-medium">
+                        {{ table_name }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-md text-gray-300">No tables found in this database.</p>
+    {% endif %}
+
+    <a href="{{ url_for('main.dashboard') }}" class="block w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ease-in-out shadow-md hover:shadow-lg mt-8">
+        Back to Dashboard
+    </a>
+{% endblock %}

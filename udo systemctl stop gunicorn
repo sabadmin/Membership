@@ -1,0 +1,15 @@
+[0;1;31m×[0m gunicorn.service - Gunicorn instance to serve member
+     Loaded: loaded (]8;;file://localhost/etc/systemd/system/gunicorn.service/etc/systemd/system/gunicorn.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;31mfailed[0m (Result: exit-code) since Tue 2025-08-12 21:51:25 UTC; 15h ago
+   Duration: 3ms
+   Main PID: 2306 (code=exited, status=217/USER)
+        CPU: 3ms
+
+Aug 12 21:51:25 localhost systemd[1]: [0;1;39m[0;1;31m[0;1;39mgunicorn.service: Main process exited, code=exited, status=217/USER[0m
+Aug 12 21:51:25 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mgunicorn.service: Failed with result 'exit-code'.[0m
+Aug 12 21:51:25 localhost systemd[1]: gunicorn.service: Scheduled restart job, restart counter is at 5.
+Aug 12 21:51:25 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mgunicorn.service: Start request repeated too quickly.[0m
+Aug 12 21:51:25 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185mgunicorn.service: Failed with result 'exit-code'.[0m
+Aug 12 21:51:25 localhost systemd[1]: [0;1;31m[0;1;39m[0;1;31mFailed to start gunicorn.service - Gunicorn instance to serve member.[0m
+Aug 12 21:52:00 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185m]8;;file://localhost/etc/systemd/system/gunicorn.service/etc/systemd/system/gunicorn.service]8;;:13: Failed to parse boolean value, ignoring: true # Keep this, it's generally good for service isolation[0m
+Aug 12 21:52:00 localhost systemd[1]: [0;1;38;5;185m[0;1;39m[0;1;38;5;185m]8;;file://localhost/etc/systemd/system/gunicorn.service/etc/systemd/system/gunicorn.service]8;;:13: Failed to parse boolean value, ignoring: true # Keep this, it's generally good for service isolation[0m
