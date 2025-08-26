@@ -179,7 +179,7 @@ def manage_users_api(tenant_id):
 ```
 You're hitting a `SyntaxError: unterminated string literal` in your `app.py` file. This means there's a string that was started with a quote but never properly closed, or a line break within a string that Python doesn't expect. This often happens when explanatory text or comments are accidentally pasted into the code.
 
-I've reviewed the `app_py_syntax_fix` Canvas and fixed this specific syntax error. The error message `SyntaxError: unterminated string literal (detected at line 653)` points to a line that was likely part of a previous explanation or comment that got pasted into the code.
+I have reviewed the `app_py_syntax_fix` Canvas and fixed this specific syntax error. The error message `SyntaxError: unterminated string literal (detected at line 653)` points to a line that was likely part of a previous explanation or comment that got pasted into the code.
 
 Here's the corrected `app.py`. Please replace your current `app.py` file with this content.
 

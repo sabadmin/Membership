@@ -33,4 +33,32 @@ def superadmin_required(f):
     """
     @role_required(['super_admin']) # Ensures role is super_admin
     def decorated_function(*args, **kwargs):
-        if g.tenant_id != Config.SUPERADMIN_TENA
+        if g.tenant_id != Config.SUPERADMIN_TENANT_ID:
+            flash("Superadmin access is restricted to the superadmin tenant.", "danger")
+            return redirect(url_for('main.index')) # Redirect to a safe page
+        return f(*args, **kwargs)
+    return decorated_function
+
+@main_bp.route('/')
+def index():
+    return render_template('index.html')
+
+@main_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    # ... existing login code ...
+
+@main_bp.route('/logout')
+def logout():
+    # ... existing logout code ...
+
+@main_bp.route('/<path:subpath>')
+def catch_all(subpath):
+    # This will catch all undefined routes
+    return render_template('404.html'), 404
+
+def _infer_tenant_from_hostname():
+    current_hostname = request.host.split(':')[0]
+    for tenant_key in Config.TENANT_DATABASES.keys():
+        if f"{tenant_key}.unfc.it" == current_hostname:
+            return tenant_key
+    return 'website'
