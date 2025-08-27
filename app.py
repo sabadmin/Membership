@@ -9,8 +9,6 @@ from app.auth.routes import auth_bp
 
 load_dotenv()
 
-print(f"DEBUG: DATABASE_URL_TENANT1 from app.py: {os.environ.get('DATABASE_URL_TENANT1')}")
-
 # User model
 class User(Base):
     __tablename__ = 'users'
@@ -166,6 +164,6 @@ def create_app():
     @app.route('/demographics/<tenant_id>')
     def demographics(tenant_id):
         # Implement demographics logic here
-        pass
+        return render_template('demographics.html', tenant_id=tenant_id)
 
     return app
