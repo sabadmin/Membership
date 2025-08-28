@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship # Import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime # Import datetime
 
-# User model definition (moved from original app.py)
+# User model definition
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
@@ -16,7 +16,7 @@ class User(Base):
     last_name = Column(String(80), nullable=True)
     
     email = Column(String(120), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False) # password_hash remains here for direct password checks
+    password_hash = Column(String(255), nullable=False)
 
     address = Column(String(255), nullable=True)
     cell_phone = Column(String(20), nullable=True)
@@ -46,7 +46,7 @@ class UserAuthDetails(Base):
     user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)
     tenant_id = Column(String(50), nullable=False) # Keep tenant_id here for easier querying
 
-    is_active = Column(Boolean, default=True, nullable=False) # Moved from User model
+    is_active = Column(Boolean, default=True, nullable=False)
     last_login_1 = Column(DateTime, nullable=True) # Most recent login
     last_login_2 = Column(DateTime, nullable=True) # Second most recent
     last_login_3 = Column(DateTime, nullable=True) # Third most recent
