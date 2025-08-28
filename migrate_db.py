@@ -1,7 +1,7 @@
 # migrate_db.py
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, inspect, text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, inspect, text # Import 'text'
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
@@ -54,30 +54,54 @@ def get_db_session(db_url):
     finally:
         session.close()
 
+def add_column_if_not_exists(session, table_name, column_name, column_type):
+    """Adds a column to a table if it doesn't already exist."""
+    inspector = inspect(session.bind)
+    columns = [col['name'] for col in inspector.get_columns(table_name)]
+
+    if column_name not in columns:
+        print(f"  - Adding column '{column_name}' to '{table_name}'...")
+        try:
+            # CORRECTED: Wrap the SQL string with text()
+            session.execute(text(f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}'))
+            session.commit()
+            print(f"  - Column '{column_name}' added successfully.")
+        except Exception as e:
+            session.rollback()
+            print(f"  - Error adding column '{column_name}': {e}")
+    else:
+        print(f"  - Column '{column_name}' already exists. Skipping.")
+
 def run_migrations():
-    """Runs migrations to ensure tables are up-to-date for all tenant databases."""
+    """Runs migrations to add new columns to all tenant databases."""
     
+    # Define columns to add (name, type)
+    columns_to_add = [
+        ('first_name', 'VARCHAR(80)'),
+        ('middle_initial', 'VARCHAR(1)'),
+        ('last_name', 'VARCHAR(80)'),
+        ('address', 'VARCHAR(255)'),
+        ('cell_phone', 'VARCHAR(20)'),
+        ('company', 'VARCHAR(120)'),
+        ('company_address', 'VARCHAR(255)'),
+        ('company_phone', 'VARCHAR(20)'),
+        ('company_title', 'VARCHAR(80)'),
+        ('network_group_title', 'VARCHAR(120)'),
+        ('member_anniversary', 'VARCHAR(5)')
+    ]
+
     for tenant_id, db_url in Config.TENANT_DATABASES.items():
         print(f"\nProcessing database for tenant: '{tenant_id}' at {db_url}")
         try:
             with get_db_session(db_url) as session:
-                inspector = inspect(session.bind)
-                
-                # Check if 'users' table exists
-                if 'users' in inspector.get_table_names():
-                    print(f"  - Table 'users' found for '{tenant_id}'. Dropping it for a clean migration...")
-                    # Drop the table to ensure it's recreated with the latest schema
-                    session.execute(text("DROP TABLE users CASCADE;"))
-                    session.commit()
-                    print(f"  - Table 'users' dropped for '{tenant_id}'.")
-                else:
-                    print(f"  - Table 'users' not found for '{tenant_id}'. Will create.")
-
-                # Create all tables defined in Base (this will create 'users' with all columns)
+                # Ensure the 'users' table exists first (Base.metadata.create_all is idempotent)
+                # This will create the table if it doesn't exist, including all columns defined in the User model.
+                # However, for *existing* tables, it won't add new columns. That's why add_column_if_not_exists is needed.
                 Base.metadata.create_all(session.bind)
-                session.commit() # Commit after create_all
-                print(f"  - Table 'users' ensured/recreated for '{tenant_id}' with latest schema.")
+                print(f"  - Ensuring 'users' table exists for '{tenant_id}'.")
 
+                for col_name, col_type in columns_to_add:
+                    add_column_if_not_exists(session, 'users', col_name, col_type)
         except Exception as e:
             print(f"Error processing tenant '{tenant_id}': {e}")
 
