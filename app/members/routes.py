@@ -7,7 +7,7 @@ from app.models import User
 from app.utils import infer_tenant_from_hostname
 
 # Define the Blueprint
-members_bp = Blueprint('members', __name__, url_prefix='/') # Removed /demographics prefix from blueprint
+members_bp = Blueprint('members', __name__, url_prefix='/')
 
 @members_bp.route('/demographics/<tenant_id>', methods=['GET', 'POST'])
 def demographics(tenant_id):
@@ -43,10 +43,8 @@ def demographics(tenant_id):
                 current_user.network_group_title = request.form.get('network_group_title')
                 current_user.member_anniversary = request.form.get('member_anniversary')
 
-                new_password = request.form.get('password')
-                if new_password:
-                    current_user.set_password(new_password)
-
+                # REMOVED password change from here
+                
                 s.commit()
                 success_message = "Your information has been updated successfully!"
                 session['user_email'] = current_user.email
@@ -63,7 +61,6 @@ def demographics(tenant_id):
                            error=error_message,
                            success=success_message)
 
-# NEW: Attendance page
 @members_bp.route('/attendance/<tenant_id>')
 def attendance(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
@@ -71,7 +68,6 @@ def attendance(tenant_id):
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     return render_template('attendance.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
-# NEW: Dues page
 @members_bp.route('/dues/<tenant_id>')
 def dues(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
@@ -79,11 +75,46 @@ def dues(tenant_id):
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     return render_template('dues.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
-# NEW: Security page
-@members_bp.route('/security/<tenant_id>')
+# UPDATED: Security page now handles password changes
+@members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    current_user_id = session['user_id']
+    error_message = None
+    success_message = None
+
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).first()
+        if not current_user:
+            session.pop('user_id', None)
+            session.pop('tenant_id', None)
+            session.pop('user_email', None)
+            session.pop('user_name', None)
+            return redirect(url_for('auth.login'))
+
+        if request.method == 'POST':
+            new_password = request.form.get('password')
+            confirm_password = request.form.get('confirm_password')
+
+            if not new_password:
+                error_message = "Password field cannot be empty."
+            elif new_password != confirm_password:
+                error_message = "New password and confirmation do not match."
+            else:
+                try:
+                    current_user.set_password(new_password)
+                    s.commit()
+                    success_message = "Your password has been updated successfully!"
+                except Exception as e:
+                    s.rollback()
+                    error_message = f"Failed to update password: {str(e)}"
+
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    return render_template('security.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+    return render_template('security.html', 
+                           tenant_id=tenant_id, 
+                           tenant_display_name=tenant_display_name,
+                           error=error_message,
+                           success=success_message)
 
