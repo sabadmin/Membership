@@ -42,7 +42,8 @@ def register():
         with get_tenant_db_session(tenant_id) as s:
             existing_user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
             if existing_user:
-                return render_template('register.html', error="User with this email already exists for this tenant.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
+                # UPDATED: Specific error message for existing users
+                return render_template('register.html', error="You are already registered, please use Login.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
 
             new_user = User(
                 tenant_id=tenant_id,
