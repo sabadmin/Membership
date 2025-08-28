@@ -95,7 +95,9 @@ def login():
                 session['user_email'] = user.email
                 session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
                 return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
-            else:
+            elif not user: # If user is not found, redirect to register
+                return render_template('register.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            else: # Invalid password or not active
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
 
