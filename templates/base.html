@@ -1,35 +1,38 @@
-<!-- templates/base.html -->
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Membership System{% endblock %} - {{ tenant_id | capitalize }}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <title>{% block title %}{% endblock %} - Multi-Tenant App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body class="bg-gradient-to-br from-purple-500 to-indigo-600 min-h-screen flex items-center justify-center text-white">
-    <div class="bg-white bg-opacity-10 backdrop-filter backdrop-blur-lg p-8 rounded-xl shadow-2xl max-w-md w-full text-center border border-white border-opacity-20">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="mb-4 list-none p-0">
-                {% for category, message in messages %}
-                    <li class="py-2 px-4 rounded-md mb-2
-                                {% if category == 'success' %} bg-green-500 text-white
-                                {% elif category == 'error' %} bg-red-500 text-white
-                                {% else %} bg-blue-500 text-white {% endif %}">
-                        {{ message }}
-                    </li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
 
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    {# Top Navigation Menu #}
+    {% if session.get('user_id') and session.get('tenant_id') %}
+    <nav class="bg-gray-800 p-4 text-white shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="text-xl font-bold">{{ session.get('tenant_name', 'App') }}</div> {# Display tenant name #}
+            <ul class="flex space-x-4">
+                <li><a href="{{ url_for('members.demographics', tenant_id=session.tenant_id) }}"
+                        class="hover:text-gray-300">Demographics</a></li>
+                <li><a href="{{ url_for('members.attendance', tenant_id=session.tenant_id) }}"
+                        class="hover:text-gray-300">Attendance</a></li>
+                <li><a href="{{ url_for('members.dues', tenant_id=session.tenant_id) }}"
+                        class="hover:text-gray-300">Dues</a></li>
+                <li><a href="{{ url_for('members.security', tenant_id=session.tenant_id) }}"
+                        class="hover:text-gray-300">Security</a></li>
+                <li><a href="{{ url_for('auth.logout') }}" class="hover:text-gray-300">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+    {% endif %}
+
+    {# Main Content Block #}
+    <main class="flex-grow">
         {% block content %}{% endblock %}
-
-    </div>
+    </main>
 </body>
+
 </html>
