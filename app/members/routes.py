@@ -3,8 +3,9 @@
 from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails # Import UserAuthDetails
+from app.models import User, UserAuthDetails
 from app.utils import infer_tenant_from_hostname
+from sqlalchemy.orm import relationship # NEW: Import relationship
 
 # Define the Blueprint
 members_bp = Blueprint('members', __name__, url_prefix='/')
@@ -83,10 +84,9 @@ def security(tenant_id):
     current_user_id = session['user_id']
     error_message = None
     success_message = None
-    current_user_auth_details = None # To pass to template for audit log
+    current_user_auth_details = None
 
     with get_tenant_db_session(tenant_id) as s:
-        # Eagerly load auth_details
         current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(relationship.joinedload(User.auth_details)).first()
         if not current_user:
             session.pop('user_id', None)
@@ -96,7 +96,7 @@ def security(tenant_id):
             session.pop('tenant_name', None)
             return redirect(url_for('auth.login'))
         
-        current_user_auth_details = current_user.auth_details # Get the auth details object
+        current_user_auth_details = current_user.auth_details
 
         if request.method == 'POST':
             new_password = request.form.get('password')
@@ -121,5 +121,5 @@ def security(tenant_id):
                            tenant_display_name=tenant_display_name,
                            error=error_message,
                            success=success_message,
-                           auth_details=current_user_auth_details) # Pass auth_details to template
+                           auth_details=current_user_auth_details)
 
