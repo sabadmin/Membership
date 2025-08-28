@@ -5,7 +5,7 @@ from config import Config
 from database import get_tenant_db_session
 from app.models import User, UserAuthDetails
 from app.utils import infer_tenant_from_hostname
-from sqlalchemy.orm import relationship # NEW: Import relationship
+from sqlalchemy.orm import relationship, joinedload # NEW: Import joinedload
 
 # Define the Blueprint
 members_bp = Blueprint('members', __name__, url_prefix='/')
@@ -22,7 +22,7 @@ def demographics(tenant_id):
 
     with get_tenant_db_session(tenant_id) as s:
         # Eagerly load auth_details to avoid N+1 queries if accessed multiple times
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(relationship.joinedload(User.auth_details)).first()
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first() # Use joinedload directly
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
@@ -87,7 +87,7 @@ def security(tenant_id):
     current_user_auth_details = None
 
     with get_tenant_db_session(tenant_id) as s:
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(relationship.joinedload(User.auth_details)).first()
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first() # Use joinedload directly
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
