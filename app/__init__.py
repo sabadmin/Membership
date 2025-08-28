@@ -6,7 +6,12 @@ from config import Config
 from database import db, init_db_for_tenant, close_db_session
 
 def create_app():
-    app = Flask(__name__)
+    # Explicitly define the template folder relative to the project root
+    # This assumes 'templates' is in the same directory as 'app' and 'run.py'
+    template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates'))
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
+
+    app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
     app.config.from_object(Config)
 
     db.init_app(app)
