@@ -1,14 +1,15 @@
 # app/members/routes.py
 
 from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session
-from config import Config # Import Config
+from config import Config
 from database import get_tenant_db_session
-from app.models import User # Import User model
+from app.models import User
+from app.utils import infer_tenant_from_hostname
 
 # Define the Blueprint
-members_bp = Blueprint('members', __name__, url_prefix='/demographics')
+members_bp = Blueprint('members', __name__, url_prefix='/') # Removed /demographics prefix from blueprint
 
-@members_bp.route('/<tenant_id>', methods=['GET', 'POST'])
+@members_bp.route('/demographics/<tenant_id>', methods=['GET', 'POST'])
 def demographics(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         return redirect(url_for('auth.login', tenant_id=tenant_id)) 
@@ -61,4 +62,28 @@ def demographics(tenant_id):
                            tenant_display_name=tenant_display_name,
                            error=error_message,
                            success=success_message)
+
+# NEW: Attendance page
+@members_bp.route('/attendance/<tenant_id>')
+def attendance(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('attendance.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+
+# NEW: Dues page
+@members_bp.route('/dues/<tenant_id>')
+def dues(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('dues.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+
+# NEW: Security page
+@members_bp.route('/security/<tenant_id>')
+def security(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('security.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
