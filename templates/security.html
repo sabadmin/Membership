@@ -34,5 +34,29 @@
             class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Update
             Password</button>
     </form>
+
+    {# NEW: Display Last Login Audit #}
+    {% if auth_details %}
+    <div class="mt-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">Last Login Audit</h2>
+        <ul class="list-disc list-inside bg-gray-50 p-4 rounded-md shadow-inner">
+            {% if auth_details.last_login_1 %}
+            <li class="mb-1 text-gray-700">1st Most Recent: {{ auth_details.last_login_1.strftime('%Y-%m-%d %H:%M:%S
+                UTC') }}</li>
+            {% else %}
+            <li class="mb-1 text-gray-700">1st Most Recent: Never logged in</li>
+            {% endif %}
+            {% if auth_details.last_login_2 %}
+            <li class="mb-1 text-gray-700">2nd Most Recent: {{ auth_details.last_login_2.strftime('%Y-%m-%d %H:%M:%S
+                UTC') }}</li>
+            {% endif %}
+            {% if auth_details.last_login_3 %}
+            <li class="mb-1 text-gray-700">3rd Most Recent: {{ auth_details.last_login_3.strftime('%Y-%m-%d %H:%M:%S
+                UTC') }}</li>
+            {% endif %}
+            <li class="mb-1 text-gray-700">Account Active: {{ "Yes" if auth_details.is_active else "No" }}</li>
+        </ul>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

@@ -3,8 +3,9 @@
 from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session
 from config import Config
 from database import get_tenant_db_session
-from app.models import User # Import User model from new models.py
-from app.utils import infer_tenant_from_hostname # Import helper from new utils.py
+from app.models import User, UserAuthDetails # Import UserAuthDetails
+from app.utils import infer_tenant_from_hostname
+from datetime import datetime # Import datetime
 
 # Define the Blueprint
 auth_bp = Blueprint('auth', __name__)
@@ -42,7 +43,6 @@ def register():
         with get_tenant_db_session(tenant_id) as s:
             existing_user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
             if existing_user:
-                # UPDATED: Specific error message for existing users
                 return render_template('register.html', error="You are already registered, please use Login.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
 
             new_user = User(
@@ -57,11 +57,23 @@ def register():
             
             try:
                 s.add(new_user)
+                s.flush() # Flush to get new_user.id before creating UserAuthDetails
+                
+                # NEW: Create UserAuthDetails entry for the new user
+                new_auth_details = UserAuthDetails(
+                    user_id=new_user.id,
+                    tenant_id=new_user.tenant_id,
+                    is_active=True, # Default to active
+                    last_login_1=datetime.utcnow() # Set initial login time
+                )
+                s.add(new_auth_details)
+                
                 s.commit()
                 session['user_id'] = new_user.id
                 session['tenant_id'] = new_user.tenant_id
                 session['user_email'] = new_user.email
                 session['user_name'] = new_user.email 
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(new_user.tenant_id, new_user.tenant_id.capitalize())
                 return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
             except Exception as e:
                 s.rollback()
@@ -89,24 +101,35 @@ def login():
         with get_tenant_db_session(tenant_id) as s:
             user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
             
-            if user and user.check_password(password) and user.is_active:
-                session['user_id'] = user.id
-                session['tenant_id'] = user.tenant_id
-                session['user_email'] = user.email
-                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
-                return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
-            elif not user: # If user is not found, redirect to register
+            if user:
+                # NEW: Check is_active from auth_details
+                if not user.auth_details or not user.auth_details.is_active:
+                    return render_template('login.html', error="Account is inactive. Please contact support.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+                
+                if user.check_password(password):
+                    # NEW: Update last login times
+                    user.auth_details.update_last_login()
+                    s.commit() # Commit the login time update
+                    
+                    session['user_id'] = user.id
+                    session['tenant_id'] = user.tenant_id
+                    session['user_email'] = user.email
+                    session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                    session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(user.tenant_id, user.tenant_id.capitalize())
+                    return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
+                else:
+                    return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            else: # If user is not found, redirect to register
                 return render_template('register.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
-            else: # Invalid password or not active
-                return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
 
 @auth_bp.route('/logout')
 def logout():
     session.pop('user_id', None)
-    session.pop('tenant_id', None)
+    session.pop('tenant_id', None) 
     session.pop('user_email', None) 
     session.pop('user_name', None)
+    session.pop('tenant_name', None)
     return redirect(url_for('auth.index'))
 
 # API routes (moved from original app.py)

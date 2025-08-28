@@ -3,7 +3,7 @@
 from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session
 from config import Config
 from database import get_tenant_db_session
-from app.models import User
+from app.models import User, UserAuthDetails # Import UserAuthDetails
 from app.utils import infer_tenant_from_hostname
 
 # Define the Blueprint
@@ -20,12 +20,14 @@ def demographics(tenant_id):
     success_message = None
 
     with get_tenant_db_session(tenant_id) as s:
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).first()
+        # Eagerly load auth_details to avoid N+1 queries if accessed multiple times
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(relationship.joinedload(User.auth_details)).first()
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
             session.pop('user_email', None)
             session.pop('user_name', None)
+            session.pop('tenant_name', None)
             return redirect(url_for('auth.login'))
 
         if request.method == 'POST':
@@ -43,8 +45,6 @@ def demographics(tenant_id):
                 current_user.network_group_title = request.form.get('network_group_title')
                 current_user.member_anniversary = request.form.get('member_anniversary')
 
-                # REMOVED password change from here
-                
                 s.commit()
                 success_message = "Your information has been updated successfully!"
                 session['user_email'] = current_user.email
@@ -75,7 +75,6 @@ def dues(tenant_id):
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     return render_template('dues.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
-# UPDATED: Security page now handles password changes
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
@@ -84,15 +83,20 @@ def security(tenant_id):
     current_user_id = session['user_id']
     error_message = None
     success_message = None
+    current_user_auth_details = None # To pass to template for audit log
 
     with get_tenant_db_session(tenant_id) as s:
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).first()
+        # Eagerly load auth_details
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(relationship.joinedload(User.auth_details)).first()
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
             session.pop('user_email', None)
             session.pop('user_name', None)
+            session.pop('tenant_name', None)
             return redirect(url_for('auth.login'))
+        
+        current_user_auth_details = current_user.auth_details # Get the auth details object
 
         if request.method == 'POST':
             new_password = request.form.get('password')
@@ -116,5 +120,6 @@ def security(tenant_id):
                            tenant_id=tenant_id, 
                            tenant_display_name=tenant_display_name,
                            error=error_message,
-                           success=success_message)
+                           success=success_message,
+                           auth_details=current_user_auth_details) # Pass auth_details to template
 
