@@ -1,88 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ tenant_display_name }} Demographics</title> {# Updated tab title #}
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
     <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl mt-10">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Demographics</h1> {# Uses display name in title #}
-        <p class="text-gray-600 mb-8 text-center">Welcome, {{ user.first_name }}! You are viewing and can update your information for: <span class="font-semibold">{{ tenant_display_name }}</span></p>
-        
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Demographics</h1> {#
+        Uses display name in title #}
+        <p class="text-gray-600 mb-8 text-center">Welcome, {{ user.first_name }}! You are viewing and can update your
+            information for: <span class="font-semibold">{{ tenant_display_name }}</span></p>
+
         {% if error %}
-            <p class="text-red-600 text-center mb-4">{{ error }}</p>
+        <p class="text-red-600 text-center mb-4">{{ error }}</p>
         {% endif %}
         {% if success %}
-            <p class="text-green-600 text-center mb-4">{{ success }}</p>
+        <p class="text-green-600 text-center mb-4">{{ success }}</p>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('demographics', tenant_id=tenant_id) }}" class="space-y-4">
+        <form method="POST" action="{{ url_for('members.demographics', tenant_id=tenant_id) }}" class="space-y-4"> {#
+            Action URL updated with blueprint prefix #}
             {# Name Fields #}
             <div>
                 <label for="first_name" class="block text-gray-700 text-sm font-bold mb-2">First Name:</label>
-                <input type="text" id="first_name" name="first_name" value="{{ user.first_name or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                <input type="text" id="first_name" name="first_name" value="{{ user.first_name or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    required>
             </div>
             <div>
                 <label for="middle_initial" class="block text-gray-700 text-sm font-bold mb-2">Middle Initial:</label>
-                <input type="text" id="middle_initial" name="middle_initial" maxlength="1" value="{{ user.middle_initial or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="text" id="middle_initial" name="middle_initial" maxlength="1"
+                    value="{{ user.middle_initial or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
                 <label for="last_name" class="block text-gray-700 text-sm font-bold mb-2">Last Name:</label>
-                <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    required>
             </div>
             {# Contact Fields #}
             <div>
                 <label for="email" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
-                <input type="email" id="email" name="email" value="{{ user.email or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                <input type="email" id="email" name="email" value="{{ user.email or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                    required>
             </div>
             <div>
                 <label for="address" class="block text-gray-700 text-sm font-bold mb-2">Address:</label>
-                <input type="text" id="address" name="address" value="{{ user.address or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="text" id="address" name="address" value="{{ user.address or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
                 <label for="cell_phone" class="block text-gray-700 text-sm font-bold mb-2">Cell Phone:</label>
-                <input type="tel" id="cell_phone" name="cell_phone" value="{{ user.cell_phone or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="tel" id="cell_phone" name="cell_phone" value="{{ user.cell_phone or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             {# Company Fields #}
             <div>
                 <label for="company" class="block text-gray-700 text-sm font-bold mb-2">Company:</label>
-                <input type="text" id="company" name="company" value="{{ user.company or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="text" id="company" name="company" value="{{ user.company or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
                 <label for="company_address" class="block text-gray-700 text-sm font-bold mb-2">Company Address:</label>
-                <input type="text" id="company_address" name="company_address" value="{{ user.company_address or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="text" id="company_address" name="company_address" value="{{ user.company_address or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
                 <label for="company_phone" class="block text-gray-700 text-sm font-bold mb-2">Company Phone:</label>
-                <input type="tel" id="company_phone" name="company_phone" value="{{ user.company_phone or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="tel" id="company_phone" name="company_phone" value="{{ user.company_phone or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
                 <label for="company_title" class="block text-gray-700 text-sm font-bold mb-2">Company Title:</label>
-                <input type="text" id="company_title" name="company_title" value="{{ user.company_title or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <input type="text" id="company_title" name="company_title" value="{{ user.company_title or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             {# Network Fields #}
             <div>
-                <label for="network_group_title" class="block text-gray-700 text-sm font-bold mb-2">Network Group Title:</label>
-                <input type="text" id="network_group_title" name="network_group_title" value="{{ user.network_group_title or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <label for="network_group_title" class="block text-gray-700 text-sm font-bold mb-2">Network Group
+                    Title:</label>
+                <input type="text" id="network_group_title" name="network_group_title"
+                    value="{{ user.network_group_title or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             <div>
-                <label for="member_anniversary" class="block text-gray-700 text-sm font-bold mb-2">Member Anniversary (MM/YY):</label>
-                <input type="text" id="member_anniversary" name="member_anniversary" pattern="\d{2}/\d{2}" placeholder="MM/YY" value="{{ user.member_anniversary or '' }}" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <label for="member_anniversary" class="block text-gray-700 text-sm font-bold mb-2">Member Anniversary
+                    (MM/YY):</label>
+                <input type="text" id="member_anniversary" name="member_anniversary" pattern="\d{2}/\d{2}"
+                    placeholder="MM/YY" value="{{ user.member_anniversary or '' }}"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
             {# Password Change (Optional) #}
             <div>
-                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Change Password (leave blank to keep current):</label>
-                <input type="password" id="password" name="password" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <label for="password" class="block text-gray-700 text-sm font-bold mb-2">Change Password (leave blank to
+                    keep current):</label>
+                <input type="password" id="password" name="password"
+                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
             </div>
 
-            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Save Changes</button>
+            <button type="submit"
+                class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Save
+                Changes</button>
         </form>
 
         <div class="mt-6 text-center">
-            <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Logout</a>
+            <a href="{{ url_for('auth.logout') }}"
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Logout</a>
         </div>
     </div>
 </body>
+
 </html>
