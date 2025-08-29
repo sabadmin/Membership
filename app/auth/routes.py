@@ -3,8 +3,8 @@
 from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session, flash
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails # Import User and UserAuthDetails from app.models
-from app.utils import infer_tenant_from_hostname # Import helper from app.utils
+from app.models import User, UserAuthDetails
+from app.utils import infer_tenant_from_hostname
 from datetime import datetime
 
 # Define the Blueprint
