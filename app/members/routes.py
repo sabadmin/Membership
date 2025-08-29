@@ -1,11 +1,12 @@
 # app/members/routes.py
 
-from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session
+from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session, flash # Import flash
 from config import Config
 from database import get_tenant_db_session
 from app.models import User, UserAuthDetails
 from app.utils import infer_tenant_from_hostname
-from sqlalchemy.orm import relationship, joinedload # NEW: Import joinedload
+from sqlalchemy.orm import relationship, joinedload
+from datetime import datetime
 
 # Define the Blueprint
 members_bp = Blueprint('members', __name__, url_prefix='/')
@@ -17,18 +18,18 @@ def demographics(tenant_id):
     
     current_user_id = session['user_id']
     current_user = None
-    error_message = None
-    success_message = None
+    
+    # Removed error_message and success_message local variables, will use flash instead
 
     with get_tenant_db_session(tenant_id) as s:
-        # Eagerly load auth_details to avoid N+1 queries if accessed multiple times
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first() # Use joinedload directly
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first()
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
             session.pop('user_email', None)
             session.pop('user_name', None)
             session.pop('tenant_name', None)
+            flash("User not found.", "danger") # Use flash message
             return redirect(url_for('auth.login'))
 
         if request.method == 'POST':
@@ -47,20 +48,29 @@ def demographics(tenant_id):
                 current_user.member_anniversary = request.form.get('member_anniversary')
 
                 s.commit()
-                success_message = "Your information has been updated successfully!"
+                flash("Your information has been updated successfully!", "success") # Use flash message
                 session['user_email'] = current_user.email
                 session['user_name'] = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or current_user.email
+
+                # NEW: Redirect to admin_panel if superadmin
+                if tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
+                
+                # For other tenants, re-render the demographics page with success message
+                return redirect(url_for('members.demographics', tenant_id=tenant_id))
+
             except Exception as e:
                 s.rollback()
-                error_message = f"Failed to update information: {str(e)}"
+                flash(f"Failed to update information: {str(e)}", "danger") # Use flash message
+                # If update fails, re-render the demographics page with error message
+                return redirect(url_for('members.demographics', tenant_id=tenant_id))
+
 
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     return render_template('demographics.html', 
                            tenant_id=tenant_id, 
                            user=current_user,
-                           tenant_display_name=tenant_display_name,
-                           error=error_message,
-                           success=success_message)
+                           tenant_display_name=tenant_display_name) # Removed error/success from render_template
 
 @members_bp.route('/attendance/<tenant_id>')
 def attendance(tenant_id):
@@ -82,18 +92,18 @@ def security(tenant_id):
         return redirect(url_for('auth.login', tenant_id=tenant_id))
     
     current_user_id = session['user_id']
-    error_message = None
-    success_message = None
+    # Removed error_message and success_message local variables
     current_user_auth_details = None
 
     with get_tenant_db_session(tenant_id) as s:
-        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first() # Use joinedload directly
+        current_user = s.query(User).filter_by(id=current_user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first()
         if not current_user:
             session.pop('user_id', None)
             session.pop('tenant_id', None)
             session.pop('user_email', None)
             session.pop('user_name', None)
             session.pop('tenant_name', None)
+            flash("User not found.", "danger") # Use flash message
             return redirect(url_for('auth.login'))
         
         current_user_auth_details = current_user.auth_details
@@ -103,23 +113,24 @@ def security(tenant_id):
             confirm_password = request.form.get('confirm_password')
 
             if not new_password:
-                error_message = "Password field cannot be empty."
+                flash("Password field cannot be empty.", "danger") # Use flash message
             elif new_password != confirm_password:
-                error_message = "New password and confirmation do not match."
+                flash("New password and confirmation do not match.", "danger") # Use flash message
             else:
                 try:
                     current_user.set_password(new_password)
                     s.commit()
-                    success_message = "Your password has been updated successfully!"
+                    flash("Your password has been updated successfully!", "success") # Use flash message
                 except Exception as e:
                     s.rollback()
-                    error_message = f"Failed to update password: {str(e)}"
+                    flash(f"Failed to update password: {str(e)}", "danger") # Use flash message
+            
+            # Always redirect after POST to prevent form resubmission
+            return redirect(url_for('members.security', tenant_id=tenant_id))
 
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     return render_template('security.html', 
                            tenant_id=tenant_id, 
                            tenant_display_name=tenant_display_name,
-                           error=error_message,
-                           success=success_message,
-                           auth_details=current_user_auth_details)
+                           auth_details=current_user_auth_details) # Removed error/success from render_template
 
