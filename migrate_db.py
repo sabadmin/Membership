@@ -1,7 +1,7 @@
 # migrate_db.py
 
 import os
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, inspect, text, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from contextlib import contextmanager
@@ -21,7 +21,7 @@ except ImportError:
 # Base for declarative models
 Base = declarative_base()
 
-# Define the User model, mirroring app.py (ensure it matches the current models.py)
+# Define the User model, mirroring app/models.py
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
@@ -47,7 +47,7 @@ class User(Base):
     def __repr__(self):
         return f'<User {self.email}>'
 
-# Define the UserAuthDetails model (mirroring the current models.py)
+# Define the UserAuthDetails model, mirroring app/models.py
 class UserAuthDetails(Base):
     __tablename__ = 'user_auth_details'
     id = Column(Integer, primary_key=True)
@@ -85,21 +85,7 @@ def run_migrations():
             with get_db_session(db_url) as session:
                 inspector = inspect(session.bind)
                 
-                # --- Migration for 'users' table ---
-                if 'users' in inspector.get_table_names():
-                    print(f"  - Table 'users' found for '{tenant_id}'. Checking for 'is_active' column...")
-                    columns = [col['name'] for col in inspector.get_columns('users')]
-                    if 'is_active' in columns:
-                        print(f"    - Dropping 'is_active' column from 'users' table...")
-                        session.execute(text("ALTER TABLE users DROP COLUMN is_active;"))
-                        session.commit()
-                        print(f"    - 'is_active' column dropped from 'users'.")
-                    else:
-                        print(f"    - 'is_active' column not found in 'users'. Skipping drop.")
-                else:
-                    print(f"  - Table 'users' not found for '{tenant_id}'. Will be created.")
-
-                # --- Migration for 'user_auth_details' table ---
+                # Drop 'user_auth_details' table if it exists
                 if 'user_auth_details' in inspector.get_table_names():
                     print(f"  - Table 'user_auth_details' found for '{tenant_id}'. Dropping it for a clean migration...")
                     session.execute(text("DROP TABLE user_auth_details CASCADE;"))
@@ -107,6 +93,15 @@ def run_migrations():
                     print(f"  - Table 'user_auth_details' dropped for '{tenant_id}'.")
                 else:
                     print(f"  - Table 'user_auth_details' not found for '{tenant_id}'. Will be created.")
+
+                # Drop 'users' table if it exists
+                if 'users' in inspector.get_table_names():
+                    print(f"  - Table 'users' found for '{tenant_id}'. Dropping it for a clean migration...")
+                    session.execute(text("DROP TABLE users CASCADE;"))
+                    session.commit()
+                    print(f"  - Table 'users' dropped for '{tenant_id}'.")
+                else:
+                    print(f"  - Table 'users' not found for '{tenant_id}'. Will be created.")
 
                 # Create all tables defined in Base (this will create 'users' and 'user_auth_details')
                 Base.metadata.create_all(session.bind)
