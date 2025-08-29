@@ -7,7 +7,6 @@ from database import db, init_db_for_tenant, close_db_session
 
 def create_app():
     # Explicitly define the template folder relative to the project root
-    # This assumes 'templates' is in the same directory as 'app' and 'run.py'
     template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates'))
     static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
 
@@ -35,6 +34,7 @@ def create_app():
 
     @app.before_request
     def set_tenant_id_from_session_or_param():
+        # Step 1: Determine g.tenant_id
         if 'tenant_id' in session and session['tenant_id'] in Config.TENANT_DATABASES:
             g.tenant_id = session['tenant_id']
         else:
@@ -48,6 +48,14 @@ def create_app():
 
         if g.tenant_id not in Config.TENANT_DATABASES:
             return jsonify({"error": f"Invalid tenant ID: {g.tenant_id}"}), 400
+
+        # Step 2: Ensure session['tenant_name'] is always consistent with g.tenant_id
+        # This ensures the menu bar always has the correct name if g.tenant_id is valid
+        if g.tenant_id in Config.TENANT_DATABASES:
+            session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(g.tenant_id, g.tenant_id.capitalize())
+        else:
+            session.pop('tenant_name', None) # Clear if g.tenant_id somehow becomes invalid
+
 
     from app.auth.routes import auth_bp
     from app.members.routes import members_bp
