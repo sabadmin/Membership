@@ -85,18 +85,38 @@ def register():
 def login():
     if request.method == 'POST':
         data = request.form
-        tenant_id = data.get('tenant_id')
+        tenant_id = data.get('tenant_id')  # Retrieve tenant_id from the form
+
+        # If tenant_id is not provided, infer it from the hostname
+        if not tenant_id:
+            tenant_id = infer_tenant_from_hostname()
+
         email = data.get('email')
         password = data.get('password')
 
-        with get_tenant_db_session(tenant_id) as s:
-            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
-            if user and user.check_password(password):
-                session['user_id'] = user.id
-                session['tenant_id'] = user.tenant_id
-                session['user_email'] = user.email
-                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
-                return redirect(url_for('auth.index'))
+        # Validate that tenant_id, email, and password are provided
+        if not all([tenant_id, email, password]):
+            return render_template('login.html', error="All fields are required.")
+
+        # Check if tenant_id exists in the database configuration
+        if tenant_id not in Config.TENANT_DATABASES:
+            return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}")
+
+        # Attempt to retrieve the user from the database
+        try:
+            with get_tenant_db_session(tenant_id) as s:
+                user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+                if user and user.check_password(password):
+                    session['user_id'] = user.id
+                    session['tenant_id'] = user.tenant_id
+                    session['user_email'] = user.email
+                    session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                    return redirect(url_for('auth.index'))
+                else:
+                    return render_template('login.html', error="Invalid email or password.")
+        except RuntimeError as e:
+            return render_template('login.html', error=str(e))
+
     return render_template('login.html')
 
 @auth_bp.route('/logout')
