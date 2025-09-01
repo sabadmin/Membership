@@ -4,40 +4,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{% endblock %} - Multi-Tenant App</title>
+    <title>{% block title %}Membership{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    {# Top Navigation Menu #}
-    {% if session.get('user_id') and session.get('tenant_id') %}
-    <nav class="bg-gray-800 p-4 text-white shadow-md">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="text-xl font-bold">{{ session.get('tenant_name', 'App') }}</div>
-            <ul class="flex space-x-4">
-                <li><a href="{{ url_for('members.demographics', tenant_id=session.tenant_id) }}"
-                        class="hover:text-gray-300">Demographics</a></li>
-                <li><a href="{{ url_for('members.attendance', tenant_id=session.tenant_id) }}"
-                        class="hover:text-gray-300">Attendance</a></li>
-                <li><a href="{{ url_for('members.dues', tenant_id=session.tenant_id) }}"
-                        class="hover:text-gray-300">Dues</a></li>
-                <li><a href="{{ url_for('members.security', tenant_id=session.tenant_id) }}"
-                        class="hover:text-gray-300">Security</a></li>
-
-                {# NEW: Admin Panel link, visible only if current user is superadmin #}
+<body>
+    <header>
+        <nav>
+            {% if session.get('user_id') %}
+            <ul>
+                <li><a href="{{ url_for('auth.index') }}">Home</a></li>
+                <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
                 {% if session.get('tenant_id') == Config.SUPERADMIN_TENANT_ID %}
-                <li><a href="{{ url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID) }}"
-                        class="hover:text-gray-300">Admin Panel</a></li>
+                <li><a href="{{ url_for('admin.admin_panel', selected_tenant_id=session.get('tenant_id')) }}">Admin
+                        Panel</a></li>
+                {% else %}
+                <li><a href="{{ url_for('members.demographics', tenant_id=session.get('tenant_id')) }}">Demographics</a>
+                </li>
                 {% endif %}
-
-                <li><a href="{{ url_for('auth.logout') }}" class="hover:text-gray-300">Logout</a></li>
             </ul>
-        </div>
-    </nav>
-    {% endif %}
-
-    {# Main Content Block #}
-    <main class="flex-grow">
+            {% endif %}
+        </nav>
+    </header>
+    <main>
         {% block content %}{% endblock %}
     </main>
 </body>

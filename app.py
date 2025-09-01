@@ -166,4 +166,9 @@ def create_app():
         # Implement demographics logic here
         return render_template('demographics.html', tenant_id=tenant_id)
 
+    # Inject Config and session into all templates
+    @app.context_processor
+    def inject_globals():
+        return dict(Config=Config, session=session)
+
     return app

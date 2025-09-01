@@ -83,35 +83,21 @@ def register():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    inferred_tenant_id, inferred_tenant_display_name, show_tenant_dropdown = get_tenant_details()
-
     if request.method == 'POST':
         data = request.form
-        tenant_id = data.get('tenant_id', inferred_tenant_id)
+        tenant_id = data.get('tenant_id')
         email = data.get('email')
         password = data.get('password')
 
-        if not all([tenant_id, email, password]):
-            return render_template('login.html', error="All fields are required.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
-
-        if tenant_id not in Config.TENANT_DATABASES:
-            return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
-
         with get_tenant_db_session(tenant_id) as s:
             user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
-            if not user or not user.check_password(password):
-                return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
-
-            set_session_variables(user)
-
-            # Redirect to admin_panel if the user is a super admin
-            if user.tenant_id == Config.SUPERADMIN_TENANT_ID:
-                return redirect(url_for('admin.admin_panel', selected_tenant_id=user.tenant_id))
-            
-            # Otherwise, redirect to demographics
-            return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
-
-    return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
+            if user and user.check_password(password):
+                session['user_id'] = user.id
+                session['tenant_id'] = user.tenant_id
+                session['user_email'] = user.email
+                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                return redirect(url_for('auth.index'))
+    return render_template('login.html')
 
 @auth_bp.route('/logout')
 def logout():
