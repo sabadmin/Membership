@@ -29,10 +29,13 @@ def set_session_variables(user):
 @auth_bp.route('/')
 def index():
     if 'user_id' in session and 'tenant_id' in session:
+        # Redirect to admin_panel if the user is a super admin
         if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
+        # Otherwise, redirect to demographics
         return redirect(url_for('members.demographics', tenant_id=session['tenant_id']))
     
+    # If no session, infer tenant details and render the index page
     inferred_tenant_id, inferred_tenant_display_name, show_tenant_dropdown = get_tenant_details()
     return render_template('index.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown)
 
@@ -100,7 +103,12 @@ def login():
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
 
             set_session_variables(user)
-            flash("Login successful!", "success")
+
+            # Redirect to admin_panel if the user is a super admin
+            if user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                return redirect(url_for('admin.admin_panel', selected_tenant_id=user.tenant_id))
+            
+            # Otherwise, redirect to demographics
             return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
 
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
