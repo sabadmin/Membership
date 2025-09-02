@@ -10,38 +10,27 @@ from datetime import datetime
 # Define the Blueprint
 auth_bp = Blueprint('auth', __name__)
 
-# Helper function to infer tenant details
-def get_tenant_details():
-    inferred_tenant_id = infer_tenant_from_hostname()
-    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
-    return inferred_tenant_id, inferred_tenant_display_name, show_tenant_dropdown
-
-# Helper function to set session variables
-def set_session_variables(user):
-    session['user_id'] = user.id
-    session['tenant_id'] = user.tenant_id
-    session['user_email'] = user.email
-    session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
-    session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(user.tenant_id, user.tenant_id.capitalize())
-
 # Routes
 @auth_bp.route('/')
 def index():
     if 'user_id' in session and 'tenant_id' in session:
-        # Redirect to admin_panel if the user is a super admin
+        # If superadmin, redirect to Admin Panel immediately after login
         if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
-        # Otherwise, redirect to demographics
-        return redirect(url_for('members.demographics', tenant_id=session['tenant_id']))
+        else:
+            return redirect(url_for('members.demographics', tenant_id=session['tenant_id']))
     
-    # If no session, infer tenant details and render the index page
-    inferred_tenant_id, inferred_tenant_display_name, show_tenant_dropdown = get_tenant_details()
-    return render_template('index.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown)
+    inferred_tenant = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
+    show_tenant_dropdown_on_index = (inferred_tenant == 'website' or inferred_tenant == 'member')
+    
+    return render_template('index.html', inferred_tenant=inferred_tenant, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown_on_index)
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    inferred_tenant_id, inferred_tenant_display_name, show_tenant_dropdown = get_tenant_details()
+    inferred_tenant_id = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
 
     if request.method == 'POST':
         data = request.form
@@ -53,27 +42,52 @@ def register():
             return render_template('register.html', error="Email and Password are required.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
         
         if tenant_id not in Config.TENANT_DATABASES:
-            return render_template('register.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
+             return render_template('register.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
         with get_tenant_db_session(tenant_id) as s:
             user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
             if user:
                 return render_template('register.html', error="You are already registered, please use Login.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
             
-            new_user = User(tenant_id=tenant_id, email=email)
+            # Create a user with default empty values for demographic info
+            new_user = User(
+                tenant_id=tenant_id,
+                email=email,
+                first_name=None, middle_initial=None, last_name=None,
+                address=None, cell_phone=None, company=None,
+                company_address=None, company_phone=None, company_title=None,
+                network_group_title=None, member_anniversary=None
+            )
             new_user.set_password(password)
 
             try:
                 s.add(new_user)
-                s.flush()
-                new_auth_details = UserAuthDetails(user_id=new_user.id, tenant_id=new_user.tenant_id, is_active=True, last_login_1=datetime.utcnow())
+                s.flush() # Flush to get the new_user.id
+                
+                # Create the corresponding UserAuthDetails entry
+                new_auth_details = UserAuthDetails(
+                    user_id=new_user.id,
+                    tenant_id=new_user.tenant_id,
+                    is_active=True,
+                    last_login_1=datetime.utcnow()
+                )
                 s.add(new_auth_details)
                 s.commit()
 
-                set_session_variables(new_user)
+                # Set session variables
+                session['user_id'] = new_user.id
+                session['tenant_id'] = new_user.tenant_id
+                session['user_email'] = new_user.email
+                session['user_name'] = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip() or new_user.email
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(new_user.tenant_id, new_user.tenant_id.capitalize())
 
-                flash("Registration successful! Please fill in your demographic information.", "success")
-                return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
+                # Redirect based on tenant
+                if new_user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    flash("Welcome, superadmin! Please fill in your demographic information.", "info")
+                    return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
+                else:
+                    flash("Registration successful! Please fill in your demographic information.", "success")
+                    return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
             except Exception as e:
                 s.rollback()
                 flash(f"Registration failed: {str(e)}", "danger")
@@ -83,45 +97,56 @@ def register():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    inferred_tenant_id = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
+
     if request.method == 'POST':
         data = request.form
-        tenant_id = data.get('tenant_id')  # Retrieve tenant_id from the form
-
-        # If tenant_id is not provided, infer it from the hostname
-        if not tenant_id:
-            tenant_id = infer_tenant_from_hostname()
-
+        tenant_id = data.get('tenant_id', inferred_tenant_id)
         email = data.get('email')
         password = data.get('password')
 
-        # Validate that tenant_id, email, and password are provided
         if not all([tenant_id, email, password]):
-            return render_template('login.html', error="All fields are required.")
+            return render_template('login.html', error="All fields are required.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
-        # Check if tenant_id exists in the database configuration
         if tenant_id not in Config.TENANT_DATABASES:
-            return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}")
+             return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
-        # Attempt to retrieve the user from the database
-        try:
-            with get_tenant_db_session(tenant_id) as s:
-                user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
-                if user and user.check_password(password):
-                    session['user_id'] = user.id
-                    session['tenant_id'] = user.tenant_id
-                    session['user_email'] = user.email
-                    session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
-                    return redirect(url_for('auth.index'))
+        with get_tenant_db_session(tenant_id) as s:
+            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+            
+            if not user:
+                return render_template('login.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            
+            if not user.auth_details or not user.auth_details.is_active:
+                return render_template('login.html', error="Account is inactive. Please contact support.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            
+            if user.check_password(password):
+                user.auth_details.update_last_login()
+                s.commit()
+                
+                session['user_id'] = user.id
+                session['tenant_id'] = user.tenant_id
+                session['user_email'] = user.email
+                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(user.tenant_id, user.tenant_id.capitalize())
+                
+                if user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=user.tenant_id))
                 else:
-                    return render_template('login.html', error="Invalid email or password.")
-        except RuntimeError as e:
-            return render_template('login.html', error=str(e))
-
-    return render_template('login.html')
+                    return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
+            else:
+                return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+    return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
 
 @auth_bp.route('/logout')
 def logout():
-    session.clear()
+    session.pop('user_id', None)
+    session.pop('tenant_id', None) 
+    session.pop('user_email', None) 
+    session.pop('user_name', None)
+    session.pop('tenant_name', None)
     return redirect(url_for('auth.index'))
 
 # API routes
@@ -153,26 +178,27 @@ def manage_users_api(tenant_id):
         new_user.set_password(data['password'])
 
         try:
-            with get_tenant_db_session(g.tenant_id) as session:
-                session.add(new_user)
-                session.flush()
+            with get_tenant_db_session(g.tenant_id) as s:
+                s.add(new_user)
+                s.flush()
+                
                 new_auth_details = UserAuthDetails(
                     user_id=new_user.id,
                     tenant_id=new_user.tenant_id,
                     is_active=True,
                     last_login_1=datetime.utcnow()
                 )
-                session.add(new_auth_details)
-                session.commit()
+                s.add(new_auth_details)
+                s.commit()
                 session.refresh(new_user)
             return jsonify({"message": "User added successfully!", "user": {"id": new_user.id, "first_name": new_user.first_name, "last_name": new_user.last_name, "email": new_user.email}}), 201
         except Exception as e:
-            session.rollback()
+            s.rollback()
             return jsonify({"error": f"Failed to add user: {str(e)}"}), 500
 
     elif request.method == 'GET':
         try:
-            with get_tenant_db_session(g.tenant_id) as session:
+            with get_tenant_db_session(g.tenant_id) as s:
                 users = s.query(User).filter_by(tenant_id=g.tenant_id).all()
                 user_list = [
                     {
