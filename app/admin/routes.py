@@ -1,155 +1,112 @@
 # app/admin/routes.py
 
-from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session, flash
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
-from database import get_tenant_db_session, Base
-from app.models import User, UserAuthDetails # Import all models that might be managed
-from app.utils import infer_tenant_from_hostname
-from sqlalchemy import inspect, text, String, Integer, Boolean, DateTime
-from sqlalchemy.exc import IntegrityError, OperationalError
-from datetime import datetime
+from database import get_tenant_db_session, get_engine
+from app.models import Base, User, UserAuthDetails
+from sqlalchemy import MetaData, Table, inspect, text
+from sqlalchemy.orm import relationship, joinedload
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-# Helper to check if current user is superadmin
-def is_superadmin():
-    return g.tenant_id == Config.SUPERADMIN_TENANT_ID and 'user_id' in session
+@admin_bp.before_request
+def check_admin_access():
+    if g.tenant_id != Config.SUPERADMIN_TENANT_ID:
+        flash("You do not have permission to access the admin panel.", "danger")
+        return redirect(url_for('auth.index'))
 
-# Admin panel dashboard
-@admin_bp.route('/')
-@admin_bp.route('/<selected_tenant_id>')
-@admin_bp.route('/<selected_tenant_id>/<table>')
-def admin_panel(selected_tenant_id=None, table=None):
-    if not is_superadmin():
-        flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for('auth.login'))
+def get_all_table_names(engine):
+    inspector = inspect(engine)
+    return inspector.get_table_names()
 
-    all_tenant_ids = list(Config.TENANT_DATABASES.keys())
+def get_table_and_model(table_name, tenant_id):
+    if table_name == 'users':
+        return User
+    elif table_name == 'user_auth_details':
+        return UserAuthDetails
+    return None
+
+def get_column_names(model):
+    if model:
+        return [c.key for c in model.__table__.columns]
+    return []
+
+def serialize_row(row):
+    serialized = {}
+    for column, value in row._asdict().items():
+        if isinstance(value, datetime):
+            serialized[column] = value.isoformat()
+        else:
+            serialized[column] = value
+    return serialized
+
+@admin_bp.route('/<selected_tenant_id>', methods=['GET', 'POST'])
+def admin_panel(selected_tenant_id):
+    if selected_tenant_id not in Config.TENANT_DATABASES:
+        flash("Invalid tenant specified.", "danger")
+        return redirect(url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID))
     
-    # Default to the superadmin tenant if none selected
-    if not selected_tenant_id or selected_tenant_id not in all_tenant_ids:
-        selected_tenant_id = Config.SUPERADMIN_TENANT_ID
-
-    db_url = Config.TENANT_DATABASES[selected_tenant_id]
-    tables = []
-    columns = []
+    tenant_id_to_manage = request.form.get('tenant_to_manage', selected_tenant_id)
+    table_name = request.form.get('table_name')
     data = []
-    primary_keys = {}
+    columns = []
     
-    try:
-        with get_tenant_db_session(selected_tenant_id) as s:
-            inspector = inspect(s.bind)
-            tables = inspector.get_table_names()
+    with get_tenant_db_session(tenant_id_to_manage) as s:
+        tables = get_all_table_names(get_engine(tenant_id_to_manage))
+        
+        if table_name:
+            model = get_table_and_model(table_name, tenant_id_to_manage)
+            if model:
+                columns = get_column_names(model)
+                if request.method == 'POST':
+                    action = request.form.get('action')
+                    row_id = request.form.get('id')
+                    
+                    if action == 'add':
+                        new_row_data = {
+                            key: value for key, value in request.form.items() if key not in ['action', 'id', 'tenant_to_manage', 'table_name']
+                        }
+                        if 'password_hash' in new_row_data and new_row_data['password_hash']:
+                            new_row_data['password_hash'] = User().set_password(new_row_data['password_hash'])
+                        
+                        try:
+                            s.add(model(**new_row_data))
+                            s.commit()
+                            flash("Row added successfully.", "success")
+                        except Exception as e:
+                            s.rollback()
+                            flash(f"Error adding row: {str(e)}", "danger")
 
-            if table and table in tables:
-                columns_info = inspector.get_columns(table)
-                columns = [{'name': col['name'], 'type': str(col['type'])} for col in columns_info]
+                    elif action == 'update' and row_id:
+                        row = s.query(model).filter_by(id=row_id).first()
+                        if row:
+                            for key, value in request.form.items():
+                                if key not in ['action', 'id', 'tenant_to_manage', 'table_name'] and key != 'password_hash':
+                                    setattr(row, key, value)
+                            s.commit()
+                            flash("Row updated successfully.", "success")
+                        else:
+                            flash("Row not found.", "danger")
+                    
+                    elif action == 'delete' and row_id:
+                        row = s.query(model).filter_by(id=row_id).first()
+                        if row:
+                            s.delete(row)
+                            s.commit()
+                            flash("Row deleted successfully.", "success")
+                        else:
+                            flash("Row not found.", "danger")
                 
-                # Get primary key(s) for the table
-                pk_constraints = inspector.get_pk_constraint(table)
-                primary_keys[table] = pk_constraints['constrained_columns']
-
-                # Dynamically fetch data
-                # For simplicity, we'll fetch all rows. For large tables, pagination is needed.
-                # Use text() for raw SQL execution
-                result = s.execute(text(f"SELECT * FROM {table} ORDER BY {primary_keys[table][0] if primary_keys[table] else 'id'} ASC"))
-                data = [row._asdict() for row in result.fetchall()]
-
-    except Exception as e:
-        flash(f"Error accessing database or table: {e}", "danger")
-        tables = []
-        columns = []
-        data = []
-
-    return render_template('admin_panel.html', 
-                           all_tenant_ids=all_tenant_ids,
-                           selected_tenant_id=selected_tenant_id,
+                rows = s.query(model).all()
+                data = [row.__dict__ for row in rows]
+                for row in data:
+                    row.pop('_sa_instance_state', None)
+    
+    return render_template('admin_panel.html',
                            tables=tables,
-                           selected_table=table,
+                           selected_tenant_id=tenant_id_to_manage,
+                           selected_table_name=table_name,
                            columns=columns,
                            data=data,
-                           primary_keys=primary_keys)
-
-# Add/Modify/Delete data
-@admin_bp.route('/<selected_tenant_id>/<table>/manage', methods=['POST'])
-def manage_data(selected_tenant_id, table):
-    if not is_superadmin():
-        flash("Unauthorized access. Admin privileges required.", "danger")
-        return redirect(url_for('auth.login'))
-        
-    action = request.form.get('action')
-    row_id = request.form.get('id') # Assuming 'id' is always the first PK
-
-    try:
-        with get_tenant_db_session(selected_tenant_id) as s:
-            inspector = inspect(s.bind)
-            columns_info = inspector.get_columns(table)
-            column_names = [col['name'] for col in columns_info]
-            pk_constraints = inspector.get_pk_constraint(table)
-            pk_column = pk_constraints['constrained_columns'][0] if pk_constraints['constrained_columns'] else 'id'
-
-            if action == 'add':
-                insert_cols = []
-                insert_vals = []
-                for col in column_names:
-                    if col != pk_column: # Don't try to insert into auto-incrementing PK
-                        val = request.form.get(f'new_{col}')
-                        if val is not None: # Only include if value is provided
-                            insert_cols.append(col)
-                            insert_vals.append(val)
-                
-                # Handle password_hash for new user if adding to 'users' table
-                if table == 'users' and 'password_hash' in insert_cols:
-                    raw_password = insert_vals[insert_cols.index('password_hash')]
-                    insert_vals[insert_cols.index('password_hash')] = User().set_password(raw_password) # Hash the password
-
-                cols_str = ', '.join(insert_cols)
-                vals_placeholders = ', '.join([f'%({c})s' for c in insert_cols])
-                params = dict(zip(insert_cols, insert_vals))
-                
-                s.execute(text(f"INSERT INTO {table} ({cols_str}) VALUES ({vals_placeholders})"), params)
-                flash(f"Row added to {table}.", "success")
-
-            elif action == 'edit' and row_id:
-                update_parts = []
-                params = {pk_column: row_id} # Use PK to identify row
-                
-                for col in column_names:
-                    # Skip PK and password_hash for direct update
-                    if col == pk_column:
-                        continue
-                    if col == 'password_hash': # Special handling for password_hash
-                        if request.form.get(f'edit_{col}_delete') == 'true':
-                            update_parts.append(f"{col} = NULL")
-                        continue # Don't allow direct edit of hash
-                    
-                    val = request.form.get(f'edit_{col}')
-                    if val is not None:
-                        update_parts.append(f"{col} = %({col})s")
-                        params[col] = val
-                
-                if update_parts:
-                    update_str = ', '.join(update_parts)
-                    s.execute(text(f"UPDATE {table} SET {update_str} WHERE {pk_column} = %({pk_column})s"), params)
-                    flash(f"Row {row_id} updated in {table}.", "success")
-                else:
-                    flash("No fields to update.", "warning")
-
-            elif action == 'delete' and row_id:
-                s.execute(text(f"DELETE FROM {table} WHERE {pk_column} = %({pk_column})s"), {pk_column: row_id})
-                flash(f"Row {row_id} deleted from {table}.", "success")
-            
-            s.commit()
-
-    except IntegrityError as e:
-        s.rollback()
-        flash(f"Database error (Integrity): {e.orig}", "danger")
-    except OperationalError as e:
-        s.rollback()
-        flash(f"Database error (Operational): {e.orig}", "danger")
-    except Exception as e:
-        s.rollback()
-        flash(f"An unexpected error occurred: {e}", "danger")
-
-    return redirect(url_for('admin.admin_panel', selected_tenant_id=selected_tenant_id, table=table))
-
+                           tenant_display_names=Config.TENANT_DISPLAY_NAMES,
+                           Config=Config) # Pass Config object to the template
