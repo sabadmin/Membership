@@ -1,113 +1,167 @@
-# app/admin/routes.py
+# app/auth/routes.py
 
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
+from flask import Blueprint, request, jsonify, g, render_template, redirect, url_for, session, flash
 from config import Config
-from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import Base, User, UserAuthDetails
-from sqlalchemy import MetaData, Table, inspect, text
-from sqlalchemy.orm import relationship, joinedload
+from database import get_tenant_db_session
+from app.models import User, UserAuthDetails
+from app.utils import infer_tenant_from_hostname
+from datetime import datetime
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+# Define the Blueprint
+auth_bp = Blueprint('auth', __name__)
 
-@admin_bp.before_request
-def check_admin_access():
-    if g.tenant_id != Config.SUPERADMIN_TENANT_ID:
-        flash("You do not have permission to access the admin panel.", "danger")
-        return redirect(url_for('auth.index'))
-
-def get_all_table_names(engine):
-    inspector = inspect(engine)
-    return inspector.get_table_names()
-
-def get_table_and_model(table_name, tenant_id):
-    if table_name == 'users':
-        return User
-    elif table_name == 'user_auth_details':
-        return UserAuthDetails
-    return None
-
-def get_column_names(model):
-    if model:
-        return [c.key for c in model.__table__.columns]
-    return []
-
-def serialize_row(row):
-    serialized = {}
-    for column, value in row._asdict().items():
-        if isinstance(value, datetime):
-            serialized[column] = value.isoformat()
+# Routes
+@auth_bp.route('/')
+def index():
+    if 'user_id' in session and 'tenant_id' in session:
+        # If superadmin, redirect to Admin Panel immediately after login
+        if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
+            return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
         else:
-            serialized[column] = value
-    return serialized
+            return redirect(url_for('members.demographics', tenant_id=session['tenant_id']))
+    
+    inferred_tenant = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
+    show_tenant_dropdown_on_index = (inferred_tenant == 'website' or inferred_tenant == 'member')
+    
+    return render_template('index.html', inferred_tenant=inferred_tenant, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown_on_index)
 
-@admin_bp.route('/<selected_tenant_id>', methods=['GET', 'POST'])
-def admin_panel(selected_tenant_id):
-    if selected_tenant_id not in Config.TENANT_DATABASES:
-        flash("Invalid tenant specified.", "danger")
-        return redirect(url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID))
-    
-    tenant_id_to_manage = request.form.get('tenant_to_manage', selected_tenant_id)
-    table_name = request.form.get('table_name')
-    data = []
-    columns = []
-    
-    with get_tenant_db_session(tenant_id_to_manage) as s:
-        engine = _tenant_engines[tenant_id_to_manage]
-        tables = get_all_table_names(engine)
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    inferred_tenant_id = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
+
+    if request.method == 'POST':
+        data = request.form
+        tenant_id = data.get('tenant_id', inferred_tenant_id)
+        email = data.get('email')
+        password = data.get('password')
+
+        if not all([tenant_id, email, password]):
+            return render_template('register.html', error="Email and Password are required.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
         
-        if table_name:
-            model = get_table_and_model(table_name, tenant_id_to_manage)
-            if model:
-                columns = get_column_names(model)
-                if request.method == 'POST':
-                    action = request.form.get('action')
-                    row_id = request.form.get('id')
-                    
-                    if action == 'add':
-                        new_row_data = {
-                            key: value for key, value in request.form.items() if key not in ['action', 'id', 'tenant_to_manage', 'table_name']
-                        }
-                        if 'password_hash' in new_row_data and new_row_data['password_hash']:
-                            new_row_data['password_hash'] = User().set_password(new_row_data['password_hash'])
-                        
-                        try:
-                            s.add(model(**new_row_data))
-                            s.commit()
-                            flash("Row added successfully.", "success")
-                        except Exception as e:
-                            s.rollback()
-                            flash(f"Error adding row: {str(e)}", "danger")
+        if tenant_id not in Config.TENANT_DATABASES:
+             return render_template('register.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
-                    elif action == 'update' and row_id:
-                        row = s.query(model).filter_by(id=row_id).first()
-                        if row:
-                            for key, value in request.form.items():
-                                if key not in ['action', 'id', 'tenant_to_manage', 'table_name'] and key != 'password_hash':
-                                    setattr(row, key, value)
-                            s.commit()
-                            flash("Row updated successfully.", "success")
-                        else:
-                            flash("Row not found.", "danger")
-                    
-                    elif action == 'delete' and row_id:
-                        row = s.query(model).filter_by(id=row_id).first()
-                        if row:
-                            s.delete(row)
-                            s.commit()
-                            flash("Row deleted successfully.", "success")
-                        else:
-                            flash("Row not found.", "danger")
+        with get_tenant_db_session(tenant_id) as s:
+            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+            if user:
+                return render_template('register.html', error="You are already registered, please use Login.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
+            
+            # Create a user with default empty values for demographic info
+            new_user = User(
+                tenant_id=tenant_id,
+                email=email,
+                first_name=None, middle_initial=None, last_name=None,
+                address=None, cell_phone=None, company=None,
+                company_address=None, company_phone=None, company_title=None,
+                network_group_title=None, member_anniversary=None
+            )
+            new_user.set_password(password)
+
+            try:
+                s.add(new_user)
+                s.flush() # Flush to get the new_user.id
                 
-                rows = s.query(model).all()
-                data = [row.__dict__ for row in rows]
-                for row in data:
-                    row.pop('_sa_instance_state', None)
+                # Create the corresponding UserAuthDetails entry
+                new_auth_details = UserAuthDetails(
+                    user_id=new_user.id,
+                    tenant_id=new_user.tenant_id,
+                    is_active=True,
+                    last_login_1=datetime.utcnow()
+                )
+                s.add(new_auth_details)
+                s.commit()
+
+                # Set session variables
+                session['user_id'] = new_user.id
+                session['tenant_id'] = new_user.tenant_id
+                session['user_email'] = new_user.email
+                session['user_name'] = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip() or new_user.email
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(new_user.tenant_id, new_user.tenant_id.capitalize())
+
+                # Redirect based on tenant
+                if new_user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    flash("Welcome, superadmin! Please fill in your demographic information.", "info")
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=new_user.tenant_id))
+                else:
+                    flash("Registration successful! Please fill in your demographic information.", "success")
+                    return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
+            except Exception as e:
+                s.rollback()
+                flash(f"Registration failed: {str(e)}", "danger")
+                return redirect(url_for('auth.register', tenant_id=tenant_id))
+
+    return render_template('register.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
+
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    inferred_tenant_id = infer_tenant_from_hostname()
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
+
+    if request.method == 'POST':
+        data = request.form
+        tenant_id = data.get('tenant_id', inferred_tenant_id)
+        email = data.get('email')
+        password = data.get('password')
+
+        if not all([tenant_id, email, password]):
+            return render_template('login.html', error="All fields are required.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
+
+        if tenant_id not in Config.TENANT_DATABASES:
+             return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
+
+        with get_tenant_db_session(tenant_id) as s:
+            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+            
+            if not user:
+                return render_template('login.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            
+            if not user.auth_details or not user.auth_details.is_active:
+                return render_template('login.html', error="Account is inactive. Please contact support.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
+            
+            if user.check_password(password):
+                user.auth_details.update_last_login()
+                s.commit()
+                
+                session['user_id'] = user.id
+                session['tenant_id'] = user.tenant_id
+                session['user_email'] = user.email
+                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(user.tenant_id, user.tenant_id.capitalize())
+                
+                if user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    flash("Welcome back, superadmin!", "success")
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=user.tenant_id))
+                else:
+                    flash("Login successful!", "success")
+                    return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
+            else:
+                flash("Invalid email or password.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
+    return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
+
+@auth_bp.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('tenant_id', None) 
+    session.pop('user_email', None) 
+    session.pop('user_name', None)
+    session.pop('tenant_name', None)
+    return redirect(url_for('auth.index'))
+```
+eof
+
+---
+
+### 160. Restart Gunicorn 🚀
+
+After updating the file, you must **restart your Gunicorn process** for the changes to take effect.
+
+1.  **Stop Gunicorn:** If Gunicorn is currently running, press `CTRL+C` in the terminal where it's active.
+2.  **Start Gunicorn:**
+    ```bash
+    gunicorn --bind 127.0.0.1:5000 'run:app'
     
-    return render_template('admin_panel.html',
-                           tables=tables,
-                           selected_tenant_id=tenant_id_to_manage,
-                           selected_table_name=table_name,
-                           columns=columns,
-                           data=data,
-                           tenant_display_names=Config.TENANT_DISPLAY_NAMES,
-                           Config=Config)
