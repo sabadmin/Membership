@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
-from database import get_tenant_db_session, get_engine
+from database import get_tenant_db_session, _tenant_engines # Corrected import
 from app.models import Base, User, UserAuthDetails
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
@@ -52,7 +52,8 @@ def admin_panel(selected_tenant_id):
     columns = []
     
     with get_tenant_db_session(tenant_id_to_manage) as s:
-        tables = get_all_table_names(get_engine(tenant_id_to_manage))
+        engine = _tenant_engines[tenant_id_to_manage]
+        tables = get_all_table_names(engine)
         
         if table_name:
             model = get_table_and_model(table_name, tenant_id_to_manage)
@@ -109,4 +110,4 @@ def admin_panel(selected_tenant_id):
                            columns=columns,
                            data=data,
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
-                           Config=Config) # Pass Config object to the template
+                           Config=Config)
