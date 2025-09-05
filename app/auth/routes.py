@@ -119,7 +119,19 @@ def login():
             if not user:
                 return render_template('login.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
             
-            if not user.auth_details or not user.auth_details.is_active:
+            # Create missing UserAuthDetails for existing users
+            if not user.auth_details:
+                user.auth_details = UserAuthDetails(
+                    user_id=user.id,
+                    tenant_id=user.tenant_id,
+                    is_active=True,  # Default existing users to active
+                    last_login_1=datetime.utcnow()
+                )
+                s.add(user.auth_details)
+                s.flush()  # Make sure the relationship is established
+            
+            # Check if account is active
+            if not user.auth_details.is_active:
                 return render_template('login.html', error="Account is inactive. Please contact support.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
             
             if user.check_password(password):
