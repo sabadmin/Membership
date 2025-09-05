@@ -77,18 +77,18 @@ def register():
 
                 # Set session variables
                 session['user_id'] = new_user.id
-                session['tenant_id'] = new_user.tenant_id
+                session['tenant_id'] = tenant_id  # Use tenant_id from current context
                 session['user_email'] = new_user.email
                 session['user_name'] = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip() or new_user.email
-                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(new_user.tenant_id, new_user.tenant_id.capitalize())
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
                 # Redirect based on tenant
-                if new_user.tenant_id == Config.SUPERADMIN_TENANT_ID:
+                if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     flash("Welcome, superadmin! Please fill in your demographic information.", "info")
-                    return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
+                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
                 else:
                     flash("Registration successful! Please fill in your demographic information.", "success")
-                    return redirect(url_for('members.demographics', tenant_id=new_user.tenant_id))
+                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
             except Exception as e:
                 s.rollback()
                 flash(f"Registration failed: {str(e)}", "danger")
@@ -139,15 +139,15 @@ def login():
                 s.commit()
                 
                 session['user_id'] = user.id
-                session['tenant_id'] = user.tenant_id
+                session['tenant_id'] = tenant_id  # Use tenant_id from current context
                 session['user_email'] = user.email
                 session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
-                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(user.tenant_id, user.tenant_id.capitalize())
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
                 
-                if user.tenant_id == Config.SUPERADMIN_TENANT_ID:
-                    return redirect(url_for('admin.admin_panel', selected_tenant_id=user.tenant_id))
+                if tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
-                    return redirect(url_for('members.demographics', tenant_id=user.tenant_id))
+                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
             else:
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
