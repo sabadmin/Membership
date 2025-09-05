@@ -65,6 +65,9 @@ def admin_panel(selected_tenant_id):
             model = get_table_and_model(table_name, tenant_id_to_manage)
             if model:
                 columns = get_column_names(model)
+                # For user_auth_details, add username column and modify columns list
+                if table_name == 'user_auth_details':
+                    columns = [col for col in columns if col != 'user_id'] + ['username']
                 if request.method == 'POST':
                     action = request.form.get('action')
                     row_id = request.form.get('id')
@@ -107,10 +110,22 @@ def admin_panel(selected_tenant_id):
                         else:
                             flash("Row not found.", "danger")
                 
-                rows = s.query(model).all()
-                data = [row.__dict__ for row in rows]
-                for row in data:
-                    row.pop('_sa_instance_state', None)
+                if table_name == 'user_auth_details':
+                    # Join with users table to show usernames instead of user_id
+                    rows = s.query(model, User.email, User.first_name, User.last_name).join(User, model.user_id == User.id).all()
+                    data = []
+                    for auth_detail, email, first_name, last_name in rows:
+                        row_data = auth_detail.__dict__.copy()
+                        row_data.pop('_sa_instance_state', None)
+                        # Replace user_id with readable user info
+                        username = f"{first_name or ''} {last_name or ''}".strip() or email
+                        row_data['username'] = username
+                        data.append(row_data)
+                else:
+                    rows = s.query(model).all()
+                    data = [row.__dict__ for row in rows]
+                    for row in data:
+                        row.pop('_sa_instance_state', None)
     
     return render_template('admin_panel.html',
                            tables=tables,
