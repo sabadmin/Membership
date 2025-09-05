@@ -36,9 +36,12 @@ class User(Base):
     company_title = Column(String(80), nullable=True)
     network_group_title = Column(String(120), nullable=True)
     member_anniversary = Column(String(5), nullable=True)
+    membership_type_id = Column(Integer, ForeignKey('membership_types.id'), nullable=True)
+    user_role = Column(String(20), default='member', nullable=False)  # member, attendance, president, admin
 
-    # Define one-to-one relationship with UserAuthDetails
+    # Define relationships
     auth_details = relationship("UserAuthDetails", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    membership_type = relationship("MembershipType", back_populates="users")
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -137,4 +140,21 @@ class ReferralRecord(Base):
 
     def __repr__(self):
         return f'<ReferralRecord {self.referred_name} referred by User {self.referrer_id} - ${self.referral_value}>'
+
+# NEW: MembershipType model for managing membership categories per tenant
+class MembershipType(Base):
+    __tablename__ = 'membership_types'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)  # Regular Member, Board Member, Honorary, etc.
+    description = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Define relationship with User
+    users = relationship("User", back_populates="membership_type")
+
+    def __repr__(self):
+        return f'<MembershipType {self.name}>'
 

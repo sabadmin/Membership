@@ -7,7 +7,8 @@
     <div class="bg-white p-6 rounded-lg shadow-md">
         <h1 class="text-2xl font-bold text-gray-800 mb-4 text-center">{{ tenant_display_name }} Demographics</h1>
         <p class="text-gray-600 mb-4 text-center text-sm">Welcome, {{ user.first_name }}! Update your information for:
-            <span class="font-semibold">{{ tenant_display_name }}</span></p>
+            <span class="font-semibold">{{ tenant_display_name }}</span>
+        </p>
 
         <form method="POST" action="{{ url_for('members.demographics', tenant_id=tenant_id) }}" class="space-y-3">
             <!-- Basic Information -->
@@ -108,12 +109,24 @@
             <!-- Membership Information Section -->
             <div class="border-t pt-2">
                 <h3 class="text-sm font-semibold text-gray-800 mb-2">Membership Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-1">
+                    <div>
+                        <select id="membership_type_id" name="membership_type_id"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">Select Membership Type</option>
+                            {% for mtype in membership_types %}
+                            <option value="{{ mtype.id }}" {% if user.membership_type_id==mtype.id %}selected{% endif
+                                %}>
+                                {{ mtype.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <input type="text" id="network_group_title" name="network_group_title"
                         value="{{ user.network_group_title or '' }}" placeholder="Network Group Title"
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     <input type="text" id="member_anniversary" name="member_anniversary" pattern="\d{2}/\d{2}"
-                        placeholder="Member Anniversary (MM/YY)" value="{{ user.member_anniversary or '' }}"
+                        placeholder="Anniversary (MM/YY)" value="{{ user.member_anniversary or '' }}"
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                 </div>
             </div>

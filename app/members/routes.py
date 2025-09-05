@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord
+from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -64,6 +64,7 @@ def demographics(tenant_id):
                 current_user.company_title = request.form.get('company_title')
                 current_user.network_group_title = request.form.get('network_group_title')
                 current_user.member_anniversary = request.form.get('member_anniversary')
+                current_user.membership_type_id = request.form.get('membership_type_id') or None
 
                 s.commit()
                 flash("Your information has been updated successfully!", "success")
@@ -77,32 +78,64 @@ def demographics(tenant_id):
                 flash(f"Failed to update information: {str(e)}", "danger")
                 return redirect(url_for('members.demographics', tenant_id=tenant_id))
 
+        # Get membership types for dropdown
+        membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
+        
     return render_template('demographics.html',
                            tenant_id=tenant_id,
                            user=current_user,
                            tenant_display_name=tenant_display_name,
+                           membership_types=membership_types,
                            format_phone_number=_format_phone)
 
-@members_bp.route('/attendance/<tenant_id>', methods=['GET', 'POST'])
+@members_bp.route('/attendance/<tenant_id>')
 def attendance(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
     
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('attendance_menu.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+
+@members_bp.route('/attendance/<tenant_id>/create', methods=['GET', 'POST'])
+def attendance_create(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    # Check if user has permission to create attendance
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = _get_current_user(s, session['user_id'])
+        if not current_user or current_user.user_role not in ['attendance', 'president', 'admin']:
+            flash("You don't have permission to create attendance records.", "danger")
+            return redirect(url_for('members.attendance', tenant_id=tenant_id))
+    
+    return _attendance_view(tenant_id, editable=True)
+
+@members_bp.route('/attendance/<tenant_id>/review')
+def attendance_review(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    return _attendance_view(tenant_id, editable=False)
+
+def _attendance_view(tenant_id, editable=True):
+    """Common attendance view logic"""
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     
     with get_tenant_db_session(tenant_id) as s:
         # Get all users for attendance matrix
         all_users = s.query(User).order_by(User.first_name, User.last_name).all()
         
-        if request.method == 'POST':
+        if request.method == 'POST' and editable:
             try:
                 event_date = request.form.get('event_date')
                 event_name = request.form.get('event_name', 'Meeting')
                 
                 if not event_date:
                     flash("Event date is required.", "danger")
-                    return redirect(url_for('members.attendance', tenant_id=tenant_id))
+                    return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
                 # Parse the date
                 from datetime import datetime
@@ -110,7 +143,7 @@ def attendance(tenant_id):
                     parsed_date = datetime.strptime(event_date, '%Y-%m-%d')
                 except ValueError:
                     flash("Invalid date format.", "danger")
-                    return redirect(url_for('members.attendance', tenant_id=tenant_id))
+                    return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
                 # Process attendance for each user
                 records_created = 0
@@ -148,7 +181,7 @@ def attendance(tenant_id):
                 s.rollback()
                 flash(f"Failed to save attendance: {str(e)}", "danger")
             
-            return redirect(url_for('members.attendance', tenant_id=tenant_id))
+            return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
         
         # For GET requests, get existing attendance for today if available
         from datetime import date
@@ -163,12 +196,13 @@ def attendance(tenant_id):
         for record in today_records:
             existing_attendance[record.user_id] = record.status
             
-        return render_template('attendance.html',
+        return render_template('attendance_matrix.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              all_users=all_users,
                              existing_attendance=existing_attendance,
-                             today=today.strftime('%Y-%m-%d'))
+                             today=today.strftime('%Y-%m-%d'),
+                             editable=editable)
 
 @members_bp.route('/dues/<tenant_id>')
 def dues(tenant_id):

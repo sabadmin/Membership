@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} Attendance{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Attendance</h1>
+        <p class="text-gray-600 mb-8 text-center">Choose an attendance action</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Create Attendance Option -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 hover:shadow-md transition duration-150">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 text-green-600 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Create Attendance</h2>
+                    <p class="text-gray-600 mb-4 text-sm">Take attendance for a meeting or event. Requires attendance or
+                        leadership role.</p>
+                    <a href="{{ url_for('members.attendance_create', tenant_id=tenant_id) }}"
+                        class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Create Attendance
+                    </a>
+                </div>
+            </div>
+
+            <!-- Review Attendance Option -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 hover:shadow-md transition duration-150">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 text-blue-600 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Review Attendance</h2>
+                    <p class="text-gray-600 mb-4 text-sm">View attendance records without making changes. Available to
+                        all members.</p>
+                    <a href="{{ url_for('members.attendance_review', tenant_id=tenant_id) }}"
+                        class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Review Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats (Optional) -->
+        <div class="mt-8 bg-gray-50 p-4 rounded-lg">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Quick Info</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                    <div class="text-2xl font-bold text-gray-800">P</div>
+                    <div class="text-xs text-gray-600">Present</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-red-600">A</div>
+                    <div class="text-xs text-gray-600">Absent</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-yellow-600">L</div>
+                    <div class="text-xs text-gray-600">Late</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-blue-600">E</div>
+                    <div class="text-xs text-gray-600">Excused</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

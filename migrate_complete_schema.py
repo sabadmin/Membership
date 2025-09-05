@@ -76,6 +76,15 @@ def migrate_tenant_database(tenant_id, db_url):
                 conn.execute(text("ALTER TABLE users DROP COLUMN address"))
                 logger.info("  Migrated address to address_line1")
             
+            # Add new user fields if they don't exist
+            if 'membership_type_id' not in user_columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN membership_type_id INTEGER"))
+                logger.info("  Added membership_type_id column")
+            
+            if 'user_role' not in user_columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN user_role VARCHAR(20) DEFAULT 'member'"))
+                logger.info("  Added user_role column")
+            
             # Remove tenant_id from users table if it exists
             if 'tenant_id' in user_columns:
                 conn.execute(text("ALTER TABLE users DROP COLUMN tenant_id"))
