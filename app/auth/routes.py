@@ -54,9 +54,9 @@ def register():
                 tenant_id=tenant_id,
                 email=email,
                 first_name=None, middle_initial=None, last_name=None,
-                address=None, cell_phone=None, company=None,
-                company_address=None, company_phone=None, company_title=None,
-                network_group_title=None, member_anniversary=None
+                address_line1=None, address_line2=None, city=None, state=None, zip_code=None,
+                cell_phone=None, company=None, company_address=None, company_phone=None,
+                company_title=None, network_group_title=None, member_anniversary=None
             )
             new_user.set_password(password)
 
@@ -166,7 +166,11 @@ def manage_users_api(tenant_id):
             middle_initial=data.get('middle_initial'),
             last_name=data.get('last_name'),
             email=data.get('email'),
-            address=data.get('address'),
+            address_line1=data.get('address_line1'),
+            address_line2=data.get('address_line2'),
+            city=data.get('city'),
+            state=data.get('state'),
+            zip_code=data.get('zip_code'),
             cell_phone=data.get('cell_phone'),
             company=data.get('company'),
             company_address=data.get('company_address'),
@@ -207,7 +211,11 @@ def manage_users_api(tenant_id):
                         "middle_initial": user.middle_initial,
                         "last_name": user.last_name,
                         "email": user.email,
-                        "address": user.address,
+                        "address_line1": user.address_line1,
+                        "address_line2": user.address_line2,
+                        "city": user.city,
+                        "state": user.state,
+                        "zip_code": user.zip_code,
                         "cell_phone": user.cell_phone,
                         "company": user.company,
                         "company_address": user.company_address,

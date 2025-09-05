@@ -48,7 +48,11 @@ def demographics(tenant_id):
                 current_user.middle_initial = request.form.get('middle_initial')
                 current_user.last_name = request.form['last_name']
                 current_user.email = request.form['email']
-                current_user.address = request.form.get('address')
+                current_user.address_line1 = request.form.get('address_line1')
+                current_user.address_line2 = request.form.get('address_line2')
+                current_user.city = request.form.get('city')
+                current_user.state = request.form.get('state')
+                current_user.zip_code = request.form.get('zip_code')
                 current_user.cell_phone = request.form.get('cell_phone')
                 current_user.company = request.form.get('company')
                 current_user.company_address = request.form.get('company_address')
