@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails
+from app.models import User, UserAuthDetails, AttendanceRecord
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -83,13 +83,92 @@ def demographics(tenant_id):
                            tenant_display_name=tenant_display_name,
                            format_phone_number=_format_phone)
 
-@members_bp.route('/attendance/<tenant_id>')
+@members_bp.route('/attendance/<tenant_id>', methods=['GET', 'POST'])
 def attendance(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    return render_template('attendance.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+    
+    with get_tenant_db_session(tenant_id) as s:
+        # Get all users for attendance matrix
+        all_users = s.query(User).order_by(User.first_name, User.last_name).all()
+        
+        if request.method == 'POST':
+            try:
+                event_date = request.form.get('event_date')
+                event_name = request.form.get('event_name', 'Meeting')
+                
+                if not event_date:
+                    flash("Event date is required.", "danger")
+                    return redirect(url_for('members.attendance', tenant_id=tenant_id))
+                
+                # Parse the date
+                from datetime import datetime
+                try:
+                    parsed_date = datetime.strptime(event_date, '%Y-%m-%d')
+                except ValueError:
+                    flash("Invalid date format.", "danger")
+                    return redirect(url_for('members.attendance', tenant_id=tenant_id))
+                
+                # Process attendance for each user
+                records_created = 0
+                for user in all_users:
+                    attendance_value = request.form.get(f'attendance_{user.id}')
+                    if attendance_value:
+                        # Check if record already exists for this date
+                        existing_record = s.query(AttendanceRecord).filter_by(
+                            user_id=user.id,
+                            event_date=parsed_date,
+                            event_name=event_name
+                        ).first()
+                        
+                        if existing_record:
+                            # Update existing record
+                            existing_record.status = attendance_value
+                            existing_record.updated_at = datetime.utcnow()
+                        else:
+                            # Create new record
+                            new_record = AttendanceRecord(
+                                user_id=user.id,
+                                event_name=event_name,
+                                event_date=parsed_date,
+                                status=attendance_value,
+                                created_at=datetime.utcnow(),
+                                updated_at=datetime.utcnow()
+                            )
+                            s.add(new_record)
+                            records_created += 1
+                
+                s.commit()
+                flash(f"Attendance saved successfully! {records_created} new records created.", "success")
+                
+            except Exception as e:
+                s.rollback()
+                flash(f"Failed to save attendance: {str(e)}", "danger")
+            
+            return redirect(url_for('members.attendance', tenant_id=tenant_id))
+        
+        # For GET requests, get existing attendance for today if available
+        from datetime import date
+        today = date.today()
+        existing_attendance = {}
+        
+        # Get attendance records for today
+        today_records = s.query(AttendanceRecord).filter_by(
+            event_date=today
+        ).all()
+        
+        for record in today_records:
+            existing_attendance[record.user_id] = record.status
+            
+        return render_template('attendance.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_users=all_users,
+                             existing_attendance=existing_attendance,
+                             today=today.strftime('%Y-%m-%d'))
 
 @members_bp.route('/dues/<tenant_id>')
 def dues(tenant_id):

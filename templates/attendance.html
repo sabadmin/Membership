@@ -3,9 +3,167 @@
 {% block title %}{{ tenant_display_name }} Attendance{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl mt-10 mx-auto text-center">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ tenant_display_name }} Attendance</h1>
-    <p class="text-gray-600">This is the Attendance page for {{ tenant_display_name }}.</p>
-    <p class="text-gray-600 mt-4">Feature development coming soon!</p>
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4 text-center">{{ tenant_display_name }} Attendance</h1>
+
+        <form method="POST" action="{{ url_for('members.attendance', tenant_id=tenant_id) }}" id="attendanceForm">
+            <!-- Date and Event Selection -->
+            <div class="mb-6 bg-gray-50 p-4 rounded-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="event_date" class="block text-gray-700 text-sm font-bold mb-2">Event Date:</label>
+                        <input type="date" id="event_date" name="event_date" value="{{ today }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400"
+                            required>
+                    </div>
+                    <div>
+                        <label for="event_name" class="block text-gray-700 text-sm font-bold mb-2">Event Name:</label>
+                        <input type="text" id="event_name" name="event_name" value="Meeting"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance Matrix -->
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse border border-gray-300">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-4 py-2 text-left text-sm font-bold text-gray-700">
+                                Member Name</th>
+                            <th class="border border-gray-300 px-3 py-2 text-center text-sm font-bold text-gray-700">
+                                Present<br><span class="text-xs text-gray-500">(P)</span></th>
+                            <th class="border border-gray-300 px-3 py-2 text-center text-sm font-bold text-gray-700">
+                                Absent<br><span class="text-xs text-gray-500">(A)</span></th>
+                            <th class="border border-gray-300 px-3 py-2 text-center text-sm font-bold text-gray-700">
+                                Late<br><span class="text-xs text-gray-500">(L)</span></th>
+                            <th class="border border-gray-300 px-3 py-2 text-center text-sm font-bold text-gray-700">
+                                Excused<br><span class="text-xs text-gray-500">(E)</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in all_users %}
+                        <tr data-user-id="{{ user.id }}"
+                            class="{% if loop.index % 2 == 0 %}bg-gray-50{% else %}bg-white{% endif %} hover:bg-blue-50 transition duration-150">
+                            <td class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900">
+                                {{ user.first_name or '' }} {{ user.last_name or '' }}
+                                {% if not user.first_name and not user.last_name %}
+                                {{ user.email }}
+                                {% endif %}
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center">
+                                <input type="radio" id="present_{{ user.id }}" name="attendance_{{ user.id }}" value="P"
+                                    {% if existing_attendance.get(user.id)=='P' %}checked{% endif %}
+                                    class="w-4 h-4 text-green-600 focus:ring-green-500 border-gray-300">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center">
+                                <input type="radio" id="absent_{{ user.id }}" name="attendance_{{ user.id }}" value="A"
+                                    {% if existing_attendance.get(user.id)=='A' %}checked{% endif %}
+                                    class="w-4 h-4 text-red-600 focus:ring-red-500 border-gray-300">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center">
+                                <input type="radio" id="late_{{ user.id }}" name="attendance_{{ user.id }}" value="L" {%
+                                    if existing_attendance.get(user.id)=='L' %}checked{% endif %}
+                                    class="w-4 h-4 text-yellow-600 focus:ring-yellow-500 border-gray-300">
+                            </td>
+                            <td class="border border-gray-300 px-3 py-2 text-center">
+                                <input type="radio" id="excused_{{ user.id }}" name="attendance_{{ user.id }}" value="E"
+                                    {% if existing_attendance.get(user.id)=='E' %}checked{% endif %}
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-6 flex justify-between items-center">
+                <div class="text-sm text-gray-600">
+                    <span id="checkedCount">0</span> of {{ all_users|length }} members marked
+                </div>
+                <div class="space-x-2">
+                    <button type="button" onclick="markAllPresent()"
+                        class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded text-sm transition duration-150">
+                        Mark All Present
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                        Save Attendance
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Update counter when radio buttons change
+        updateCheckedCount();
+
+        // Add event listeners to all radio buttons
+        const radioButtons = document.querySelectorAll('input[type="radio"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', updateCheckedCount);
+        });
+    });
+
+    function updateCheckedCount() {
+        let checkedUsers = 0;
+        const totalUsers = document.querySelectorAll('tr[data-user-id]').length;
+
+        // Count users with checked radio buttons
+        document.querySelectorAll('tr[data-user-id]').forEach(row => {
+            const userId = row.getAttribute('data-user-id');
+            const checkedRadio = document.querySelector('input[name="attendance_' + userId + '"]:checked');
+            if (checkedRadio) {
+                checkedUsers++;
+            }
+        });
+
+        document.getElementById('checkedCount').textContent = checkedUsers;
+
+        // Change color based on completion
+        const counter = document.getElementById('checkedCount');
+        if (checkedUsers === totalUsers) {
+            counter.className = 'text-green-600 font-bold';
+        } else if (checkedUsers > 0) {
+            counter.className = 'text-yellow-600 font-bold';
+        } else {
+            counter.className = 'text-red-600 font-bold';
+        }
+    }
+
+    function markAllPresent() {
+        const presentRadios = document.querySelectorAll('input[value="P"]');
+        presentRadios.forEach(radio => {
+            radio.checked = true;
+        });
+        updateCheckedCount();
+    }
+
+    // Validation before form submission
+    document.getElementById('attendanceForm').addEventListener('submit', function (e) {
+        let checkedUsers = 0;
+        const totalUsers = document.querySelectorAll('tr[data-user-id]').length;
+
+        // Count checked users
+        document.querySelectorAll('tr[data-user-id]').forEach(row => {
+            const userId = row.getAttribute('data-user-id');
+            const checkedRadio = document.querySelector('input[name="attendance_' + userId + '"]:checked');
+            if (checkedRadio) {
+                checkedUsers++;
+            }
+        });
+
+        if (checkedUsers < totalUsers) {
+            e.preventDefault();
+            alert('Please mark attendance for all ' + totalUsers + ' members. Currently ' + checkedUsers + ' marked.');
+            return false;
+        }
+    });
+</script>
 {% endblock %}
