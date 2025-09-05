@@ -3,60 +3,81 @@
 {% block title %}{{ tenant_display_name }} Security{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md mt-10 mx-auto">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Security</h1>
-    <p class="text-gray-600 mb-8 text-center">Manage your security settings for: <span class="font-semibold">{{
-            tenant_display_name }}</span></p>
+<div class="max-w-2xl mx-auto px-4 py-8">
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Security</h1>
+        <p class="text-gray-600 mb-8 text-center">Manage your security settings</p>
 
-    {% if error %}
-    <p class="text-red-600 text-center mb-4">{{ error }}</p>
-    {% endif %}
-    {% if success %}
-    <p class="text-green-600 text-center mb-4">{{ success }}</p>
-    {% endif %}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Password Change Section -->
+            <div>
+                <form method="POST" action="{{ url_for('members.security', tenant_id=tenant_id) }}" class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Change Password</h2>
+                    <div>
+                        <label for="password" class="block text-gray-700 text-sm font-bold mb-2">New Password:</label>
+                        <input type="password" id="password" name="password"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            required minlength="6">
+                    </div>
+                    <div>
+                        <label for="confirm_password" class="block text-gray-700 text-sm font-bold mb-2">Confirm New
+                            Password:</label>
+                        <input type="password" id="confirm_password" name="confirm_password"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            required minlength="6">
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                        Update Password
+                    </button>
+                </form>
+            </div>
 
-    <form method="POST" action="{{ url_for('members.security', tenant_id=tenant_id) }}" class="space-y-4">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Change Password</h2>
-        <div>
-            <label for="password" class="block text-gray-700 text-sm font-bold mb-2">New Password:</label>
-            <input type="password" id="password" name="password"
-                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                required>
+            <!-- Login History Section -->
+            {% if auth_details %}
+            <div>
+                <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Login History</h2>
+                <div class="bg-gray-50 p-4 rounded-md shadow-inner">
+                    <div class="space-y-3">
+                        {% if auth_details.last_login_1 %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-600">Most Recent:</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_1.strftime('%m/%d/%Y %I:%M
+                                %p') }}</span>
+                        </div>
+                        {% endif %}
+                        {% if auth_details.last_login_2 %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-600">2nd Recent:</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_2.strftime('%m/%d/%Y %I:%M
+                                %p') }}</span>
+                        </div>
+                        {% endif %}
+                        {% if auth_details.last_login_3 %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-600">3rd Recent:</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_3.strftime('%m/%d/%Y %I:%M
+                                %p') }}</span>
+                        </div>
+                        {% endif %}
+                        {% if not auth_details.last_login_1 %}
+                        <div class="text-center text-gray-500 text-sm">No login history available</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-600">Account Status:</span>
+                            <span
+                                class="text-sm {{ 'text-green-600 font-semibold' if auth_details.is_active else 'text-red-600 font-semibold' }}">
+                                {{ "Active" if auth_details.is_active else "Inactive" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        <div>
-            <label for="confirm_password" class="block text-gray-700 text-sm font-bold mb-2">Confirm New
-                Password:</label>
-            <input type="password" id="confirm_password" name="confirm_password"
-                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                required>
-        </div>
-        <button type="submit"
-            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Update
-            Password</button>
-    </form>
-
-    {# NEW: Display Last Login Audit #}
-    {% if auth_details %}
-    <div class="mt-8">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Last Login Audit</h2>
-        <ul class="list-disc list-inside bg-gray-50 p-4 rounded-md shadow-inner">
-            {% if auth_details.last_login_1 %}
-            <li class="mb-1 text-gray-700">1st Most Recent: {{ auth_details.last_login_1.strftime('%Y-%m-%d %H:%M:%S
-                UTC') }}</li>
-            {% else %}
-            <li class="mb-1 text-gray-700">1st Most Recent: Never logged in</li>
-            {% endif %}
-            {% if auth_details.last_login_2 %}
-            <li class="mb-1 text-gray-700">2nd Most Recent: {{ auth_details.last_login_2.strftime('%Y-%m-%d %H:%M:%S
-                UTC') }}</li>
-            {% endif %}
-            {% if auth_details.last_login_3 %}
-            <li class="mb-1 text-gray-700">3rd Most Recent: {{ auth_details.last_login_3.strftime('%Y-%m-%d %H:%M:%S
-                UTC') }}</li>
-            {% endif %}
-            <li class="mb-1 text-gray-700">Account Active: {{ "Yes" if auth_details.is_active else "No" }}</li>
-        </ul>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

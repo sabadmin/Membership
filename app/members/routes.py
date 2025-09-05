@@ -17,8 +17,8 @@ def before_request():
     if g.tenant_id != Config.SUPERADMIN_TENANT_ID and 'user_id' not in session:
         return redirect(url_for('auth.login', tenant_id=g.tenant_id))
 
-def _get_current_user(s, user_id, tenant_id):
-    return s.query(User).filter_by(id=user_id, tenant_id=tenant_id).options(joinedload(User.auth_details)).first()
+def _get_current_user(s, user_id):
+    return s.query(User).filter_by(id=user_id).options(joinedload(User.auth_details)).first()
 
 def _format_phone(phone):
     if phone and len(phone) == 10 and phone.isdigit():
@@ -35,7 +35,7 @@ def demographics(tenant_id):
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
     with get_tenant_db_session(tenant_id) as s:
-        current_user = _get_current_user(s, current_user_id, tenant_id)
+        current_user = _get_current_user(s, current_user_id)
         if not current_user:
             session.clear()
             flash("User not found.", "danger")
@@ -55,7 +55,11 @@ def demographics(tenant_id):
                 current_user.zip_code = request.form.get('zip_code')
                 current_user.cell_phone = request.form.get('cell_phone')
                 current_user.company = request.form.get('company')
-                current_user.company_address = request.form.get('company_address')
+                current_user.company_address_line1 = request.form.get('company_address_line1')
+                current_user.company_address_line2 = request.form.get('company_address_line2')
+                current_user.company_city = request.form.get('company_city')
+                current_user.company_state = request.form.get('company_state')
+                current_user.company_zip_code = request.form.get('company_zip_code')
                 current_user.company_phone = request.form.get('company_phone')
                 current_user.company_title = request.form.get('company_title')
                 current_user.network_group_title = request.form.get('network_group_title')
@@ -106,7 +110,7 @@ def security(tenant_id):
     user = None
 
     with get_tenant_db_session(tenant_id) as s:
-        user = _get_current_user(s, current_user_id, tenant_id)
+        user = _get_current_user(s, current_user_id)
         if not user:
             session.clear()
             flash("User not found.", "danger")

@@ -45,18 +45,20 @@ def register():
              return render_template('register.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
         with get_tenant_db_session(tenant_id) as s:
-            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+            user = s.query(User).filter_by(email=email).first()
             if user:
                 return render_template('register.html', error="You are already registered, please use Login.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 409
             
             # Create a user with default empty values for demographic info
             new_user = User(
-                tenant_id=tenant_id,
                 email=email,
                 first_name=None, middle_initial=None, last_name=None,
                 address_line1=None, address_line2=None, city=None, state=None, zip_code=None,
-                cell_phone=None, company=None, company_address=None, company_phone=None,
-                company_title=None, network_group_title=None, member_anniversary=None
+                cell_phone=None, company=None,
+                company_address_line1=None, company_address_line2=None,
+                company_city=None, company_state=None, company_zip_code=None,
+                company_phone=None, company_title=None,
+                network_group_title=None, member_anniversary=None
             )
             new_user.set_password(password)
 
@@ -67,7 +69,6 @@ def register():
                 # Create the corresponding UserAuthDetails entry
                 new_auth_details = UserAuthDetails(
                     user_id=new_user.id,
-                    tenant_id=new_user.tenant_id,
                     is_active=True,
                     last_login_1=datetime.utcnow()
                 )
@@ -114,7 +115,7 @@ def login():
              return render_template('login.html', error=f"Invalid tenant ID: {tenant_id}", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 400
 
         with get_tenant_db_session(tenant_id) as s:
-            user = s.query(User).filter_by(tenant_id=tenant_id, email=email).first()
+            user = s.query(User).filter_by(email=email).first()
             
             if not user:
                 return render_template('login.html', error="You don't have an account. Please register.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
@@ -123,7 +124,6 @@ def login():
             if not user.auth_details:
                 user.auth_details = UserAuthDetails(
                     user_id=user.id,
-                    tenant_id=user.tenant_id,
                     is_active=True,  # Default existing users to active
                     last_login_1=datetime.utcnow()
                 )
@@ -173,7 +173,6 @@ def manage_users_api(tenant_id):
             return jsonify({"error": "First Name, Last Name, Email, and Password are required"}), 400
 
         new_user = User(
-            tenant_id=g.tenant_id,
             first_name=data.get('first_name'),
             middle_initial=data.get('middle_initial'),
             last_name=data.get('last_name'),
@@ -185,7 +184,11 @@ def manage_users_api(tenant_id):
             zip_code=data.get('zip_code'),
             cell_phone=data.get('cell_phone'),
             company=data.get('company'),
-            company_address=data.get('company_address'),
+            company_address_line1=data.get('company_address_line1'),
+            company_address_line2=data.get('company_address_line2'),
+            company_city=data.get('company_city'),
+            company_state=data.get('company_state'),
+            company_zip_code=data.get('company_zip_code'),
             company_phone=data.get('company_phone'),
             company_title=data.get('company_title'),
             network_group_title=data.get('network_group_title'),
@@ -200,7 +203,6 @@ def manage_users_api(tenant_id):
                 
                 new_auth_details = UserAuthDetails(
                     user_id=new_user.id,
-                    tenant_id=new_user.tenant_id,
                     is_active=True,
                     last_login_1=datetime.utcnow()
                 )
@@ -215,7 +217,7 @@ def manage_users_api(tenant_id):
     elif request.method == 'GET':
         try:
             with get_tenant_db_session(g.tenant_id) as s:
-                users = s.query(User).filter_by(tenant_id=g.tenant_id).all()
+                users = s.query(User).all()
                 user_list = [
                     {
                         "id": user.id,
@@ -230,13 +232,17 @@ def manage_users_api(tenant_id):
                         "zip_code": user.zip_code,
                         "cell_phone": user.cell_phone,
                         "company": user.company,
-                        "company_address": user.company_address,
+                        "company_address_line1": user.company_address_line1,
+                        "company_address_line2": user.company_address_line2,
+                        "company_city": user.company_city,
+                        "company_state": user.company_state,
+                        "company_zip_code": user.company_zip_code,
                         "company_phone": user.company_phone,
                         "company_title": user.company_title,
                         "network_group_title": user.network_group_title,
                         "member_anniversary": user.member_anniversary
                     } for user in users
                 ]
-            return jsonify({"tenant": g.tenant_id, "users": user_list})
+            return jsonify({"users": user_list})
         except Exception as e:
             return jsonify({"error": f"Failed to retrieve users: {str(e)}"}), 500

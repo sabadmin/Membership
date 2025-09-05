@@ -10,7 +10,6 @@ from datetime import datetime # Import datetime
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
-    tenant_id = Column(String(50), nullable=False)
     first_name = Column(String(80), nullable=True)
     middle_initial = Column(String(1), nullable=True)
     last_name = Column(String(80), nullable=True)
@@ -18,14 +17,21 @@ class User(Base):
     email = Column(String(120), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
 
+    # Personal Address
     address_line1 = Column(String(255), nullable=True)
     address_line2 = Column(String(255), nullable=True)
     city = Column(String(100), nullable=True)
     state = Column(String(2), nullable=True)
     zip_code = Column(String(10), nullable=True)
     cell_phone = Column(String(20), nullable=True)
+    
+    # Company Information
     company = Column(String(120), nullable=True)
-    company_address = Column(String(255), nullable=True)
+    company_address_line1 = Column(String(255), nullable=True)
+    company_address_line2 = Column(String(255), nullable=True)
+    company_city = Column(String(100), nullable=True)
+    company_state = Column(String(2), nullable=True)
+    company_zip_code = Column(String(10), nullable=True)
     company_phone = Column(String(20), nullable=True)
     company_title = Column(String(80), nullable=True)
     network_group_title = Column(String(120), nullable=True)
@@ -48,7 +54,6 @@ class UserAuthDetails(Base):
     __tablename__ = 'user_auth_details'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), unique=True, nullable=False)
-    tenant_id = Column(String(50), nullable=False) # Keep tenant_id here for easier querying
 
     is_active = Column(Boolean, default=True, nullable=False)
     last_login_1 = Column(DateTime, nullable=True) # Most recent login
@@ -72,7 +77,6 @@ class AttendanceRecord(Base):
     __tablename__ = 'attendance_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    tenant_id = Column(String(50), nullable=False)
     event_name = Column(String(255), nullable=False)
     event_date = Column(DateTime, nullable=False)
     status = Column(String(1), default='P', nullable=False)  # P=present, A=absent, L=late, E=excused
@@ -91,7 +95,6 @@ class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    tenant_id = Column(String(50), nullable=False)
     dues_type = Column(String(1), nullable=False)  # F=Food, Q=Quarterly, A=Annual
     amount_due = Column(String(10), nullable=False)  # Store as string for currency formatting
     amount_paid = Column(String(10), default='0.00', nullable=False)
@@ -119,7 +122,6 @@ class ReferralRecord(Base):
     referred_email = Column(String(120), nullable=True)  # Email of person being referred
     referred_phone = Column(String(20), nullable=True)  # Phone of person being referred
     referred_company = Column(String(120), nullable=True)  # Company of person being referred
-    tenant_id = Column(String(50), nullable=False)
     referral_type = Column(String(50), nullable=False)  # prospect, member, vendor, etc.
     referral_value = Column(String(10), nullable=True)  # Dollar value of referral
     status = Column(String(20), default='new', nullable=False)  # new, contacted, converted, closed
