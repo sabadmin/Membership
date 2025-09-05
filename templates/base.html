@@ -27,21 +27,21 @@
                     <div class="hidden md:ml-6 md:flex md:space-x-8">
                         {% if session.get('tenant_id') == Config.SUPERADMIN_TENANT_ID %}
                         <!-- Admin Navigation -->
-                        <a href="{{ url_for('admin.admin_panel', selected_tenant_id=session.get('tenant_id')) }}"
+                        <a href="{{ url_for('admin.admin_panel', selected_tenant_id=g.tenant_id) }}"
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Admin Panel
                         </a>
                         {% else %}
                         <!-- Member Navigation -->
-                        <a href="{{ url_for('members.demographics', tenant_id=session.get('tenant_id')) }}"
+                        <a href="{{ url_for('members.demographics', tenant_id=g.tenant_id) }}"
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Demographics
                         </a>
-                        <a href="{{ url_for('members.attendance', tenant_id=session.get('tenant_id')) }}"
+                        <a href="{{ url_for('members.attendance', tenant_id=g.tenant_id) }}"
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Attendance
                         </a>
-                        <a href="{{ url_for('members.dues', tenant_id=session.get('tenant_id')) }}"
+                        <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Dues
                         </a>
@@ -49,7 +49,7 @@
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Referrals
                         </a>
-                        <a href="{{ url_for('members.security', tenant_id=session.get('tenant_id')) }}"
+                        <a href="{{ url_for('members.security', tenant_id=g.tenant_id) }}"
                             class="text-blue-100 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-150">
                             Security
                         </a>
@@ -88,27 +88,27 @@
         <div class="mobile-menu hidden md:hidden">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
                 {% if session.get('tenant_id') == Config.SUPERADMIN_TENANT_ID %}
-                <a href="{{ url_for('admin.admin_panel', selected_tenant_id=session.get('tenant_id')) }}"
+                <a href="{{ url_for('admin.admin_panel', selected_tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Admin Panel
                 </a>
                 {% else %}
-                <a href="{{ url_for('members.demographics', tenant_id=session.get('tenant_id')) }}"
+                <a href="{{ url_for('members.demographics', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Demographics
                 </a>
-                <a href="{{ url_for('members.attendance', tenant_id=session.get('tenant_id')) }}"
+                <a href="{{ url_for('members.attendance', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Attendance
                 </a>
-                <a href="{{ url_for('members.dues', tenant_id=session.get('tenant_id')) }}"
+                <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Dues
                 </a>
                 <a href="#" class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Referrals
                 </a>
-                <a href="{{ url_for('members.security', tenant_id=session.get('tenant_id')) }}"
+                <a href="{{ url_for('members.security', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Security
                 </a>
