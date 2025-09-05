@@ -115,7 +115,8 @@ def admin_panel(selected_tenant_id):
     return render_template('admin_panel.html',
                            tables=tables,
                            selected_tenant_id=tenant_id_to_manage,
-                           selected_table_name=table_name,
+                           selected_table=table_name,  # Template expects this name
+                           all_tenant_ids=list(Config.TENANT_DATABASES.keys()),  # For dropdown
                            columns=columns,
                            data=data,
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
