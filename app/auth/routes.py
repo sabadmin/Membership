@@ -18,7 +18,7 @@ def index():
         if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
         else:
-            return redirect(url_for('members.demographics', tenant_id=session['tenant_id']))
+            return redirect(url_for('members.my_demographics', tenant_id=session['tenant_id']))
     
     inferred_tenant = infer_tenant_from_hostname()
     inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
@@ -85,10 +85,10 @@ def register():
                 # Redirect based on tenant
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     flash("Welcome, superadmin! Please fill in your demographic information.", "info")
-                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
+                    return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
                 else:
                     flash("Registration successful! Please fill in your demographic information.", "success")
-                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
+                    return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
             except Exception as e:
                 s.rollback()
                 flash(f"Registration failed: {str(e)}", "danger")
@@ -147,7 +147,7 @@ def login():
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
-                    return redirect(url_for('members.demographics', tenant_id=tenant_id))
+                    return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
             else:
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)

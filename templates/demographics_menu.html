@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} Demographics{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Demographics</h1>
+        <p class="text-gray-600 mb-8 text-center">Choose a demographics option</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- My Demographics Option -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 hover:shadow-md transition duration-150">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 text-blue-600 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">My Demographics</h2>
+                    <p class="text-gray-600 mb-4 text-sm">View and edit your personal information, address, and company
+                        details.</p>
+                    <a href="{{ url_for('members.my_demographics', tenant_id=tenant_id) }}"
+                        class="inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Edit My Info
+                    </a>
+                </div>
+            </div>
+
+            <!-- Membership List Option -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-6 hover:shadow-md transition duration-150">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 text-green-600 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">Membership List</h2>
+                    <p class="text-gray-600 mb-4 text-sm">Browse all member profiles and contact information.</p>
+                    <a href="{{ url_for('members.membership_list', tenant_id=tenant_id) }}"
+                        class="inline-block bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Browse Members
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

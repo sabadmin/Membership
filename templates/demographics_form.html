@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - {{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{{ page_title }}</h1>
+            <a href="{{ url_for('members.demographics', tenant_id=tenant_id) }}"
+                class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition duration-150">
+                ← Back to Menu
+            </a>
+        </div>
+
+        <!-- Member Selection Dropdown (only for membership list view) -->
+        {% if not editable and all_members %}
+        <div class="mb-6 bg-blue-50 p-4 rounded-md">
+            <label for="member_select" class="block text-gray-700 text-sm font-bold mb-2">Select Another Member:</label>
+            <select id="member_select" onchange="viewMember()"
+                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="">-- Choose a Member --</option>
+                {% for member in all_members %}
+                <option value="{{ member.id }}" {% if member.id==selected_member_id %}selected{% endif %}>
+                    {{ member.first_name or '' }} {{ member.last_name or '' }}
+                    {% if not member.first_name and not member.last_name %}
+                    {{ member.email }}
+                    {% endif %}
+                    {% if member.membership_type %}
+                    - {{ member.membership_type.name }}
+                    {% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        {% if editable %}
+        <form method="POST" action="{{ url_for('members.my_demographics', tenant_id=tenant_id) }}" class="space-y-3">
+            {% endif %}
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                    <label for="first_name" class="block text-gray-700 text-xs font-bold mb-1">First Name:</label>
+                    {% if editable %}
+                    <input type="text" id="first_name" name="first_name" value="{{ user.first_name or '' }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.first_name or
+                        'Not provided' }}</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="middle_initial" class="block text-gray-700 text-xs font-bold mb-1">MI:</label>
+                    {% if editable %}
+                    <input type="text" id="middle_initial" name="middle_initial" maxlength="1"
+                        value="{{ user.middle_initial or '' }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                        user.middle_initial or '' }}</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="last_name" class="block text-gray-700 text-xs font-bold mb-1">Last Name:</label>
+                    {% if editable %}
+                    <input type="text" id="last_name" name="last_name" value="{{ user.last_name or '' }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.last_name or
+                        'Not provided' }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                    <label for="email" class="block text-gray-700 text-xs font-bold mb-1">Email:</label>
+                    {% if editable %}
+                    <input type="email" id="email" name="email" value="{{ user.email or '' }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline"
+                        required>
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.email or 'Not
+                        provided' }}</div>
+                    {% endif %}
+                </div>
+                <div>
+                    <label for="cell_phone" class="block text-gray-700 text-xs font-bold mb-1">Cell Phone:</label>
+                    {% if editable %}
+                    <input type="tel" id="cell_phone" name="cell_phone"
+                        value="{{ user.cell_phone or '' | format_phone_number }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.cell_phone |
+                        format_phone_number or 'Not provided' }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Personal Address Section -->
+            <div class="border-t pt-2">
+                <h3 class="text-sm font-semibold text-gray-800 mb-2">Personal Address</h3>
+                <div class="space-y-1">
+                    {% if editable %}
+                    <input type="text" id="address_line1" name="address_line1" value="{{ user.address_line1 or '' }}"
+                        placeholder="Address Line 1"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    <input type="text" id="address_line2" name="address_line2" value="{{ user.address_line2 or '' }}"
+                        placeholder="Address Line 2"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.address_line1
+                        or 'Not provided' }}</div>
+                    {% if user.address_line2 %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.address_line2
+                        }}</div>
+                    {% endif %}
+                    {% endif %}
+                    <div class="grid grid-cols-3 gap-1">
+                        {% if editable %}
+                        <input type="text" id="city" name="city" value="{{ user.city or '' }}" placeholder="City"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        <input type="text" id="state" name="state" maxlength="2" value="{{ user.state or '' }}"
+                            placeholder="ST"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        <input type="text" id="zip_code" name="zip_code" value="{{ user.zip_code or '' }}"
+                            placeholder="ZIP"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        {% else %}
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.city or
+                            'N/A' }}</div>
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.state or
+                            'N/A' }}</div>
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.zip_code
+                            or 'N/A' }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Company Information Section -->
+            <div class="border-t pt-2">
+                <h3 class="text-sm font-semibold text-gray-800 mb-2">Company Information</h3>
+                <div class="space-y-1">
+                    {% if editable %}
+                    <input type="text" id="company" name="company" value="{{ user.company or '' }}"
+                        placeholder="Company Name"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    <input type="text" id="company_address_line1" name="company_address_line1"
+                        value="{{ user.company_address_line1 or '' }}" placeholder="Company Address Line 1"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    <input type="text" id="company_address_line2" name="company_address_line2"
+                        value="{{ user.company_address_line2 or '' }}" placeholder="Company Address Line 2"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.company or
+                        'Not provided' }}</div>
+                    {% if user.company_address_line1 %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                        user.company_address_line1 }}</div>
+                    {% endif %}
+                    {% if user.company_address_line2 %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                        user.company_address_line2 }}</div>
+                    {% endif %}
+                    {% endif %}
+                    <div class="grid grid-cols-3 gap-1">
+                        {% if editable %}
+                        <input type="text" id="company_city" name="company_city" value="{{ user.company_city or '' }}"
+                            placeholder="Company City"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        <input type="text" id="company_state" name="company_state" maxlength="2"
+                            value="{{ user.company_state or '' }}" placeholder="ST"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        <input type="text" id="company_zip_code" name="company_zip_code"
+                            value="{{ user.company_zip_code or '' }}" placeholder="ZIP"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        {% else %}
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                            user.company_city or 'N/A' }}</div>
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                            user.company_state or 'N/A' }}</div>
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                            user.company_zip_code or 'N/A' }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="grid grid-cols-2 gap-1">
+                        {% if editable %}
+                        <input type="tel" id="company_phone" name="company_phone"
+                            value="{{ user.company_phone or '' | format_phone_number }}" placeholder="Company Phone"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        <input type="text" id="company_title" name="company_title"
+                            value="{{ user.company_title or '' }}" placeholder="Job Title"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                        {% else %}
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                            user.company_phone | format_phone_number or 'Not provided' }}</div>
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                            user.company_title or 'Not provided' }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Membership Information Section -->
+            <div class="border-t pt-2">
+                <h3 class="text-sm font-semibold text-gray-800 mb-2">Membership Information</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-1">
+                    <div>
+                        {% if editable %}
+                        <select id="membership_type_id" name="membership_type_id"
+                            class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">Select Membership Type</option>
+                            {% for mtype in membership_types %}
+                            <option value="{{ mtype.id }}" {% if user.membership_type_id==mtype.id %}selected{% endif
+                                %}>
+                                {{ mtype.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% else %}
+                        <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">
+                            {{ user.membership_type.name if user.membership_type else 'Not assigned' }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if editable %}
+                    <input type="text" id="network_group_title" name="network_group_title"
+                        value="{{ user.network_group_title or '' }}" placeholder="Network Group Title"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    <input type="text" id="member_anniversary" name="member_anniversary" pattern="\d{2}/\d{2}"
+                        placeholder="Anniversary (MM/YY)" value="{{ user.member_anniversary or '' }}"
+                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
+                    {% else %}
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                        user.network_group_title or 'Not provided' }}</div>
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
+                        user.member_anniversary or 'Not provided' }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if editable %}
+            <div class="pt-3">
+                <button type="submit"
+                    class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                    Save Changes
+                </button>
+            </div>
+            {% else %}
+            <div class="pt-3 text-center">
+                <p class="text-gray-600 text-sm">This member information is read-only. Use the dropdown above to view
+                    other members.</p>
+            </div>
+            {% endif %}
+            {% if editable %}
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{% if not editable and all_members %}
+<script>
+    function viewMember() {
+        const select = document.getElementById('member_select');
+        const memberId = select.value;
+        if (memberId) {
+            window.location.href = "{{ url_for('members.view_member_demographics', tenant_id=tenant_id, member_id=1) }}".replace('1', memberId);
+        }
+    }
+</script>
+{% endif %}
+{% endblock %}

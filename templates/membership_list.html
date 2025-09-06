@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} Membership List{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{{ tenant_display_name }} Membership List</h1>
+            <a href="{{ url_for('members.demographics', tenant_id=tenant_id) }}"
+                class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition duration-150">
+                ← Back to Menu
+            </a>
+        </div>
+
+        <p class="text-gray-600 mb-6 text-center">Select a member to view their information</p>
+
+        <!-- Member Selection Dropdown -->
+        <div class="mb-6 bg-gray-50 p-4 rounded-md">
+            <label for="member_select" class="block text-gray-700 text-sm font-bold mb-2">Select Member:</label>
+            <select id="member_select" onchange="viewMember()"
+                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="">-- Choose a Member --</option>
+                {% for member in all_members %}
+                <option value="{{ member.id }}">
+                    {{ member.first_name or '' }} {{ member.last_name or '' }}
+                    {% if not member.first_name and not member.last_name %}
+                    {{ member.email }}
+                    {% endif %}
+                    {% if member.membership_type %}
+                    - {{ member.membership_type.name }}
+                    {% endif %}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Member Directory Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for member in all_members %}
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md transition duration-150 cursor-pointer"
+                onclick="location.href='{{ url_for('members.view_member_demographics', tenant_id=tenant_id, member_id=member.id) }}'">
+                <div class="text-center">
+                    <div class="mb-2">
+                        <div
+                            class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mx-auto">
+                            {{ (member.first_name or member.email)[0].upper() }}{{ (member.last_name or '')[0].upper()
+                            if member.last_name else '' }}
+                        </div>
+                    </div>
+                    <h3 class="font-semibold text-gray-800 text-sm">
+                        {{ member.first_name or '' }} {{ member.last_name or '' }}
+                        {% if not member.first_name and not member.last_name %}
+                        {{ member.email }}
+                        {% endif %}
+                    </h3>
+                    {% if member.membership_type %}
+                    <p class="text-xs text-gray-600 mt-1">{{ member.membership_type.name }}</p>
+                    {% endif %}
+                    {% if member.company %}
+                    <p class="text-xs text-gray-500 mt-1">{{ member.company }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not all_members %}
+        <div class="text-center py-8">
+            <p class="text-gray-500">No members found in this organization.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function viewMember() {
+        const select = document.getElementById('member_select');
+        const memberId = select.value;
+        if (memberId) {
+            window.location.href = '{{ url_for("members.view_member_demographics", tenant_id=tenant_id, member_id="MEMBER_ID") }}'.replace('MEMBER_ID', memberId);
+        }
+    }
+</script>
+{% endblock %}

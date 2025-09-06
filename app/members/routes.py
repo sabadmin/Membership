@@ -25,8 +25,17 @@ def _format_phone(phone):
         return f"({phone[0:3]}) {phone[3:6]}-{phone[6:10]}"
     return phone
 
-@members_bp.route('/demographics/<tenant_id>', methods=['GET', 'POST'])
+@members_bp.route('/demographics/<tenant_id>')
 def demographics(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You do not have permission to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('demographics_menu.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+
+@members_bp.route('/demographics/<tenant_id>/my', methods=['GET', 'POST'])
+def my_demographics(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You do not have permission to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
@@ -71,21 +80,72 @@ def demographics(tenant_id):
                 session['user_email'] = current_user.email
                 session['user_name'] = f"{current_user.first_name or ''} {current_user.last_name or ''}".strip() or current_user.email
                 
-                return redirect(url_for('members.demographics', tenant_id=tenant_id))
+                return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
             except Exception as e:
                 s.rollback()
                 flash(f"Failed to update information: {str(e)}", "danger")
-                return redirect(url_for('members.demographics', tenant_id=tenant_id))
+                return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
         # Get membership types for dropdown
         membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
         
-    return render_template('demographics.html',
+    return render_template('demographics_form.html',
                            tenant_id=tenant_id,
                            user=current_user,
                            tenant_display_name=tenant_display_name,
                            membership_types=membership_types,
+                           editable=True,
+                           page_title="My Demographics",
+                           format_phone_number=_format_phone)
+
+@members_bp.route('/demographics/<tenant_id>/list')
+def membership_list(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You do not have permission to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    
+    with get_tenant_db_session(tenant_id) as s:
+        # Get all members for dropdown
+        all_members = s.query(User).order_by(User.first_name, User.last_name).all()
+        
+    return render_template('membership_list.html',
+                           tenant_id=tenant_id,
+                           tenant_display_name=tenant_display_name,
+                           all_members=all_members)
+
+@members_bp.route('/demographics/<tenant_id>/view/<int:member_id>')
+def view_member_demographics(tenant_id, member_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You do not have permission to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    
+    with get_tenant_db_session(tenant_id) as s:
+        # Get the selected member
+        selected_member = s.query(User).filter_by(id=member_id).first()
+        if not selected_member:
+            flash("Member not found.", "danger")
+            return redirect(url_for('members.membership_list', tenant_id=tenant_id))
+        
+        # Get all members for dropdown (to keep it available)
+        all_members = s.query(User).order_by(User.first_name, User.last_name).all()
+        
+        # Get membership types for display
+        membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
+        
+    return render_template('demographics_form.html',
+                           tenant_id=tenant_id,
+                           user=selected_member,
+                           tenant_display_name=tenant_display_name,
+                           membership_types=membership_types,
+                           all_members=all_members,
+                           selected_member_id=member_id,
+                           editable=False,
+                           page_title=f"Viewing: {selected_member.first_name or ''} {selected_member.last_name or ''}".strip() or selected_member.email,
                            format_phone_number=_format_phone)
 
 @members_bp.route('/attendance/<tenant_id>')
