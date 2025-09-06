@@ -105,11 +105,26 @@ def admin_panel(selected_tenant_id):
                     row_id = request.form.get('id')
                     
                     if action == 'add':
-                        new_row_data = {
-                            key: value for key, value in request.form.items() if key not in ['action', 'id', 'tenant_to_manage', 'table_name']
-                        }
+                        # Skip auto-managed and system fields
+                        skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name']
+                        
+                        new_row_data = {}
+                        for key, value in request.form.items():
+                            if key not in skip_fields:
+                                # Skip empty timestamp fields - let model defaults handle them
+                                if key in ['created_at', 'updated_at'] and (value == '' or value is None):
+                                    continue
+                                
+                                if value == '':
+                                    new_row_data[key] = None
+                                else:
+                                    # Convert data types properly
+                                    converted_value = _convert_form_value(model, key, value)
+                                    logger.info(f"Converted {key}: '{value}' -> {converted_value} (type: {type(converted_value)})")
+                                    new_row_data[key] = converted_value
+                        
+                        # Handle password hashing for User model
                         if 'password_hash' in new_row_data and new_row_data['password_hash']:
-                            # Create a temporary user to hash the password correctly
                             temp_user = User()
                             temp_user.set_password(new_row_data['password_hash'])
                             new_row_data['password_hash'] = temp_user.password_hash
