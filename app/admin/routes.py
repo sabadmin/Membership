@@ -54,6 +54,31 @@ def serialize_row(row):
             serialized[column] = value
     return serialized
 
+def _convert_form_value(model, column_name, value):
+    """Convert HTML form string values to proper Python types based on model column types"""
+    try:
+        if hasattr(model, '__table__'):
+            column = model.__table__.columns.get(column_name)
+            if column is not None:
+                # Boolean conversion
+                if str(column.type) == 'BOOLEAN':
+                    return value.lower() in ['true', '1', 'yes', 'on']
+                # Integer conversion
+                elif 'INTEGER' in str(column.type):
+                    return int(value) if value.isdigit() else 0
+                # DateTime conversion
+                elif 'DATETIME' in str(column.type):
+                    if isinstance(value, str):
+                        from datetime import datetime
+                        try:
+                            return datetime.fromisoformat(value.replace('Z', '+00:00'))
+                        except:
+                            return value  # Return as-is if conversion fails
+        return value  # Return original value if no conversion needed
+    except Exception as e:
+        logger.error(f"Error converting value {value} for column {column_name}: {str(e)}")
+        return value  # Return original value on error
+
 @admin_bp.route('/<selected_tenant_id>', methods=['GET', 'POST'])
 def admin_panel(selected_tenant_id):
     if selected_tenant_id not in Config.TENANT_DATABASES:
@@ -108,12 +133,18 @@ def admin_panel(selected_tenant_id):
                             row = s.query(model).filter_by(id=row_id).first()
                             if row:
                                 logger.info(f"Found record to update: {row}")
+                                # Skip auto-managed timestamp fields
+                                skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name', 'password_hash', 'created_at', 'updated_at']
+                                
                                 for key, value in request.form.items():
-                                    if key not in ['action', 'id', 'tenant_to_manage', 'table_name'] and key != 'password_hash':
+                                    if key not in skip_fields:
                                         logger.info(f"Setting {key} = {value}")
                                         # Handle empty values properly
                                         if value == '':
                                             value = None
+                                        else:
+                                            # Convert data types based on model column types
+                                            value = _convert_form_value(model, key, value)
                                         setattr(row, key, value)
                                 
                                 # For MembershipType, update the updated_at field
