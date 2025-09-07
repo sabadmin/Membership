@@ -25,14 +25,6 @@ def _format_phone(phone):
         return f"({phone[0:3]}) {phone[3:6]}-{phone[6:10]}"
     return phone
 
-@members_bp.route('/demographics/<tenant_id>')
-def demographics(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You do not have permission to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-    
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    return render_template('demographics_menu.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
 @members_bp.route('/demographics/<tenant_id>/my', methods=['GET', 'POST'])
 def my_demographics(tenant_id):
@@ -174,14 +166,6 @@ def view_member_demographics(tenant_id, member_id):
                            page_title=f"Viewing: {selected_member.first_name or ''} {selected_member.last_name or ''}".strip() or selected_member.email,
                            format_phone_number=_format_phone)
 
-@members_bp.route('/attendance/<tenant_id>')
-def attendance(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-    
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    return render_template('attendance_menu.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
 
 @members_bp.route('/attendance/<tenant_id>/create', methods=['GET', 'POST'])
 def attendance_create(tenant_id):

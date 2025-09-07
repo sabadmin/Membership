@@ -5,13 +5,9 @@
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 py-4">
     <div class="bg-white p-6 rounded-lg shadow-md">
-        <div class="flex justify-between items-center mb-4">
+        <div class="mb-4">
             <h1 class="text-2xl font-bold text-gray-800">{{ tenant_display_name }} Attendance - {{ 'Create' if editable
                 else 'Review' }}</h1>
-            <a href="{{ url_for('members.attendance', tenant_id=tenant_id) }}"
-                class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm transition duration-150">
-                ← Back to Menu
-            </a>
         </div>
 
         {% if editable %}
