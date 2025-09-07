@@ -122,13 +122,7 @@ def membership_list(tenant_id):
                 all_members = s.query(User).options(joinedload(User.membership_type)).order_by(User.first_name, User.last_name).all()
                 logger.info(f"Retrieved {len(all_members)} members from database")
                 
-                # Detach objects from session to prevent lazy loading errors
-                for member in all_members:
-                    s.expunge(member)
-                    if member.membership_type:
-                        s.expunge(member.membership_type)
-                
-                logger.info("Successfully detached all members from session")
+                logger.info("Successfully loaded all members with relationships")
                 
         except Exception as db_error:
             logger.error(f"Database error in membership_list: {str(db_error)}")
@@ -168,19 +162,6 @@ def view_member_demographics(tenant_id, member_id):
         
         # Get membership types for display
         membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
-        
-        # Detach objects from session to prevent lazy loading errors
-        s.expunge(selected_member)
-        if selected_member.membership_type:
-            s.expunge(selected_member.membership_type)
-            
-        for member in all_members:
-            s.expunge(member)
-            if member.membership_type:
-                s.expunge(member.membership_type)
-                
-        for membership_type in membership_types:
-            s.expunge(membership_type)
         
     return render_template('demographics_form.html',
                            tenant_id=tenant_id,
