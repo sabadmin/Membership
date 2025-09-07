@@ -78,7 +78,7 @@
         const select = document.getElementById('member_select');
         const memberId = select.value;
         if (memberId) {
-            window.location.href = '{{ url_for("members.view_member_demographics", tenant_id=tenant_id, member_id="MEMBER_ID") }}'.replace('MEMBER_ID', memberId);
+            window.location.href = `/demographics/{{ tenant_id }}/view/${memberId}`;
         }
     }
 </script>
