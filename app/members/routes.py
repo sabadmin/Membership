@@ -120,7 +120,7 @@ def membership_list(tenant_id):
             logger.error(f"Database error in membership_list: {str(db_error)}")
             logger.error(f"Database error type: {type(db_error).__name__}")
             flash("Database error occurred while retrieving members.", "danger")
-            return redirect(url_for('members.demographics', tenant_id=tenant_id))
+            return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
         
         logger.info("Rendering membership_list.html template")
         return render_template('membership_list.html',
@@ -132,7 +132,7 @@ def membership_list(tenant_id):
         logger.error(f"Unexpected error in membership_list: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("An unexpected error occurred.", "danger")
-        return redirect(url_for('members.demographics', tenant_id=tenant_id))
+        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
 @members_bp.route('/demographics/<tenant_id>/view/<int:member_id>')
 def view_member_demographics(tenant_id, member_id):
@@ -178,7 +178,7 @@ def attendance_create(tenant_id):
         current_user = _get_current_user(s, session['user_id'])
         if not current_user or current_user.user_role not in ['attendance', 'president', 'admin']:
             flash("You don't have permission to create attendance records.", "danger")
-            return redirect(url_for('members.attendance', tenant_id=tenant_id))
+            return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
     
     return _attendance_view(tenant_id, editable=True)
 

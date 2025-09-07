@@ -10,7 +10,7 @@
             <span class="font-semibold">{{ tenant_display_name }}</span>
         </p>
 
-        <form method="POST" action="{{ url_for('members.demographics', tenant_id=tenant_id) }}" class="space-y-3">
+        <form method="POST" action="{{ url_for('members.my_demographics', tenant_id=tenant_id) }}" class="space-y-3">
             <!-- Basic Information -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>

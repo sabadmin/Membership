@@ -192,11 +192,11 @@
                     Admin Panel
                 </a>
                 {% else %}
-                <a href="{{ url_for('members.demographics', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('members.my_demographics', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Demographics
                 </a>
-                <a href="{{ url_for('members.attendance', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('members.attendance_create', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Attendance
                 </a>
