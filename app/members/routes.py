@@ -101,20 +101,52 @@ def my_demographics(tenant_id):
 
 @members_bp.route('/demographics/<tenant_id>/list')
 def membership_list(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You do not have permission to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    import logging
+    logger = logging.getLogger(__name__)
     
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    
-    with get_tenant_db_session(tenant_id) as s:
-        # Get all members for dropdown
-        all_members = s.query(User).order_by(User.first_name, User.last_name).all()
+    try:
+        logger.info(f"Starting membership_list for tenant: {tenant_id}")
         
-    return render_template('membership_list.html',
-                           tenant_id=tenant_id,
-                           tenant_display_name=tenant_display_name,
-                           all_members=all_members)
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            logger.warning(f"Access denied for membership_list. Session user_id: {session.get('user_id')}, Session tenant_id: {session.get('tenant_id')}")
+            flash("You do not have permission to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+        
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+        logger.info(f"Tenant display name: {tenant_display_name}")
+        
+        try:
+            with get_tenant_db_session(tenant_id) as s:
+                logger.info("Database session opened successfully")
+                # Get all members with preloaded membership_type to avoid lazy loading issues
+                all_members = s.query(User).options(joinedload(User.membership_type)).order_by(User.first_name, User.last_name).all()
+                logger.info(f"Retrieved {len(all_members)} members from database")
+                
+                # Detach objects from session to prevent lazy loading errors
+                for member in all_members:
+                    s.expunge(member)
+                    if member.membership_type:
+                        s.expunge(member.membership_type)
+                
+                logger.info("Successfully detached all members from session")
+                
+        except Exception as db_error:
+            logger.error(f"Database error in membership_list: {str(db_error)}")
+            logger.error(f"Database error type: {type(db_error).__name__}")
+            flash("Database error occurred while retrieving members.", "danger")
+            return redirect(url_for('members.demographics', tenant_id=tenant_id))
+        
+        logger.info("Rendering membership_list.html template")
+        return render_template('membership_list.html',
+                               tenant_id=tenant_id,
+                               tenant_display_name=tenant_display_name,
+                               all_members=all_members)
+                               
+    except Exception as e:
+        logger.error(f"Unexpected error in membership_list: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        flash("An unexpected error occurred.", "danger")
+        return redirect(url_for('members.demographics', tenant_id=tenant_id))
 
 @members_bp.route('/demographics/<tenant_id>/view/<int:member_id>')
 def view_member_demographics(tenant_id, member_id):

@@ -27,7 +27,7 @@
                     {% if not member.first_name and not member.last_name %}
                     {{ member.email }}
                     {% endif %}
-                    {% if member.membership_type %}
+                    {% if member.membership_type and member.membership_type.name %}
                     - {{ member.membership_type.name }}
                     {% endif %}
                 </option>
@@ -54,7 +54,7 @@
                         {{ member.email }}
                         {% endif %}
                     </h3>
-                    {% if member.membership_type %}
+                    {% if member.membership_type and member.membership_type.name %}
                     <p class="text-xs text-gray-600 mt-1">{{ member.membership_type.name }}</p>
                     {% endif %}
                     {% if member.company %}

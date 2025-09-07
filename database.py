@@ -53,17 +53,38 @@ def get_tenant_db_session(tenant_id):
     Provides a SQLAlchemy session scoped to a specific tenant's database.
     This context manager ensures the session is properly closed/removed after use.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    logger.info(f"Requesting database session for tenant: {tenant_id}")
+    
     if tenant_id not in _tenant_session_factories:
+        logger.error(f"Database engine not initialized for tenant '{tenant_id}'. Available tenants: {list(_tenant_session_factories.keys())}")
         raise RuntimeError(f"Database engine not initialized for tenant '{tenant_id}'. "
                            "Call init_db_for_tenant() for this tenant first.")
 
-    session_factory = _tenant_session_factories[tenant_id]
-    session = session_factory()
     try:
+        session_factory = _tenant_session_factories[tenant_id]
+        session = session_factory()
+        logger.info(f"Successfully created database session for tenant: {tenant_id}")
+        
+        # Test the connection
+        session.execute("SELECT 1")
+        logger.info(f"Database connection test successful for tenant: {tenant_id}")
+        
         yield session
+        
+    except Exception as e:
+        logger.error(f"Database session error for tenant '{tenant_id}': {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        raise
     finally:
-        # CORRECTED: Call .remove() on the session factory, not the session object
-        session_factory.remove()
+        try:
+            # CORRECTED: Call .remove() on the session factory, not the session object
+            session_factory.remove()
+            logger.info(f"Database session closed for tenant: {tenant_id}")
+        except Exception as cleanup_error:
+            logger.error(f"Error closing database session for tenant '{tenant_id}': {str(cleanup_error)}")
 
 def close_db_session(exception=None):
     """
