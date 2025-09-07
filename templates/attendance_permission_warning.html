@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - Permission Required{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{{ tenant_display_name }} Attendance</h1>
+        </div>
+
+        <!-- Permission Warning -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-yellow-800">
+                        Permission Required
+                    </h3>
+                    <div class="mt-2 text-sm text-yellow-700">
+                        <p>You don't have permission to create attendance records.</p>
+                        <p class="mt-1">Your current role is: <strong>{{ user_role.title() }}</strong></p>
+                        <p class="mt-2">To access attendance features, you need one of these roles:</p>
+                        <ul class="list-disc list-inside mt-1">
+                            <li>Attendance Manager</li>
+                            <li>President</li>
+                            <li>Administrator</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alternative Actions -->
+        <div class="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+            <h3 class="text-lg font-medium text-blue-800 mb-3">What you can do instead:</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-2">Review Attendance</h4>
+                    <p class="text-sm text-blue-700 mb-3">View attendance records without editing capabilities.</p>
+                    <a href="{{ url_for('members.attendance_review', tenant_id=tenant_id) }}"
+                        class="inline-block bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm transition duration-150">
+                        View Attendance Records
+                    </a>
+                </div>
+                <div class="bg-white border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-2">Contact Administrator</h4>
+                    <p class="text-sm text-blue-700 mb-3">Request access to attendance management features.</p>
+                    <a href="{{ url_for('members.security', tenant_id=tenant_id) }}"
+                        class="inline-block bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition duration-150">
+                        Contact Admin
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Hint -->
+        <div class="text-center text-gray-600">
+            <p class="text-sm">Use the navigation menu above to access other features available to you.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

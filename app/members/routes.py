@@ -177,8 +177,12 @@ def attendance_create(tenant_id):
     with get_tenant_db_session(tenant_id) as s:
         current_user = _get_current_user(s, session['user_id'])
         if not current_user or current_user.user_role not in ['attendance', 'president', 'admin']:
-            flash("You don't have permission to create attendance records.", "danger")
-            return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
+            # Display warning and stay on page instead of redirecting
+            tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+            return render_template('attendance_permission_warning.html',
+                                 tenant_id=tenant_id,
+                                 tenant_display_name=tenant_display_name,
+                                 user_role=current_user.user_role if current_user else 'member')
     
     return _attendance_view(tenant_id, editable=True)
 
