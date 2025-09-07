@@ -157,17 +157,30 @@ def view_member_demographics(tenant_id, member_id):
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
     
     with get_tenant_db_session(tenant_id) as s:
-        # Get the selected member
-        selected_member = s.query(User).filter_by(id=member_id).first()
+        # Get the selected member with preloaded membership_type to avoid lazy loading issues
+        selected_member = s.query(User).options(joinedload(User.membership_type)).filter_by(id=member_id).first()
         if not selected_member:
             flash("Member not found.", "danger")
             return redirect(url_for('members.membership_list', tenant_id=tenant_id))
         
-        # Get all members for dropdown (to keep it available)
-        all_members = s.query(User).order_by(User.first_name, User.last_name).all()
+        # Get all members for dropdown (to keep it available) with preloaded membership_type
+        all_members = s.query(User).options(joinedload(User.membership_type)).order_by(User.first_name, User.last_name).all()
         
         # Get membership types for display
         membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
+        
+        # Detach objects from session to prevent lazy loading errors
+        s.expunge(selected_member)
+        if selected_member.membership_type:
+            s.expunge(selected_member.membership_type)
+            
+        for member in all_members:
+            s.expunge(member)
+            if member.membership_type:
+                s.expunge(member.membership_type)
+                
+        for membership_type in membership_types:
+            s.expunge(membership_type)
         
     return render_template('demographics_form.html',
                            tenant_id=tenant_id,
