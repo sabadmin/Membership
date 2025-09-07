@@ -54,6 +54,7 @@ def get_tenant_db_session(tenant_id):
     This context manager ensures the session is properly closed/removed after use.
     """
     import logging
+    from sqlalchemy import text
     logger = logging.getLogger(__name__)
     
     logger.info(f"Requesting database session for tenant: {tenant_id}")
@@ -68,8 +69,8 @@ def get_tenant_db_session(tenant_id):
         session = session_factory()
         logger.info(f"Successfully created database session for tenant: {tenant_id}")
         
-        # Test the connection
-        session.execute("SELECT 1")
+        # Test the connection with proper text() wrapper for SQLAlchemy 2.x
+        session.execute(text("SELECT 1"))
         logger.info(f"Database connection test successful for tenant: {tenant_id}")
         
         yield session
