@@ -91,9 +91,15 @@ def admin_panel(selected_tenant_id):
     table_name = request.form.get('table_name')
     data = []
     columns = []
+    users_list = []  # For foreign key dropdowns
     
     with get_tenant_db_session(tenant_id_to_manage) as s:
         tables = get_all_table_names(_tenant_engines[tenant_id_to_manage])
+        
+        # Get users list for foreign key dropdowns
+        if table_name in ['attendance_records', 'dues_records', 'referral_records', 'user_auth_details']:
+            users = s.query(User).order_by(User.first_name, User.last_name).all()
+            users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
         
         if table_name:
             model = get_table_and_model(table_name, tenant_id_to_manage)
@@ -232,5 +238,6 @@ def admin_panel(selected_tenant_id):
                            all_tenant_ids=list(Config.TENANT_DATABASES.keys()),  # For dropdown
                            columns=columns,
                            data=data,
+                           users_list=users_list,  # For foreign key dropdowns
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
                            Config=Config)
