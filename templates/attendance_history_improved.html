@@ -102,35 +102,108 @@
                         {% endif %}
                     </tr>
                 </thead>
-                >>>>>>> REPLACE
-
-                <<<<<<< SEARCH :start_line:109 ------- <!-- Navigation Help -->
-                    <div class="mt-6 text-center text-gray-600">
-                        <p class="text-sm">Use the date selector above to view attendance for any date in history.</p>
-                    </div>
-                    =======
-                    <!-- Navigation Help -->
-                    <div class="mt-6 text-center text-gray-600">
-                        <p class="text-sm">Use the date selector above or navigation arrows to view attendance for any
-                            date in history.</p>
-                        {% if not all_users or not existing_attendance %}
-                        <p class="text-sm text-gray-500 mt-2">No attendance records found for {{ selected_date }}.</p>
+                <tbody>
+                    {% for user in all_users %}
+                    <tr class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %}">
+                        <td class="border border-gray-300 px-4 py-2">
+                            <div class="font-medium text-gray-900">
+                                {{ user.first_name or '' }} {{ user.last_name or '' }}
+                                {% if not user.first_name and not user.last_name %}
+                                {{ user.email }}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            {% if user.id in existing_attendance %}
+                            {% if existing_attendance[user.id] == 'P' %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Present
+                            </span>
+                            {% elif existing_attendance[user.id] == 'L' %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                Late
+                            </span>
+                            {% elif existing_attendance[user.id] == 'E' %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Excused
+                            </span>
+                            {% else %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Absent
+                            </span>
+                            {% endif %}
+                            {% else %}
+                            <span
+                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Absent
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% if can_view_all %}
+                        <td class="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                            {{ user.company or '-' }}
+                        </td>
                         {% endif %}
-                    </div>
-                    >>>>>>> REPLACE
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-                    <<<<<<< SEARCH :start_line:27 ------- function navigateDate(direction) { const
-                        dateInput=document.getElementById('selected_date'); const currentDate=new Date(dateInput.value);
-                        // Add/subtract one day currentDate.setDate(currentDate.getDate() + direction); // Format back
-                        to YYYY-MM-DD const newDate=currentDate.toISOString().split('T')[0]; dateInput.value=newDate; //
-                        Submit form document.querySelector('form').submit(); }=======function navigateDate(direction) {
-                        const dateInput=document.getElementById('selected_date'); const currentDate=new
-                        Date(dateInput.value + 'T00:00:00' ); // Add/subtract one day
-                        currentDate.setDate(currentDate.getDate() + direction); // Format back to YYYY-MM-DD const
-                        year=currentDate.getFullYear(); const month=String(currentDate.getMonth() + 1).padStart(2, '0'
-                        ); const day=String(currentDate.getDate()).padStart(2, '0' ); const
-                        newDate=`${year}-${month}-${day}`; dateInput.value=newDate; // Show loading and submit form
-                        const viewButton=document.getElementById('view_button'); viewButton.textContent='Loading...' ;
-                        viewButton.disabled=true; document.querySelector('form').submit(); }>>>>>>> REPLACE
-                        </diff>
-                        </apply_diff>
+        <!-- Navigation Help -->
+        <div class="mt-6 text-center text-gray-600">
+            <p class="text-sm">Use the date selector above or navigation arrows to view attendance for any date in
+                history.</p>
+            {% if not all_users or not existing_attendance %}
+            <p class="text-sm text-gray-500 mt-2">No attendance records found for {{ selected_date }}.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateInput = document.getElementById('selected_date');
+        const viewButton = document.getElementById('view_button');
+
+        // Auto-submit form when date changes
+        dateInput.addEventListener('change', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+            this.form.submit();
+        });
+
+        // Add loading indicator
+        document.querySelector('form').addEventListener('submit', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+        });
+    });
+
+    function navigateDate(direction) {
+        const dateInput = document.getElementById('selected_date');
+        const currentDate = new Date(dateInput.value + 'T00:00:00');
+
+        // Add/subtract one day
+        currentDate.setDate(currentDate.getDate() + direction);
+
+        // Format back to YYYY-MM-DD
+        const year = currentDate.getFullYear();
+        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+        const day = String(currentDate.getDate()).padStart(2, '0');
+        const newDate = `${year}-${month}-${day}`;
+
+        dateInput.value = newDate;
+
+        // Show loading and submit form
+        const viewButton = document.getElementById('view_button');
+        viewButton.textContent = 'Loading...';
+        viewButton.disabled = true;
+        document.querySelector('form').submit();
+    }
+</script>
+{% endblock %}
