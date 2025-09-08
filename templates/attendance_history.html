@@ -52,7 +52,7 @@
         </div>
         {% endif %}
 
-        <!-- Date Navigation and Matrix Header -->
+        <!-- Date Navigation -->
         <div class="mb-4">
             <div class="flex justify-between items-center bg-gray-100 p-4 rounded-md">
                 <button type="button" onclick="navigateDate(-1)"
@@ -64,9 +64,9 @@
                     Previous Day
                 </button>
 
-                <h3 class="text-lg font-semibold text-gray-800">
-                    {{ event_name }} - {{ selected_date }}
-                </h3>
+                <span class="text-lg font-semibold text-gray-800">
+                    Navigate Attendance History
+                </span>
 
                 <button type="button" onclick="navigateDate(1)"
                     class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
@@ -89,6 +89,8 @@
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
                             Date</th>
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                            Meeting Type</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
                             Status</th>
                         {% if can_view_all %}
                         <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
@@ -109,6 +111,9 @@
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                             {{ selected_date }}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                            {{ event_name or 'Meeting' }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
                             {% if user.id in existing_attendance %}
