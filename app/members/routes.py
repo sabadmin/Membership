@@ -177,12 +177,8 @@ def attendance_create(tenant_id):
     with get_tenant_db_session(tenant_id) as s:
         current_user = _get_current_user(s, session['user_id'])
         if not current_user or current_user.user_role not in ['attendance', 'president', 'admin']:
-            # Display warning and stay on page instead of redirecting
-            tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-            return render_template('attendance_permission_warning.html',
-                                 tenant_id=tenant_id,
-                                 tenant_display_name=tenant_display_name,
-                                 user_role=current_user.user_role if current_user else 'member')
+            # Redirect to personal attendance history instead of showing warning
+            return redirect(url_for('members.attendance_history', tenant_id=tenant_id))
     
     return _attendance_view(tenant_id, editable=True)
 
@@ -193,6 +189,64 @@ def attendance_review(tenant_id):
         return redirect(url_for('auth.login', tenant_id=tenant_id))
     
     return _attendance_view(tenant_id, editable=False)
+
+@members_bp.route('/attendance/<tenant_id>/history', methods=['GET', 'POST'])
+def attendance_history(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    
+    # Get selected date from form or default to today
+    from datetime import date, datetime
+    selected_date = date.today()
+    
+    if request.method == 'POST':
+        date_str = request.form.get('selected_date')
+        if date_str:
+            try:
+                selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("Invalid date format.", "danger")
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = _get_current_user(s, session['user_id'])
+        
+        # Check if user has permission to see all users or just their own
+        can_view_all = current_user and current_user.user_role in ['attendance', 'president', 'admin']
+        
+        if can_view_all:
+            # Show all users for privileged users
+            all_users = s.query(User).order_by(User.first_name, User.last_name).all()
+            page_title = "Attendance History - All Members"
+        else:
+            # Show only current user for regular members
+            all_users = [current_user] if current_user else []
+            page_title = "My Attendance History"
+        
+        # Get attendance records for the selected date
+        attendance_records = s.query(AttendanceRecord).filter_by(
+            event_date=selected_date
+        ).all()
+        
+        # Create attendance dictionary
+        existing_attendance = {}
+        event_name = "Meeting"  # Default
+        
+        for record in attendance_records:
+            existing_attendance[record.user_id] = record.status
+            event_name = record.event_name  # Use the event name from records
+    
+    return render_template('attendance_history.html',
+                         tenant_id=tenant_id,
+                         tenant_display_name=tenant_display_name,
+                         all_users=all_users,
+                         existing_attendance=existing_attendance,
+                         selected_date=selected_date.strftime('%Y-%m-%d'),
+                         event_name=event_name,
+                         can_view_all=can_view_all,
+                         page_title=page_title)
 
 def _attendance_view(tenant_id, editable=True):
     """Common attendance view logic"""
