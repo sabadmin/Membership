@@ -37,7 +37,6 @@ class User(Base):
     network_group_title = Column(String(120), nullable=True)
     member_anniversary = Column(String(5), nullable=True)
     membership_type_id = Column(Integer, ForeignKey('membership_types.id'), nullable=True)
-    user_role = Column(String(20), default='member', nullable=False)  # member, attendance, president, admin
 
     # Define relationships
     auth_details = relationship("UserAuthDetails", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -149,6 +148,13 @@ class MembershipType(Base):
     description = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
     sort_order = Column(Integer, default=0, nullable=False)
+    
+    # New permission fields
+    can_edit_attendance = Column(Boolean, default=False, nullable=False)
+    can_edit_demographics = Column(Boolean, default=False, nullable=False)
+    can_edit_dues = Column(Boolean, default=False, nullable=False)
+    can_edit_referrals = Column(Boolean, default=False, nullable=False)
+    
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

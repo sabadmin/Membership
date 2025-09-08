@@ -175,8 +175,8 @@ def attendance_create(tenant_id):
     
     # Check if user has permission to create attendance
     with get_tenant_db_session(tenant_id) as s:
-        current_user = _get_current_user(s, session['user_id'])
-        if not current_user or current_user.user_role not in ['attendance', 'president', 'admin']:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user or not current_user.membership_type or not current_user.membership_type.can_edit_attendance:
             # Redirect to personal attendance history instead of showing warning
             return redirect(url_for('members.attendance_history', tenant_id=tenant_id))
     
@@ -214,15 +214,15 @@ def attendance_history(tenant_id):
         with get_tenant_db_session(tenant_id) as s:
             logger.info("Database session opened successfully")
             
-            current_user = _get_current_user(s, session['user_id'])
+            current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
             if not current_user:
                 logger.error("Current user not found")
                 flash("User not found.", "danger")
                 return redirect(url_for('auth.login', tenant_id=tenant_id))
             
             # Check if user has permission to see all users or just their own
-            can_view_all = current_user and current_user.user_role in ['attendance', 'president', 'admin']
-            logger.info(f"User role: {current_user.user_role}, can_view_all: {can_view_all}")
+            can_view_all = current_user and current_user.membership_type and current_user.membership_type.can_edit_attendance
+            logger.info(f"User membership type: {current_user.membership_type.name if current_user.membership_type else 'None'}, can_view_all: {can_view_all}")
             
             if can_view_all:
                 # Show all users for privileged users
