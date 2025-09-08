@@ -113,10 +113,6 @@ def admin_panel(selected_tenant_id):
                         new_row_data = {}
                         for key, value in request.form.items():
                             if key not in skip_fields:
-                                # Skip empty timestamp fields - let model defaults handle them
-                                if key in ['created_at', 'updated_at'] and (value == '' or value is None):
-                                    continue
-                                
                                 if value == '':
                                     new_row_data[key] = None
                                 else:
@@ -150,8 +146,8 @@ def admin_panel(selected_tenant_id):
                             row = s.query(model).filter_by(id=row_id).first()
                             if row:
                                 logger.info(f"Found record to update: {row}")
-                                # Skip auto-managed timestamp fields
-                                skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name', 'password_hash', 'created_at', 'updated_at']
+                                # Only skip system fields, preserve important date fields
+                                skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name', 'password_hash']
                                 
                                 for key, value in request.form.items():
                                     if key not in skip_fields:
@@ -161,7 +157,7 @@ def admin_panel(selected_tenant_id):
                                         logger.info(f"Converted {key}: '{value}' -> {converted_value}")
                                         setattr(row, key, converted_value)
                                 
-                                # For MembershipType, update the updated_at field
+                                # Auto-update timestamp for membership types
                                 if table_name == 'membership_types':
                                     row.updated_at = datetime.utcnow()
                                 
@@ -205,6 +201,23 @@ def admin_panel(selected_tenant_id):
                         # Replace user_id with readable user info
                         username = f"{first_name or ''} {last_name or ''}".strip() or email
                         row_data['username'] = username
+                        data.append(row_data)
+                elif table_name in ['attendance_records', 'dues_records', 'referral_records']:
+                    # Join with users table to show member names instead of user_id
+                    if table_name == 'attendance_records':
+                        rows = s.query(AttendanceRecord, User.email, User.first_name, User.last_name).join(User, AttendanceRecord.user_id == User.id).all()
+                    elif table_name == 'dues_records':
+                        rows = s.query(DuesRecord, User.email, User.first_name, User.last_name).join(User, DuesRecord.user_id == User.id).all()
+                    elif table_name == 'referral_records':
+                        rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).join(User, ReferralRecord.referrer_id == User.id).all()
+                    
+                    data = []
+                    for record, email, first_name, last_name in rows:
+                        row_data = record.__dict__.copy()
+                        row_data.pop('_sa_instance_state', None)
+                        # Add member name
+                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                        row_data['member_name'] = member_name
                         data.append(row_data)
                 else:
                     rows = s.query(model).all()
