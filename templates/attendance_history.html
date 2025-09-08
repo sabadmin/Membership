@@ -20,7 +20,7 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400">
                     </div>
                     <div>
-                        <button type="submit"
+                        <button type="submit" id="view_button"
                             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                             View Attendance
                         </button>
@@ -93,9 +93,6 @@
                                 {{ user.email }}
                                 {% endif %}
                             </div>
-                            {% if user.membership_type and user.membership_type.name %}
-                            <div class="text-sm text-gray-600">{{ user.membership_type.name }}</div>
-                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
                             {% if user.id in existing_attendance %}
@@ -150,4 +147,44 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateInput = document.getElementById('selected_date');
+        const viewButton = document.getElementById('view_button');
+
+        // Auto-submit form when date changes
+        dateInput.addEventListener('change', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+            this.form.submit();
+        });
+
+        // Add loading indicator
+        document.querySelector('form').addEventListener('submit', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+        });
+    });
+</script>
 {% endblock %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateInput = document.getElementById('selected_date');
+        const viewButton = document.getElementById('view_button');
+
+        // Auto-submit form when date changes
+        dateInput.addEventListener('change', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+            this.form.submit();
+        });
+
+        // Add loading indicator
+        document.querySelector('form').addEventListener('submit', function () {
+            viewButton.textContent = 'Loading...';
+            viewButton.disabled = true;
+        });
+    });
+</script>

@@ -62,13 +62,15 @@ def _convert_form_value(model, column_name, value):
             if column is not None:
                 # Boolean conversion
                 if str(column.type) == 'BOOLEAN':
+                    if value is None or value == '':
+                        return False  # Default to False for empty boolean fields
                     return value.lower() in ['true', '1', 'yes', 'on']
                 # Integer conversion
                 elif 'INTEGER' in str(column.type):
-                    return int(value) if value.isdigit() else 0
+                    return int(value) if value and value.isdigit() else 0
                 # DateTime conversion
                 elif 'DATETIME' in str(column.type):
-                    if isinstance(value, str):
+                    if isinstance(value, str) and value:
                         from datetime import datetime
                         try:
                             return datetime.fromisoformat(value.replace('Z', '+00:00'))
@@ -154,13 +156,10 @@ def admin_panel(selected_tenant_id):
                                 for key, value in request.form.items():
                                     if key not in skip_fields:
                                         logger.info(f"Setting {key} = {value}")
-                                        # Handle empty values properly
-                                        if value == '':
-                                            value = None
-                                        else:
-                                            # Convert data types based on model column types
-                                            value = _convert_form_value(model, key, value)
-                                        setattr(row, key, value)
+                                        # Convert data types based on model column types
+                                        converted_value = _convert_form_value(model, key, value)
+                                        logger.info(f"Converted {key}: '{value}' -> {converted_value}")
+                                        setattr(row, key, converted_value)
                                 
                                 # For MembershipType, update the updated_at field
                                 if table_name == 'membership_types':
