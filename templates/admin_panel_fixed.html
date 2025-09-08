@@ -56,25 +56,36 @@
             Config.TENANT_DISPLAY_NAMES.get(selected_tenant_id, selected_tenant_id.capitalize()) }})</h2>
 
         <style>
-            .resizable-table {
+            .admin-table {
                 table-layout: fixed;
                 width: 100%;
+                border-collapse: separate;
+                border-spacing: 0;
             }
 
-            .resizable-col {
+            .admin-table th,
+            .admin-table td {
+                border: 1px solid #d1d5db;
                 resize: horizontal;
                 overflow: auto;
+                min-width: 120px;
+                max-width: 500px;
+                position: relative;
+            }
+
+            .admin-table input,
+            .admin-table select {
+                width: 100%;
+                resize: horizontal;
                 min-width: 100px;
-                max-width: 400px;
             }
         </style>
 
-        <table class="resizable-table divide-y divide-gray-200 border border-gray-300">
+        <table class="admin-table divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     {% for col in columns %}
-                    <th scope="col"
-                        class="resizable-col px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-300">
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         {% if col.startswith('can_edit_') %}
                         {{ col.replace('can_edit_', '').replace('_', ' ').title() }}
                         {% else %}
@@ -82,8 +93,7 @@
                         {% endif %}
                     </th>
                     {% endfor %}
-                    <th scope="col"
-                        class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions
+                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions
                     </th>
                 </tr>
             </thead>
@@ -96,40 +106,39 @@
                         <input type="hidden" name="tenant_to_manage" value="{{ selected_tenant_id }}">
                         <input type="hidden" name="table_name" value="{{ selected_table }}">
                         {% for col in columns %}
-                        <td class="px-3 py-2 whitespace-nowrap resize-x overflow-auto min-w-0">
+                        <td class="px-3 py-2">
                             {% if col == 'id' %}
-                            {# Primary key is usually auto-increment, don't allow input #}
                             <span class="text-gray-400">AUTO</span>
                             {% elif col == 'password_hash' %}
                             <input type="password" name="{{ col }}" placeholder="New Password"
-                                class="w-full border-gray-300 rounded-md text-sm resize-x">
+                                class="border-gray-300 rounded-md text-sm">
                             {% elif col.startswith('can_edit_') %}
-                            {# Boolean checkboxes for permission fields #}
-                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm">
+                            <select name="{{ col }}" class="border-gray-300 rounded-md text-sm">
                                 <option value="false">No</option>
                                 <option value="true">Yes</option>
                             </select>
                             {% elif col in ['user_id', 'referrer_id'] and selected_table in ['attendance_records',
                             'dues_records', 'referral_records'] %}
-                            {# User selection dropdown for foreign key fields #}
-                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                            <select name="{{ col }}" class="border-gray-300 rounded-md text-sm" required>
                                 <option value="">-- Select Member --</option>
+                                {% if users_list %}
                                 {% for user_id, user_name in users_list %}
                                 <option value="{{ user_id }}">{{ user_name }}</option>
                                 {% endfor %}
+                                {% endif %}
                             </select>
                             {% elif 'date' in col.lower() %}
-                            {# Date inputs for date fields #}
                             <input type="datetime-local" name="{{ col }}" placeholder="{{ col }}"
-                                class="w-full border-gray-300 rounded-md text-sm resize-x">
+                                class="border-gray-300 rounded-md text-sm">
                             {% else %}
                             <input type="text" name="{{ col }}" placeholder="{{ col }}"
-                                class="w-full border-gray-300 rounded-md text-sm resize-x">
+                                class="border-gray-300 rounded-md text-sm">
                             {% endif %}
                         </td>
                         {% endfor %}
-                        <td class="px-3 py-2 whitespace-nowrap">
-                            <button type="submit" class="text-green-600 hover:text-green-900 text-sm">Add</button>
+                        <td class="px-3 py-2">
+                            <button type="submit"
+                                class="text-green-600 hover:text-green-900 text-sm font-bold">Add</button>
                         </td>
                     </form>
                 </tr>
@@ -144,38 +153,39 @@
                         <input type="hidden" name="table_name" value="{{ selected_table }}">
                         <input type="hidden" name="id" value="{{ row.id }}">
                         {% for col in columns %}
-                        <td class="px-3 py-2 whitespace-nowrap resize-x overflow-auto min-w-0">
+                        <td class="px-3 py-2">
                             {% if col == 'id' %}
                             <span class="font-medium text-gray-900">{{ row[col] }}</span>
                             {% elif col == 'password_hash' %}
                             <span class="text-gray-500 text-sm">HASHED VALUE</span>
-                            {% elif col == 'user_id' and selected_table in ['attendance_records', 'dues_records',
-                            'referral_records'] %}
-                            {# Show member name instead of user_id for related tables #}
+                            {% elif col == 'user_id' and selected_table in ['attendance_records', 'dues_records'] %}
+                            <input type="hidden" name="{{ col }}" value="{{ row[col] or '' }}">
+                            <span class="font-medium text-gray-900">{{ row.get('member_name', 'User ID: ' +
+                                (row[col]|string)) }}</span>
+                            {% elif col == 'referrer_id' and selected_table == 'referral_records' %}
                             <input type="hidden" name="{{ col }}" value="{{ row[col] or '' }}">
                             <span class="font-medium text-gray-900">{{ row.get('member_name', 'User ID: ' +
                                 (row[col]|string)) }}</span>
                             {% elif col.startswith('can_edit_') %}
-                            {# Boolean dropdowns for permission fields #}
-                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm">
+                            <select name="{{ col }}" class="border-gray-300 rounded-md text-sm">
                                 <option value="false" {% if not row[col] %}selected{% endif %}>No</option>
                                 <option value="true" {% if row[col] %}selected{% endif %}>Yes</option>
                             </select>
                             {% elif 'date' in col.lower() %}
-                            {# Date inputs for date fields #}
                             <input type="datetime-local" name="{{ col }}"
                                 value="{% if row[col] %}{{ row[col].strftime('%Y-%m-%dT%H:%M') if row[col].__class__.__name__ == 'datetime' else row[col] }}{% endif %}"
-                                class="w-full border-gray-300 rounded-md text-sm resize-x">
+                                class="border-gray-300 rounded-md text-sm">
                             {% else %}
                             <input type="text" name="{{ col }}" value="{{ row[col] or '' }}"
-                                class="w-full border-gray-300 rounded-md text-sm resize-x">
+                                class="border-gray-300 rounded-md text-sm">
                             {% endif %}
                         </td>
                         {% endfor %}
-                        <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
-                            <button type="submit" class="text-indigo-600 hover:text-indigo-900 mr-2">Update</button>
+                        <td class="px-3 py-2 text-sm font-medium">
+                            <button type="submit"
+                                class="text-indigo-600 hover:text-indigo-900 mr-2 font-bold">Update</button>
                             <button type="button" onclick="confirmDelete('{{ row.id }}')"
-                                class="text-red-600 hover:text-red-900">Delete</button>
+                                class="text-red-600 hover:text-red-900 font-bold">Delete</button>
                         </td>
                     </form>
                 </tr>
@@ -223,5 +233,8 @@
             form.submit();
         }
     }
+
+    // Debug logging
+    console.log('Admin panel loaded');
 </script>
 {% endblock %}
