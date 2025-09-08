@@ -149,12 +149,22 @@
                             <span class="font-medium text-gray-900">{{ row[col] }}</span>
                             {% elif col == 'password_hash' %}
                             <span class="text-gray-500 text-sm">HASHED VALUE</span>
-                            {% elif col == 'user_id' and selected_table in ['attendance_records', 'dues_records',
-                            'referral_records'] %}
-                            {# Show member name instead of user_id for related tables #}
-                            <input type="hidden" name="{{ col }}" value="{{ row[col] or '' }}">
-                            <span class="font-medium text-gray-900">{{ row.get('member_name', 'User ID: ' +
-                                (row[col]|string)) }}</span>
+                            {% elif col == 'user_id' and selected_table in ['attendance_records', 'dues_records'] %}
+                            {# Editable dropdown for user_id in existing records #}
+                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                {% for user_id, user_name in users_list %}
+                                <option value="{{ user_id }}" {% if user_id==row[col] %}selected{% endif %}>{{ user_name
+                                    }}</option>
+                                {% endfor %}
+                            </select>
+                            {% elif col == 'referrer_id' and selected_table == 'referral_records' %}
+                            {# Editable dropdown for referrer_id in existing records #}
+                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                {% for user_id, user_name in users_list %}
+                                <option value="{{ user_id }}" {% if user_id==row[col] %}selected{% endif %}>{{ user_name
+                                    }}</option>
+                                {% endfor %}
+                            </select>
                             {% elif col.startswith('can_edit_') %}
                             {# Boolean dropdowns for permission fields #}
                             <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm">
