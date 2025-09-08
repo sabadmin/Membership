@@ -12,12 +12,13 @@
         <!-- Date Selection Form -->
         <form method="POST" class="mb-6">
             <div class="bg-gray-50 p-4 rounded-md">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div>
                         <label for="selected_date" class="block text-gray-700 text-sm font-bold mb-2">Select
                             Date:</label>
                         <input type="date" id="selected_date" name="selected_date" value="{{ selected_date }}"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400">
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400"
+                            onchange="this.form.submit();">
                     </div>
                     <div>
                         <button type="submit" id="view_button"
@@ -25,15 +26,6 @@
                             View Attendance
                         </button>
                     </div>
-                    {% if can_view_all %}
-                    <div class="text-sm text-gray-600">
-                        <p>Viewing all members for: <strong>{{ selected_date }}</strong></p>
-                    </div>
-                    {% else %}
-                    <div class="text-sm text-gray-600">
-                        <p>Viewing your attendance for: <strong>{{ selected_date }}</strong></p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </form>
@@ -86,13 +78,16 @@
             </div>
         </div>
 
-        <!-- Attendance Matrix - Always Show -->
+        <!-- Attendance Matrix - Only Show if attendance exists -->
+        {% if existing_attendance %}
         <div class="overflow-x-auto">
             <table class="min-w-full border-collapse border border-gray-300">
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
                             Member</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                            Date</th>
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
                             Status</th>
                         {% if can_view_all %}
@@ -111,6 +106,9 @@
                                 {{ user.email }}
                                 {% endif %}
                             </div>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                            {{ selected_date }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
                             {% if user.id in existing_attendance %}
@@ -152,14 +150,16 @@
                 </tbody>
             </table>
         </div>
+        {% else %}
+        <div class="text-center py-8">
+            <p class="text-gray-500">No attendance records found for {{ selected_date }}.</p>
+        </div>
+        {% endif %}
 
         <!-- Navigation Help -->
         <div class="mt-6 text-center text-gray-600">
             <p class="text-sm">Use the date selector above or navigation arrows to view attendance for any date in
                 history.</p>
-            {% if not all_users or not existing_attendance %}
-            <p class="text-sm text-gray-500 mt-2">No attendance records found for {{ selected_date }}.</p>
-            {% endif %}
         </div>
     </div>
 </div>
