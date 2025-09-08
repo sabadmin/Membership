@@ -42,7 +42,15 @@ def get_table_and_model(table_name, tenant_id):
 
 def get_column_names(model):
     if model:
-        return [c.key for c in model.__table__.columns]
+        columns = [c.key for c in model.__table__.columns]
+        # Remove unwanted columns from all tables
+        exclude_columns = ['sort_order']
+        
+        # Remove specific fields from referral records
+        if model.__name__ == 'ReferralRecord':
+            exclude_columns.extend(['converted_to_member', 'conversion_date', 'created_at'])
+            
+        return [col for col in columns if col not in exclude_columns]
     return []
 
 def serialize_row(row):

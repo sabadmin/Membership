@@ -61,8 +61,12 @@
                     {% for col in columns %}
                     <th scope="col"
                         class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider resize-x overflow-auto min-w-0">
-                        {{
-                        col }}</th>
+                        {% if col.startswith('can_edit_') %}
+                        {{ col.replace('can_edit_', '').replace('_', ' ').title() }}
+                        {% else %}
+                        {{ col.replace('_', ' ').title() }}
+                        {% endif %}
+                    </th>
                     {% endfor %}
                     <th scope="col"
                         class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions
@@ -96,7 +100,9 @@
                             {# User selection dropdown for foreign key fields #}
                             <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
                                 <option value="">-- Select Member --</option>
-                                {# This would need to be populated from backend with actual users #}
+                                {% for user_id, user_name in users_list %}
+                                <option value="{{ user_id }}">{{ user_name }}</option>
+                                {% endfor %}
                             </select>
                             {% elif 'date' in col.lower() %}
                             {# Date inputs for date fields #}
