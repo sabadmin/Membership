@@ -242,13 +242,15 @@ def attendance_history(tenant_id):
             
             logger.info(f"Found {len(attendance_records)} attendance records for {selected_date}")
             
-            # Create attendance dictionary
+            # Create attendance dictionary and event names dictionary
             existing_attendance = {}
-            event_name = "Meeting"  # Default
+            event_names = {}  # Maps user_id to their specific event name
+            default_event_name = "Meeting"  # Default for template compatibility
             
             for record in attendance_records:
                 existing_attendance[record.user_id] = record.status
-                event_name = record.event_name  # Use the event name from records
+                event_names[record.user_id] = record.event_name  # Store individual event names
+                default_event_name = record.event_name  # Keep last one as fallback
         
         logger.info("Rendering attendance_history.html template")
         return render_template('attendance_history.html',
@@ -257,7 +259,8 @@ def attendance_history(tenant_id):
                              all_users=all_users,
                              existing_attendance=existing_attendance,
                              selected_date=selected_date.strftime('%Y-%m-%d'),
-                             event_name=event_name,
+                             event_name=default_event_name,  # Keep for compatibility
+                             event_names=event_names,  # Individual event names per user
                              can_view_all=can_view_all,
                              page_title=page_title)
                              

@@ -113,7 +113,8 @@
                             {{ selected_date }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            {{ event_name or 'Meeting' }}
+                            {{ event_names.get(user.id, 'No Record') if user.id in existing_attendance else 'No Record'
+                            }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
                             {% if user.id in existing_attendance %}
