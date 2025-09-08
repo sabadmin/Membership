@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType
+from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord, DuesType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -359,8 +359,206 @@ def dues(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user:
+            flash("User not found.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+        
+        # Check if user has permission to manage dues
+        can_manage_dues = current_user and current_user.membership_type and current_user.membership_type.can_edit_dues
+        
+        if can_manage_dues:
+            # Show dues management page for privileged users
+            return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+        else:
+            # Show personal dues history for regular users
+            return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+
+@members_bp.route('/dues/<tenant_id>/management')
+def dues_management(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user or not current_user.membership_type or not current_user.membership_type.can_edit_dues:
+            flash("You do not have permission to manage dues.", "danger")
+            return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+        
+        # Get all members and dues records with proper sorting
+        from sqlalchemy import case, desc, asc
+        
+        # Join users with their dues records and sort by paid status, then date, then name
+        query = s.query(User, DuesRecord, DuesType).outerjoin(
+            DuesRecord, User.id == DuesRecord.user_id
+        ).outerjoin(
+            DuesType, DuesRecord.dues_type_id == DuesType.id
+        ).order_by(
+            # Unpaid first (status != 'paid' comes first)
+            case((DuesRecord.status == 'paid', 1), else_=0),
+            # Then by due date
+            asc(DuesRecord.due_date),
+            # Then by last name A-Z
+            asc(User.last_name),
+            asc(User.first_name)
+        )
+        
+        dues_data = query.all()
+        
+        # Get dues types for dropdown
+        dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.sort_order, DuesType.name).all()
+        
+        # Get all users for dues generation
+        all_users = s.query(User).order_by(User.last_name, User.first_name).all()
+    
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    return render_template('dues.html', tenant_id=tenant_id, tenant_display_name=tenant_display_name)
+    return render_template('dues_management.html',
+                         tenant_id=tenant_id,
+                         tenant_display_name=tenant_display_name,
+                         dues_data=dues_data,
+                         dues_types=dues_types,
+                         all_users=all_users,
+                         can_manage_dues=True)
+
+@members_bp.route('/dues/<tenant_id>/generate', methods=['POST'])
+def generate_dues(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user or not current_user.membership_type or not current_user.membership_type.can_edit_dues:
+            flash("You do not have permission to generate dues.", "danger")
+            return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+        
+        try:
+            dues_type_id = request.form.get('dues_type_id')
+            amount_due = request.form.get('amount_due')
+            due_date_str = request.form.get('due_date')
+            
+            if not all([dues_type_id, amount_due, due_date_str]):
+                flash("All fields are required for dues generation.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Parse date
+            from datetime import datetime
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+            except ValueError:
+                flash("Invalid date format.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Validate amount
+            try:
+                amount = float(amount_due)
+                if amount <= 0:
+                    raise ValueError("Amount must be positive")
+            except ValueError:
+                flash("Invalid amount.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Get all active users
+            all_users = s.query(User).all()
+            
+            # Create dues records for all users
+            records_created = 0
+            for user in all_users:
+                # Check if user already has this type of dues for this date
+                existing_record = s.query(DuesRecord).filter_by(
+                    user_id=user.id,
+                    dues_type_id=dues_type_id,
+                    due_date=due_date
+                ).first()
+                
+                if not existing_record:
+                    new_dues = DuesRecord(
+                        user_id=user.id,
+                        dues_type_id=dues_type_id,
+                        amount_due=amount,
+                        due_date=due_date,
+                        status='unpaid'
+                    )
+                    s.add(new_dues)
+                    records_created += 1
+            
+            s.commit()
+            flash(f"Generated {records_created} dues records successfully.", "success")
+            
+        except Exception as e:
+            s.rollback()
+            flash(f"Error generating dues: {str(e)}", "danger")
+    
+    return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+
+@members_bp.route('/dues/<tenant_id>/my-history')
+def my_dues_history(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user:
+            flash("User not found.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+        
+        # Get user's dues records
+        my_dues = s.query(DuesRecord, DuesType).join(
+            DuesType, DuesRecord.dues_type_id == DuesType.id
+        ).filter(
+            DuesRecord.user_id == current_user.id
+        ).order_by(
+            DuesRecord.due_date.desc()
+        ).all()
+        
+        can_manage_dues = current_user.membership_type and current_user.membership_type.can_edit_dues if current_user.membership_type else False
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('my_dues_history.html',
+                         tenant_id=tenant_id,
+                         tenant_display_name=tenant_display_name,
+                         my_dues=my_dues,
+                         current_user=current_user,
+                         can_manage_dues=can_manage_dues)
+
+@members_bp.route('/dues/<tenant_id>/member/<int:member_id>')
+def member_dues_history(tenant_id, member_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.membership_type)).filter_by(id=session['user_id']).first()
+        if not current_user or not current_user.membership_type or not current_user.membership_type.can_edit_dues:
+            flash("You do not have permission to view member dues history.", "danger")
+            return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+        
+        # Get selected member
+        selected_member = s.query(User).filter_by(id=member_id).first()
+        if not selected_member:
+            flash("Member not found.", "danger")
+            return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+        
+        # Get member's dues records
+        member_dues = s.query(DuesRecord, DuesType).join(
+            DuesType, DuesRecord.dues_type_id == DuesType.id
+        ).filter(
+            DuesRecord.user_id == member_id
+        ).order_by(
+            DuesRecord.due_date.desc()
+        ).all()
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    return render_template('member_dues_history.html',
+                         tenant_id=tenant_id,
+                         tenant_display_name=tenant_display_name,
+                         member_dues=member_dues,
+                         selected_member=selected_member,
+                         can_manage_dues=True)
 
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):

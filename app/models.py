@@ -1,7 +1,7 @@
 # app/models.py
 
 from database import Base # Import Base from your existing database.py
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship # Import relationship
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime # Import datetime
@@ -92,28 +92,54 @@ class AttendanceRecord(Base):
     def __repr__(self):
         return f'<AttendanceRecord {self.user_id} - {self.event_name} on {self.event_date}>'
 
+# NEW: DuesType model for dues categories
+class DuesType(Base):
+    __tablename__ = 'dues_types'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(50), nullable=False)  # Annual, Quarterly, Assessment
+    description = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Define relationship with DuesRecord
+    dues_records = relationship("DuesRecord", back_populates="dues_type_obj")
+
+    def __repr__(self):
+        return f'<DuesType {self.name}>'
+
 # NEW: DuesRecord model for dues management subsystem
 class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    dues_type = Column(String(1), nullable=False)  # F=Food, Q=Quarterly, A=Annual
-    amount_due = Column(String(10), nullable=False)  # Store as string for currency formatting
-    amount_paid = Column(String(10), default='0.00', nullable=False)
+    dues_type_id = Column(Integer, ForeignKey('dues_types.id'), nullable=False)
+    amount_due = Column(DECIMAL(10, 2), nullable=False)
+    amount_paid = Column(DECIMAL(10, 2), default=0.00, nullable=False)
     due_date = Column(DateTime, nullable=False)
     payment_date = Column(DateTime, nullable=True)
     payment_method = Column(String(50), nullable=True)  # cash, check, card, online, etc.
     payment_reference = Column(String(100), nullable=True)  # check number, transaction ID, etc.
-    status = Column(String(20), default='pending', nullable=False)  # pending, paid, overdue, partial
+    status = Column(String(20), default='unpaid', nullable=False)  # unpaid, paid, overdue, partial
     notes = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Define relationship with User
+    # Define relationships
     user = relationship("User", backref="dues_records")
+    dues_type_obj = relationship("DuesType", back_populates="dues_records")
+
+    @property
+    def is_paid(self):
+        return self.status == 'paid'
+
+    @property
+    def balance_due(self):
+        return float(self.amount_due) - float(self.amount_paid)
 
     def __repr__(self):
-        return f'<DuesRecord {self.user_id} - {self.dues_type} ${self.amount_due} due {self.due_date}>'
+        return f'<DuesRecord {self.user_id} - {self.dues_type_obj.name if self.dues_type_obj else "Unknown"} ${self.amount_due} due {self.due_date}>'
 
 # NEW: ReferralRecord model for referrals subsystem
 class ReferralRecord(Base):

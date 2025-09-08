@@ -118,6 +118,16 @@
                                 <option value="{{ user_id }}">{{ user_name }}</option>
                                 {% endfor %}
                             </select>
+                            {% elif col == 'dues_type_id' and selected_table == 'dues_records' %}
+                            {# Dues type selection dropdown #}
+                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                <option value="">-- Select Dues Type --</option>
+                                {% if dues_types_list %}
+                                {% for type_id, type_name in dues_types_list %}
+                                <option value="{{ type_id }}">{{ type_name }}</option>
+                                {% endfor %}
+                                {% endif %}
+                            </select>
                             {% elif 'date' in col.lower() %}
                             {# Date inputs for date fields #}
                             <input type="datetime-local" name="{{ col }}" placeholder="{{ col }}"
@@ -162,6 +172,14 @@
                             <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
                                 {% for user_id, user_name in users_list %}
                                 <option value="{{ user_id }}" {% if user_id==row[col] %}selected{% endif %}>{{ user_name
+                                    }}</option>
+                                {% endfor %}
+                            </select>
+                            {% elif col == 'dues_type_id' and selected_table == 'dues_records' %}
+                            {# Editable dropdown for dues_type_id in existing records #}
+                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                {% for type_id, type_name in dues_types_list %}
+                                <option value="{{ type_id }}" {% if type_id==row[col] %}selected{% endif %}>{{ type_name
                                     }}</option>
                                 {% endfor %}
                             </select>

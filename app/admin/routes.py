@@ -4,7 +4,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord, MembershipType
+from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord, MembershipType, DuesType
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
 from datetime import datetime
@@ -34,6 +34,8 @@ def get_table_and_model(table_name, tenant_id):
         return AttendanceRecord
     elif table_name == 'dues_records':
         return DuesRecord
+    elif table_name == 'dues_types':
+        return DuesType
     elif table_name == 'referral_records':
         return ReferralRecord
     elif table_name == 'membership_types':
@@ -108,6 +110,12 @@ def admin_panel(selected_tenant_id):
         if table_name in ['attendance_records', 'dues_records', 'referral_records', 'user_auth_details']:
             users = s.query(User).order_by(User.first_name, User.last_name).all()
             users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
+        
+        # Get dues types list for dues_records foreign key
+        dues_types_list = []
+        if table_name == 'dues_records':
+            dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.sort_order, DuesType.name).all()
+            dues_types_list = [(dt.id, dt.name) for dt in dues_types]
         
         if table_name:
             model = get_table_and_model(table_name, tenant_id_to_manage)
@@ -247,5 +255,6 @@ def admin_panel(selected_tenant_id):
                            columns=columns,
                            data=data,
                            users_list=users_list,  # For foreign key dropdowns
+                           dues_types_list=dues_types_list,  # For dues type dropdowns
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
                            Config=Config)
