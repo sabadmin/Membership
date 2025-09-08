@@ -91,6 +91,13 @@
                                 <option value="false">No</option>
                                 <option value="true">Yes</option>
                             </select>
+                            {% elif col in ['user_id', 'referrer_id'] and selected_table in ['attendance_records',
+                            'dues_records', 'referral_records'] %}
+                            {# User selection dropdown for foreign key fields #}
+                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                <option value="">-- Select Member --</option>
+                                {# This would need to be populated from backend with actual users #}
+                            </select>
                             {% elif 'date' in col.lower() %}
                             {# Date inputs for date fields #}
                             <input type="datetime-local" name="{{ col }}" placeholder="{{ col }}"
