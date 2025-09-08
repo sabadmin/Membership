@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - {{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{{ page_title }}</h1>
+        </div>
+
+        <!-- Date Selection Form -->
+        <form method="POST" class="mb-6">
+            <div class="bg-gray-50 p-4 rounded-md">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <div>
+                        <label for="selected_date" class="block text-gray-700 text-sm font-bold mb-2">Select
+                            Date:</label>
+                        <input type="date" id="selected_date" name="selected_date" value="{{ selected_date }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400"
+                            onchange="this.form.submit();">
+                    </div>
+                    <div>
+                        <button type="submit" id="view_button"
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                            View Attendance
+                        </button>
+                    </div>
+                    {% if can_view_all %}
+                    <div class="text-sm text-gray-600">
+                        <p>Viewing all members</p>
+                    </div>
+                    {% else %}
+                    <div class="text-sm text-gray-600">
+                        <p>Viewing your attendance history</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+
+        <!-- Permission Notice for Regular Users -->
+        {% if not can_view_all %}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-blue-700">
+                        You are viewing your personal attendance history. To create attendance records or view all
+                        members, contact your administrator for elevated permissions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Date Navigation and Matrix Header -->
+        <div class="mb-4">
+            <div class="flex justify-between items-center bg-gray-100 p-4 rounded-md">
+                <button type="button" onclick="navigateDate(-1)"
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                    Previous Day
+                </button>
+
+                <h3 class="text-lg font-semibold text-gray-800">
+                    {{ event_name }} - {{ selected_date }}
+                </h3>
+
+                <button type="button" onclick="navigateDate(1)"
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                    Next Day
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Attendance Matrix - Always Show -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full border-collapse border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                            Member</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                            Status</th>
+                        {% if can_view_all %}
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                            Company</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                >>>>>>> REPLACE
+
+                <<<<<<< SEARCH :start_line:109 ------- <!-- Navigation Help -->
+                    <div class="mt-6 text-center text-gray-600">
+                        <p class="text-sm">Use the date selector above to view attendance for any date in history.</p>
+                    </div>
+                    =======
+                    <!-- Navigation Help -->
+                    <div class="mt-6 text-center text-gray-600">
+                        <p class="text-sm">Use the date selector above or navigation arrows to view attendance for any
+                            date in history.</p>
+                        {% if not all_users or not existing_attendance %}
+                        <p class="text-sm text-gray-500 mt-2">No attendance records found for {{ selected_date }}.</p>
+                        {% endif %}
+                    </div>
+                    >>>>>>> REPLACE
+
+                    <<<<<<< SEARCH :start_line:27 ------- function navigateDate(direction) { const
+                        dateInput=document.getElementById('selected_date'); const currentDate=new Date(dateInput.value);
+                        // Add/subtract one day currentDate.setDate(currentDate.getDate() + direction); // Format back
+                        to YYYY-MM-DD const newDate=currentDate.toISOString().split('T')[0]; dateInput.value=newDate; //
+                        Submit form document.querySelector('form').submit(); }=======function navigateDate(direction) {
+                        const dateInput=document.getElementById('selected_date'); const currentDate=new
+                        Date(dateInput.value + 'T00:00:00' ); // Add/subtract one day
+                        currentDate.setDate(currentDate.getDate() + direction); // Format back to YYYY-MM-DD const
+                        year=currentDate.getFullYear(); const month=String(currentDate.getMonth() + 1).padStart(2, '0'
+                        ); const day=String(currentDate.getDate()).padStart(2, '0' ); const
+                        newDate=`${year}-${month}-${day}`; dateInput.value=newDate; // Show loading and submit form
+                        const viewButton=document.getElementById('view_button'); viewButton.textContent='Loading...' ;
+                        viewButton.disabled=true; document.querySelector('form').submit(); }>>>>>>> REPLACE
+                        </diff>
+                        </apply_diff>
