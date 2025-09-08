@@ -182,71 +182,90 @@ def attendance_create(tenant_id):
     
     return _attendance_view(tenant_id, editable=True)
 
-@members_bp.route('/attendance/<tenant_id>/review')
-def attendance_review(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-    
-    return _attendance_view(tenant_id, editable=False)
 
 @members_bp.route('/attendance/<tenant_id>/history', methods=['GET', 'POST'])
 def attendance_history(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    import logging
+    logger = logging.getLogger(__name__)
     
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    
-    # Get selected date from form or default to today
-    from datetime import date, datetime
-    selected_date = date.today()
-    
-    if request.method == 'POST':
-        date_str = request.form.get('selected_date')
-        if date_str:
-            try:
-                selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            except ValueError:
-                flash("Invalid date format.", "danger")
-    
-    with get_tenant_db_session(tenant_id) as s:
-        current_user = _get_current_user(s, session['user_id'])
+    try:
+        logger.info(f"Starting attendance_history for tenant: {tenant_id}")
         
-        # Check if user has permission to see all users or just their own
-        can_view_all = current_user and current_user.user_role in ['attendance', 'president', 'admin']
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
         
-        if can_view_all:
-            # Show all users for privileged users
-            all_users = s.query(User).order_by(User.first_name, User.last_name).all()
-            page_title = "Attendance History - All Members"
-        else:
-            # Show only current user for regular members
-            all_users = [current_user] if current_user else []
-            page_title = "My Attendance History"
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
         
-        # Get attendance records for the selected date
-        attendance_records = s.query(AttendanceRecord).filter_by(
-            event_date=selected_date
-        ).all()
+        # Get selected date from form or default to today
+        from datetime import date, datetime
+        selected_date = date.today()
         
-        # Create attendance dictionary
-        existing_attendance = {}
-        event_name = "Meeting"  # Default
+        if request.method == 'POST':
+            date_str = request.form.get('selected_date')
+            if date_str:
+                try:
+                    selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                    logger.info(f"Selected date: {selected_date}")
+                except ValueError:
+                    logger.error(f"Invalid date format: {date_str}")
+                    flash("Invalid date format.", "danger")
         
-        for record in attendance_records:
-            existing_attendance[record.user_id] = record.status
-            event_name = record.event_name  # Use the event name from records
-    
-    return render_template('attendance_history.html',
-                         tenant_id=tenant_id,
-                         tenant_display_name=tenant_display_name,
-                         all_users=all_users,
-                         existing_attendance=existing_attendance,
-                         selected_date=selected_date.strftime('%Y-%m-%d'),
-                         event_name=event_name,
-                         can_view_all=can_view_all,
-                         page_title=page_title)
+        with get_tenant_db_session(tenant_id) as s:
+            logger.info("Database session opened successfully")
+            
+            current_user = _get_current_user(s, session['user_id'])
+            if not current_user:
+                logger.error("Current user not found")
+                flash("User not found.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
+            
+            # Check if user has permission to see all users or just their own
+            can_view_all = current_user and current_user.user_role in ['attendance', 'president', 'admin']
+            logger.info(f"User role: {current_user.user_role}, can_view_all: {can_view_all}")
+            
+            if can_view_all:
+                # Show all users for privileged users
+                all_users = s.query(User).options(joinedload(User.membership_type)).order_by(User.first_name, User.last_name).all()
+                page_title = "Attendance History - All Members"
+            else:
+                # Show only current user for regular members
+                all_users = [current_user] if current_user else []
+                page_title = "My Attendance History"
+            
+            logger.info(f"Retrieved {len(all_users)} users")
+            
+            # Get attendance records for the selected date
+            attendance_records = s.query(AttendanceRecord).filter(
+                AttendanceRecord.event_date == selected_date
+            ).all()
+            
+            logger.info(f"Found {len(attendance_records)} attendance records for {selected_date}")
+            
+            # Create attendance dictionary
+            existing_attendance = {}
+            event_name = "Meeting"  # Default
+            
+            for record in attendance_records:
+                existing_attendance[record.user_id] = record.status
+                event_name = record.event_name  # Use the event name from records
+        
+        logger.info("Rendering attendance_history.html template")
+        return render_template('attendance_history.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_users=all_users,
+                             existing_attendance=existing_attendance,
+                             selected_date=selected_date.strftime('%Y-%m-%d'),
+                             event_name=event_name,
+                             can_view_all=can_view_all,
+                             page_title=page_title)
+                             
+    except Exception as e:
+        logger.error(f"Error in attendance_history: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        flash("An error occurred while retrieving attendance history.", "danger")
+        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
 def _attendance_view(tenant_id, editable=True):
     """Common attendance view logic"""
