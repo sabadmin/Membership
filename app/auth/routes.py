@@ -21,8 +21,15 @@ def index():
             return redirect(url_for('members.my_demographics', tenant_id=session['tenant_id']))
     
     inferred_tenant = infer_tenant_from_hostname()
-    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
-    show_tenant_dropdown_on_index = (inferred_tenant == 'website' or inferred_tenant == 'member')
+    current_hostname = request.host.split(':')[0]
+    
+    # For member.unfc.it, show as admin portal but still use website tenant
+    if current_hostname == 'member.unfc.it':
+        inferred_tenant_display_name = 'Admin Portal'
+        show_tenant_dropdown_on_index = True
+    else:
+        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
+        show_tenant_dropdown_on_index = (inferred_tenant == 'website')
     
     return render_template('index.html', inferred_tenant=inferred_tenant, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown_on_index)
 
@@ -34,8 +41,15 @@ def register():
     try:
         logger.info("Starting register route")
         inferred_tenant_id = infer_tenant_from_hostname()
-        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-        show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
+        current_hostname = request.host.split(':')[0]
+        
+        # For member.unfc.it, show as admin portal but use website tenant
+        if current_hostname == 'member.unfc.it':
+            inferred_tenant_display_name = 'Admin Portal'
+            show_tenant_dropdown = True
+        else:
+            inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+            show_tenant_dropdown = (inferred_tenant_id == 'website')
         logger.info(f"Inferred tenant: {inferred_tenant_id}")
 
         if request.method == 'POST':
@@ -120,8 +134,15 @@ def register():
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     inferred_tenant_id = infer_tenant_from_hostname()
-    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-    show_tenant_dropdown = (inferred_tenant_id == 'website' or inferred_tenant_id == 'member')
+    current_hostname = request.host.split(':')[0]
+    
+    # For member.unfc.it, show as admin portal but use website tenant
+    if current_hostname == 'member.unfc.it':
+        inferred_tenant_display_name = 'Admin Portal'
+        show_tenant_dropdown = True
+    else:
+        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+        show_tenant_dropdown = (inferred_tenant_id == 'website')
 
     if request.method == 'POST':
         data = request.form
