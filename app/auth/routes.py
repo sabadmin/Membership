@@ -14,8 +14,8 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/')
 def index():
     if 'user_id' in session and 'tenant_id' in session:
-        # If superadmin or member tenant, redirect to Admin Panel immediately after login
-        if session['tenant_id'] in [Config.SUPERADMIN_TENANT_ID, 'member']:
+        # If superadmin (website), redirect to Admin Panel immediately after login
+        if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
         else:
             return redirect(url_for('members.my_demographics', tenant_id=session['tenant_id']))
@@ -95,7 +95,7 @@ def register():
                     session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
                     # Redirect based on tenant
-                    if tenant_id in [Config.SUPERADMIN_TENANT_ID, 'member']:
+                    if tenant_id == Config.SUPERADMIN_TENANT_ID:
                         flash("Welcome to admin! Access the admin panel.", "info")
                         return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                     else:
@@ -165,7 +165,7 @@ def login():
                 session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
                 session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
                 
-                if tenant_id in [Config.SUPERADMIN_TENANT_ID, 'member']:
+                if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
                     return redirect(url_for('members.my_demographics', tenant_id=tenant_id))

@@ -5,6 +5,11 @@ from config import Config
 
 def infer_tenant_from_hostname():
     current_hostname = request.host.split(':')[0]
+    
+    # Special case: member.unfc.it should use website (admin) database
+    if current_hostname == 'member.unfc.it':
+        return 'website'
+    
     for tenant_key in Config.TENANT_DATABASES.keys():
         if f"{tenant_key}.unfc.it" == current_hostname:
             return tenant_key
