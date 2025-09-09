@@ -575,41 +575,26 @@ def my_dues_history(tenant_id):
                 flash("User not found.", "danger")
                 return redirect(url_for('auth.login', tenant_id=tenant_id))
             
-            # Try to get user's dues records with schema compatibility
+            # Get user's dues records using simple query with existing schema
             my_dues = []
             try:
-                logger.info("Attempting to query dues records with new schema...")
-                my_dues = s.query(DuesRecord, DuesType).join(
-                    DuesType, DuesRecord.dues_type_id == DuesType.id
-                ).filter(
-                    DuesRecord.user_id == current_user.id
-                ).order_by(
-                    DuesRecord.due_date.desc()
-                ).all()
-                logger.info(f"Found {len(my_dues)} dues records with new schema")
-            except Exception as schema_error:
-                logger.warning(f"New schema query failed: {str(schema_error)}")
+                logger.info("Querying dues records for current user...")
+                dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
+                logger.info(f"Found {len(dues_records)} dues records")
                 
-                # Fallback to old schema or simple query
-                try:
-                    logger.info("Attempting fallback query...")
-                    dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).all()
-                    logger.info(f"Found {len(dues_records)} dues records with fallback query")
+                # Create template-compatible data structure
+                for record in dues_records:
+                    # Use the dues_type_name property from the model
+                    mock_dues_type = type('MockDuesType', (), {
+                        'name': record.dues_type_name,
+                        'description': f'{record.dues_type_name} dues'
+                    })()
+                    my_dues.append((record, mock_dues_type))
                     
-                    # Create mock data for template compatibility
-                    my_dues = []
-                    for record in dues_records:
-                        # Create simple dues type name from record
-                        dues_type_name = record.dues_type_name if hasattr(record, 'dues_type_name') else getattr(record, 'dues_type', 'Unknown')
-                        mock_dues_type = type('MockDuesType', (), {
-                            'name': dues_type_name,
-                            'description': f'{dues_type_name} dues'
-                        })()
-                        my_dues.append((record, mock_dues_type))
-                        
-                except Exception as fallback_error:
-                    logger.error(f"Fallback query also failed: {str(fallback_error)}")
-                    my_dues = []
+            except Exception as dues_error:
+                logger.error(f"Error querying dues records: {str(dues_error)}")
+                # Return empty list instead of crashing
+                my_dues = []
             
             can_manage_dues = current_user.membership_type and current_user.membership_type.can_edit_dues if current_user.membership_type else False
             logger.info(f"User can manage dues: {can_manage_dues}")
@@ -626,8 +611,16 @@ def my_dues_history(tenant_id):
     except Exception as e:
         logger.error(f"Error in my_dues_history route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
-        flash("Dues history temporarily unavailable. Please contact administrator.", "danger")
-        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+        
+        # Instead of redirecting, render a safe version of the page
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+        flash("Dues history temporarily unavailable due to system updates. Contact administrator for dues information.", "warning")
+        return render_template('my_dues_history.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             my_dues=[],  # Empty list
+                             current_user=None,
+                             can_manage_dues=False)
 
 @members_bp.route('/dues/<tenant_id>/member/<int:member_id>')
 def member_dues_history(tenant_id, member_id):
