@@ -175,14 +175,23 @@
                                     }}</option>
                                 {% endfor %}
                             </select>
-                            {% elif col == 'dues_type_id' and selected_table == 'dues_records' %}
-                            {# Editable dropdown for dues_type_id in existing records #}
-                            <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
-                                {% for type_id, type_name in dues_types_list %}
-                                <option value="{{ type_id }}" {% if type_id==row[col] %}selected{% endif %}>{{ type_name
-                                    }}</option>
-                                {% endfor %}
-                            </select>
+                            {% elif col == 'dues_type' and selected_table == 'dues_records' %}
+                            {# Display readable name and dropdown for dues_type in existing records #}
+                            <div class="text-sm">
+                                <div class="text-gray-700 mb-1">
+                                    Current:
+                                    {% if row[col] == 'A' %}Annual
+                                    {% elif row[col] == 'Q' %}Quarterly
+                                    {% elif row[col] == 'F' %}Assessment
+                                    {% else %}{{ row[col] }}{% endif %}
+                                </div>
+                                <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
+                                    {% for type_id, type_name in dues_types_list %}
+                                    <option value="{{ type_id }}" {% if type_id==row[col] %}selected{% endif %}>{{
+                                        type_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                             {% elif col.startswith('can_edit_') %}
                             {# Boolean dropdowns for permission fields #}
                             <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm">
