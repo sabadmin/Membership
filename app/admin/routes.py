@@ -109,10 +109,14 @@ def admin_panel(selected_tenant_id):
             users = s.query(User).order_by(User.first_name, User.last_name).all()
             users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
         
-        # Get simple dues types list for dues_records dropdown
+        # Get dues types list - use full names for flexibility
         dues_types_list = []
         if table_name == 'dues_records':
-            dues_types_list = [('A', 'Annual'), ('Q', 'Quarterly'), ('F', 'Assessment')]
+            dues_types_list = [
+                ('Annual', 'Annual'),
+                ('Quarterly', 'Quarterly'),
+                ('Assessment', 'Assessment')
+            ]
         
         if table_name:
             model = get_table_and_model(table_name, tenant_id_to_manage)

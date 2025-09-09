@@ -100,7 +100,7 @@ class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    dues_type = Column(String(1), nullable=False)  # F=Food/Assessment, Q=Quarterly, A=Annual
+    dues_type = Column(String(50), nullable=False)  # Store full names: Annual, Quarterly, Assessment
     amount_due = Column(String(10), nullable=False)  # Store as string for existing schema
     amount_paid = Column(String(10), default='0.00', nullable=False)
     due_date = Column(DateTime, nullable=False)
@@ -128,13 +128,8 @@ class DuesRecord(Base):
 
     @property
     def dues_type_name(self):
-        """Convert old dues_type codes to readable names"""
-        type_mapping = {
-            'A': 'Annual',
-            'Q': 'Quarterly',
-            'F': 'Assessment'
-        }
-        return type_mapping.get(self.dues_type, 'Unknown')
+        """Return dues_type as-is since it's now stored as full name"""
+        return self.dues_type or 'Unknown'
 
     def __repr__(self):
         return f'<DuesRecord {self.user_id} - {self.dues_type_name} ${self.amount_due} due {self.due_date}>'

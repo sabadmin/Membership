@@ -385,11 +385,11 @@ def dues(tenant_id):
                 # Get all users for dues generation
                 all_users = s.query(User).order_by(User.last_name, User.first_name).all()
                 
-                # Create simple dues types list
+                # Create simple dues types list using full names
                 dues_types = [
-                    {'id': 'A', 'name': 'Annual'},
-                    {'id': 'Q', 'name': 'Quarterly'},
-                    {'id': 'F', 'name': 'Assessment'}
+                    {'id': 'Annual', 'name': 'Annual'},
+                    {'id': 'Quarterly', 'name': 'Quarterly'},
+                    {'id': 'Assessment', 'name': 'Assessment'}
                 ]
                 
                 logger.info("Rendering dues_management.html directly")
@@ -528,18 +528,18 @@ def generate_dues(tenant_id):
             records_created = 0
             
             for user in all_users:
-                # Check if user already has this type of dues for this date (using existing schema)
+                # Check if user already has this type of dues for this date (using full names)
                 existing_record = s.query(DuesRecord).filter_by(
                     user_id=user.id,
-                    dues_type=dues_type_id,  # This is now the single letter code
+                    dues_type=dues_type_id,  # This is now the full name
                     due_date=due_date
                 ).first()
                 
                 if not existing_record:
-                    # Create new record using existing schema
+                    # Create new record using full name
                     new_dues = DuesRecord(
                         user_id=user.id,
-                        dues_type=dues_type_id,  # Store the single letter code
+                        dues_type=dues_type_id,  # Store the full name
                         amount_due=str(amount),  # Store as string for existing schema
                         due_date=due_date,
                         status='unpaid'
@@ -601,10 +601,8 @@ def my_dues_history(tenant_id):
                 
                 # Create template-compatible data structure
                 for row in dues_rows:
-                    # Convert dues_type code to readable name
-                    dues_type_code = getattr(row, 'dues_type', 'A')
-                    dues_type_names = {'A': 'Annual', 'Q': 'Quarterly', 'F': 'Assessment'}
-                    dues_type_name = dues_type_names.get(dues_type_code, dues_type_code)
+                    # Use dues_type as-is since it's now stored as full name
+                    dues_type_name = getattr(row, 'dues_type', 'Unknown')
                     
                     # Create mock objects for template
                     mock_record = type('MockRecord', (), {
