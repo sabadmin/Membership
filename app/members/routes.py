@@ -575,12 +575,23 @@ def my_dues_history(tenant_id):
                 flash("User not found.", "danger")
                 return redirect(url_for('auth.login', tenant_id=tenant_id))
             
-            # Get user's dues records using simple query with existing schema
+            # Check user permissions first
+            can_manage_dues = current_user.membership_type and current_user.membership_type.can_edit_dues if current_user.membership_type else False
+            logger.info(f"User can manage dues: {can_manage_dues}")
+            
+            # Get dues records based on user permissions
             my_dues = []
             try:
-                logger.info("Querying dues records for current user...")
-                dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
-                logger.info(f"Found {len(dues_records)} dues records")
+                if can_manage_dues:
+                    # Privileged users: get ALL dues records from all users
+                    logger.info("Querying ALL dues records for privileged user...")
+                    dues_records = s.query(DuesRecord).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(dues_records)} total dues records")
+                else:
+                    # Regular users: get only their own dues records
+                    logger.info("Querying dues records for current user only...")
+                    dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(dues_records)} dues records for user")
                 
                 # Create template-compatible data structure
                 for record in dues_records:
@@ -593,11 +604,8 @@ def my_dues_history(tenant_id):
                     
             except Exception as dues_error:
                 logger.error(f"Error querying dues records: {str(dues_error)}")
-                # Return empty list instead of crashing
+                # Return empty list but don't show error message
                 my_dues = []
-            
-            can_manage_dues = current_user.membership_type and current_user.membership_type.can_edit_dues if current_user.membership_type else False
-            logger.info(f"User can manage dues: {can_manage_dues}")
         
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
         logger.info("Rendering my_dues_history.html")
@@ -612,9 +620,8 @@ def my_dues_history(tenant_id):
         logger.error(f"Error in my_dues_history route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         
-        # Instead of redirecting, render a safe version of the page
+        # Render safe version without error message
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-        flash("Dues history temporarily unavailable due to system updates. Contact administrator for dues information.", "warning")
         return render_template('my_dues_history.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
