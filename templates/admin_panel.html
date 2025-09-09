@@ -118,7 +118,7 @@
                                 <option value="{{ user_id }}">{{ user_name }}</option>
                                 {% endfor %}
                             </select>
-                            {% elif col == 'dues_type_id' and selected_table == 'dues_records' %}
+                            {% elif col == 'dues_type' and selected_table == 'dues_records' %}
                             {# Dues type selection dropdown #}
                             <select name="{{ col }}" class="w-full border-gray-300 rounded-md text-sm" required>
                                 <option value="">-- Select Dues Type --</option>

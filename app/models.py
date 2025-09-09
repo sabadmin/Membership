@@ -92,22 +92,8 @@ class AttendanceRecord(Base):
     def __repr__(self):
         return f'<AttendanceRecord {self.user_id} - {self.event_name} on {self.event_date}>'
 
-# NEW: DuesType model for dues categories
-class DuesType(Base):
-    __tablename__ = 'dues_types'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), nullable=False)  # Annual, Quarterly, Assessment
-    description = Column(String(255), nullable=True)
-    is_active = Column(Boolean, default=True, nullable=False)
-    sort_order = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
-    # Define relationship with DuesRecord
-    dues_records = relationship("DuesRecord", back_populates="dues_type_obj")
-
-    def __repr__(self):
-        return f'<DuesType {self.name}>'
+# NOTE: DuesType model temporarily removed to avoid schema conflicts
+# Will be re-enabled after database migration is complete
 
 # NEW: DuesRecord model for dues management subsystem (existing schema)
 class DuesRecord(Base):

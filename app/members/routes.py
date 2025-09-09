@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord, DuesType
+from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -415,15 +415,13 @@ def dues_management(tenant_id):
                 flash("You do not have permission to manage dues.", "danger")
                 return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
             
-            logger.info("Checking if DuesType table exists...")
-            # Check if DuesType table exists and has data
-            try:
-                dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.sort_order, DuesType.name).all()
-                logger.info(f"Found {len(dues_types)} dues types")
-            except Exception as dt_error:
-                logger.error(f"Error querying DuesType: {str(dt_error)}")
-                # Create a fallback dues type if table doesn't exist
-                dues_types = []
+            # Create simple dues types list for dropdown
+            dues_types = [
+                {'id': 'A', 'name': 'Annual'},
+                {'id': 'Q', 'name': 'Quarterly'},
+                {'id': 'F', 'name': 'Assessment'}
+            ]
+            logger.info("Created simple dues types list")
             
             # Get all users first
             all_users = s.query(User).order_by(User.last_name, User.first_name).all()
@@ -531,10 +529,11 @@ def my_dues_history(tenant_id):
                     # Create mock data for template compatibility
                     my_dues = []
                     for record in dues_records:
-                        # Create mock DuesType object
+                        # Create simple dues type name from record
+                        dues_type_name = record.dues_type_name if hasattr(record, 'dues_type_name') else getattr(record, 'dues_type', 'Unknown')
                         mock_dues_type = type('MockDuesType', (), {
-                            'name': getattr(record, 'dues_type', 'Unknown'),
-                            'description': 'Legacy dues record'
+                            'name': dues_type_name,
+                            'description': f'{dues_type_name} dues'
                         })()
                         my_dues.append((record, mock_dues_type))
                         
@@ -609,10 +608,11 @@ def member_dues_history(tenant_id, member_id):
                     # Create mock data for template compatibility
                     member_dues = []
                     for record in dues_records:
-                        # Create mock DuesType object
+                        # Create simple dues type name from record
+                        dues_type_name = record.dues_type_name if hasattr(record, 'dues_type_name') else getattr(record, 'dues_type', 'Unknown')
                         mock_dues_type = type('MockDuesType', (), {
-                            'name': getattr(record, 'dues_type', 'Unknown'),
-                            'description': 'Legacy dues record'
+                            'name': dues_type_name,
+                            'description': f'{dues_type_name} dues'
                         })()
                         member_dues.append((record, mock_dues_type))
                         
