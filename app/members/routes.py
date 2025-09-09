@@ -378,15 +378,16 @@ def dues(tenant_id):
             logger.info(f"User can manage dues: {can_manage_dues}")
             
             if can_manage_dues:
-                # For now, show a simple dues page instead of complex management
+                # Privileged users: show dues generation interface
                 tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
                 return render_template('dues.html',
                                      tenant_id=tenant_id,
                                      tenant_display_name=tenant_display_name,
                                      can_manage_dues=True,
-                                     message="Dues management system is being set up. Please use the admin panel to manage dues records directly.")
+                                     page_type="management",
+                                     message="Generate dues for all members. Dues types will be set up before production.")
             else:
-                # Show personal dues history for regular users
+                # Regular users: redirect to dues history to see their own dues
                 return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
                 
     except Exception as e:
