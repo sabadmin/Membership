@@ -109,14 +109,14 @@ class DuesType(Base):
     def __repr__(self):
         return f'<DuesType {self.name}>'
 
-# NEW: DuesRecord model for dues management subsystem
+# NEW: DuesRecord model for dues management subsystem (existing schema)
 class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    dues_type_id = Column(Integer, ForeignKey('dues_types.id'), nullable=False)
-    amount_due = Column(DECIMAL(10, 2), nullable=False)
-    amount_paid = Column(DECIMAL(10, 2), default=0.00, nullable=False)
+    dues_type = Column(String(1), nullable=False)  # F=Food/Assessment, Q=Quarterly, A=Annual
+    amount_due = Column(String(10), nullable=False)  # Store as string for existing schema
+    amount_paid = Column(String(10), default='0.00', nullable=False)
     due_date = Column(DateTime, nullable=False)
     payment_date = Column(DateTime, nullable=True)
     payment_method = Column(String(50), nullable=True)  # cash, check, card, online, etc.
@@ -126,9 +126,8 @@ class DuesRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Define relationships
+    # Define relationship with User
     user = relationship("User", backref="dues_records")
-    dues_type_obj = relationship("DuesType", back_populates="dues_records")
 
     @property
     def is_paid(self):
@@ -136,10 +135,23 @@ class DuesRecord(Base):
 
     @property
     def balance_due(self):
-        return float(self.amount_due) - float(self.amount_paid)
+        try:
+            return float(self.amount_due) - float(self.amount_paid)
+        except (ValueError, TypeError):
+            return 0.0
+
+    @property
+    def dues_type_name(self):
+        """Convert old dues_type codes to readable names"""
+        type_mapping = {
+            'A': 'Annual',
+            'Q': 'Quarterly',
+            'F': 'Assessment'
+        }
+        return type_mapping.get(self.dues_type, 'Unknown')
 
     def __repr__(self):
-        return f'<DuesRecord {self.user_id} - {self.dues_type_obj.name if self.dues_type_obj else "Unknown"} ${self.amount_due} due {self.due_date}>'
+        return f'<DuesRecord {self.user_id} - {self.dues_type_name} ${self.amount_due} due {self.due_date}>'
 
 # NEW: ReferralRecord model for referrals subsystem
 class ReferralRecord(Base):
