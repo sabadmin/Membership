@@ -582,25 +582,49 @@ def my_dues_history(tenant_id):
             # Get dues records based on user permissions
             my_dues = []
             try:
+                # Use raw SQL to bypass any model issues
+                from sqlalchemy import text
+                
                 if can_manage_dues:
                     # Privileged users: get ALL dues records from all users
                     logger.info("Querying ALL dues records for privileged user...")
-                    dues_records = s.query(DuesRecord).order_by(DuesRecord.due_date.desc()).all()
-                    logger.info(f"Found {len(dues_records)} total dues records")
+                    result = s.execute(text("SELECT * FROM dues_records ORDER BY due_date DESC"))
+                    dues_rows = result.fetchall()
+                    logger.info(f"Found {len(dues_rows)} total dues records via raw SQL")
                 else:
                     # Regular users: get only their own dues records
                     logger.info("Querying dues records for current user only...")
-                    dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
-                    logger.info(f"Found {len(dues_records)} dues records for user")
+                    result = s.execute(text("SELECT * FROM dues_records WHERE user_id = :user_id ORDER BY due_date DESC"),
+                                     {'user_id': current_user.id})
+                    dues_rows = result.fetchall()
+                    logger.info(f"Found {len(dues_rows)} dues records for user via raw SQL")
                 
                 # Create template-compatible data structure
-                for record in dues_records:
-                    # Use the dues_type_name property from the model
-                    mock_dues_type = type('MockDuesType', (), {
-                        'name': record.dues_type_name,
-                        'description': f'{record.dues_type_name} dues'
+                for row in dues_rows:
+                    # Convert dues_type code to readable name
+                    dues_type_code = getattr(row, 'dues_type', 'A')
+                    dues_type_names = {'A': 'Annual', 'Q': 'Quarterly', 'F': 'Assessment'}
+                    dues_type_name = dues_type_names.get(dues_type_code, dues_type_code)
+                    
+                    # Create mock objects for template
+                    mock_record = type('MockRecord', (), {
+                        'id': getattr(row, 'id', 0),
+                        'user_id': getattr(row, 'user_id', 0),
+                        'dues_type': dues_type_code,
+                        'amount_due': getattr(row, 'amount_due', '0.00'),
+                        'amount_paid': getattr(row, 'amount_paid', '0.00'),
+                        'due_date': getattr(row, 'due_date', None),
+                        'payment_date': getattr(row, 'payment_date', None),
+                        'status': getattr(row, 'status', 'unpaid'),
+                        'user': s.query(User).filter_by(id=getattr(row, 'user_id', 0)).first()
                     })()
-                    my_dues.append((record, mock_dues_type))
+                    
+                    mock_dues_type = type('MockDuesType', (), {
+                        'name': dues_type_name,
+                        'description': f'{dues_type_name} dues'
+                    })()
+                    
+                    my_dues.append((mock_record, mock_dues_type))
                     
             except Exception as dues_error:
                 logger.error(f"Error querying dues records: {str(dues_error)}")
