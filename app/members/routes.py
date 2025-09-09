@@ -589,10 +589,14 @@ def my_dues_history(tenant_id):
                 from sqlalchemy import text
                 
                 if can_manage_dues:
-                    # Privileged users: get ALL dues records from all users with proper joins
+                    # Privileged users: get ALL dues records from all users with proper joins including User
                     logger.info("Querying ALL dues records for privileged user with joins...")
                     my_dues_query = s.query(DuesRecord, DuesType).join(
                         DuesType, DuesRecord.dues_type_id == DuesType.id
+                    ).join(
+                        User, DuesRecord.user_id == User.id
+                    ).options(
+                        joinedload(DuesRecord.user)
                     ).order_by(DuesRecord.due_date.desc()).all()
                     logger.info(f"Found {len(my_dues_query)} total dues records")
                     my_dues = my_dues_query
