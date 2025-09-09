@@ -113,7 +113,7 @@ def register():
                         return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                     else:
                         flash("Registration successful! Welcome to the system.", "success")
-                        return redirect(url_for('auth.index'))
+                        return redirect(url_for('members.dashboard', tenant_id=tenant_id))
                         
             except Exception as e:
                 logger.error(f"Database error during registration: {str(e)}")
@@ -188,7 +188,7 @@ def login():
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
-                    return redirect(url_for('auth.index'))
+                    return redirect(url_for('members.dashboard', tenant_id=tenant_id))
             else:
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)

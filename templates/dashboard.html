@@ -1,42 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ tenant_display_name }} Dashboard</title> {# Updated tab title #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-4xl mt-10">
-        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">{{ tenant_display_name }} Dashboard</h1> {# Uses display name in title #}
-        <p class="text-gray-600 mb-8 text-center">Welcome, {{ current_user_email }}! You are viewing data for: <span class="font-semibold">{{ tenant_display_name }}</span></p> {# Changed "tenant:" to "for:" and uses display name #}
-        
-        <div class="mb-6 text-center">
-            <a href="{{ url_for('logout') }}" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">Logout</a>
-        </div>
+{% extends "base.html" %}
 
-        <h2 class="text-2xl font-bold text-gray-800 mb-4">Other Users:</h2> {# Changed from "Other Users in This Tenant:" #}
-        {% if users %}
-            <ul class="list-disc list-inside bg-gray-50 p-4 rounded-md shadow-inner">
-                {% for user in users %}
-                    <li class="mb-2 text-gray-700">
-                        <strong>Name:</strong> {{ user.first_name }} {% if user.middle_initial %}{{ user.middle_initial }}. {% endif %}{{ user.last_name }}<br>
-                        <strong>Email:</strong> {{ user.email }}<br>
-                        {% if user.address %}<strong>Address:</strong> {{ user.address }}<br>{% endif %}
-                        {% if user.cell_phone %}<strong>Cell:</strong> {{ user.cell_phone }}<br>{% endif %}
-                        {% if user.company %}<strong>Company:</strong> {{ user.company }}<br>{% endif %}
-                        {% if user.company_address %}<strong>Company Address:</strong> {{ user.company_address }}<br>{% endif %}
-                        {% if user.company_phone %}<strong>Company Phone:</strong> {{ user.company_phone }}<br>{% endif %}
-                        {% if user.company_title %}<strong>Company Title:</strong> {{ user.company_title }}<br>{% endif %}
-                        {% if user.network_group_title %}<strong>Network Group Title:</strong> {{ user.network_group_title }}<br>{% endif %}
-                        {% if user.member_anniversary %}<strong>Member Anniversary:</strong> {{ user.member_anniversary }}<br>{% endif %}
-                        (ID: {{ user.id }})
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="text-gray-600 text-center">No other users found yet.</p> {# Changed from "in this tenant yet." #}
-        {% endif %}
+{% block title %}{{ tenant_display_name }} - Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="bg-white p-8 rounded-lg shadow-md">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">Welcome to {{ tenant_display_name }}</h1>
+        <p class="text-gray-600 text-lg">Use the navigation menu above to access different sections of the system.</p>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}

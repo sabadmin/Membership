@@ -26,6 +26,19 @@ def _format_phone(phone):
     return phone
 
 
+@members_bp.route('/dashboard/<tenant_id>')
+def dashboard(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You do not have permission to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    
+    return render_template('dashboard.html',
+                           tenant_id=tenant_id,
+                           tenant_display_name=tenant_display_name)
+
+
 @members_bp.route('/demographics/<tenant_id>/my', methods=['GET', 'POST'])
 def my_demographics(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
