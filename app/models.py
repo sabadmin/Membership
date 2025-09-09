@@ -103,15 +103,18 @@ class DuesType(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
+    # Define relationship with DuesRecord
+    dues_records = relationship("DuesRecord", back_populates="dues_type_obj")
+
     def __repr__(self):
         return f'<DuesType {self.name}>'
 
-# NEW: DuesRecord model for dues management subsystem - matches actual database schema
+# NEW: DuesRecord model for dues management subsystem with proper foreign key
 class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    dues_type = Column(String(50), nullable=False)  # Legacy field that exists in database
+    dues_type_id = Column(Integer, ForeignKey('dues_types.id'), nullable=False)
     amount_due = Column(DECIMAL(10, 2), nullable=False)
     amount_paid = Column(DECIMAL(10, 2), default=0.00, nullable=False)
     due_date = Column(DateTime, nullable=False)
@@ -123,8 +126,9 @@ class DuesRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Define relationship with User only (no DuesType relationship since we use string field)
+    # Define relationships
     user = relationship("User", backref="dues_records")
+    dues_type_obj = relationship("DuesType", back_populates="dues_records")
 
     @property
     def is_paid(self):
@@ -135,7 +139,7 @@ class DuesRecord(Base):
         return float(self.amount_due) - float(self.amount_paid)
 
     def __repr__(self):
-        return f'<DuesRecord {self.user_id} - {self.dues_type} ${self.amount_due} due {self.due_date}>'
+        return f'<DuesRecord {self.user_id} - {self.dues_type_obj.name if self.dues_type_obj else "Unknown"} ${self.amount_due} due {self.due_date}>'
 
 # NEW: ReferralRecord model for referrals subsystem
 class ReferralRecord(Base):
