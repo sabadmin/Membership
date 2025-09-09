@@ -377,15 +377,29 @@ def dues(tenant_id):
             can_manage_dues = current_user and current_user.membership_type and current_user.membership_type.can_edit_dues
             logger.info(f"User can manage dues: {can_manage_dues}")
             
+            # Show dues management interface directly for privileged users
+            # Show dues history for regular users
+            tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+            
             if can_manage_dues:
-                # Privileged users: show dues generation interface
-                tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-                return render_template('dues.html',
+                # Get all users for dues generation
+                all_users = s.query(User).order_by(User.last_name, User.first_name).all()
+                
+                # Create simple dues types list
+                dues_types = [
+                    {'id': 'A', 'name': 'Annual'},
+                    {'id': 'Q', 'name': 'Quarterly'},
+                    {'id': 'F', 'name': 'Assessment'}
+                ]
+                
+                logger.info("Rendering dues_management.html directly")
+                return render_template('dues_management.html',
                                      tenant_id=tenant_id,
                                      tenant_display_name=tenant_display_name,
-                                     can_manage_dues=True,
-                                     page_type="management",
-                                     message="Generate dues for all members. Dues types will be set up before production.")
+                                     dues_data=[],  # Empty for now
+                                     dues_types=dues_types,
+                                     all_users=all_users,
+                                     can_manage_dues=True)
             else:
                 # Regular users: redirect to dues history to see their own dues
                 return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
@@ -481,8 +495,64 @@ def generate_dues(tenant_id):
             flash("You do not have permission to generate dues.", "danger")
             return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
         
-        # For now, disable dues generation until schema migration is complete
-        flash("Dues generation is temporarily disabled. Please use the Admin Panel to create dues records manually.", "warning")
+        try:
+            dues_type_id = request.form.get('dues_type_id')
+            amount_due = request.form.get('amount_due')
+            due_date_str = request.form.get('due_date')
+            
+            if not all([dues_type_id, amount_due, due_date_str]):
+                flash("All fields are required for dues generation.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Parse date
+            from datetime import datetime
+            try:
+                due_date = datetime.strptime(due_date_str, '%Y-%m-%d')
+            except ValueError:
+                flash("Invalid date format.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Validate amount
+            try:
+                amount = float(amount_due)
+                if amount <= 0:
+                    raise ValueError("Amount must be positive")
+            except ValueError:
+                flash("Invalid amount.", "danger")
+                return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+            
+            # Get all active users
+            all_users = s.query(User).all()
+            
+            # Create dues records for all users (using existing schema)
+            records_created = 0
+            
+            for user in all_users:
+                # Check if user already has this type of dues for this date (using existing schema)
+                existing_record = s.query(DuesRecord).filter_by(
+                    user_id=user.id,
+                    dues_type=dues_type_id,  # This is now the single letter code
+                    due_date=due_date
+                ).first()
+                
+                if not existing_record:
+                    # Create new record using existing schema
+                    new_dues = DuesRecord(
+                        user_id=user.id,
+                        dues_type=dues_type_id,  # Store the single letter code
+                        amount_due=str(amount),  # Store as string for existing schema
+                        due_date=due_date,
+                        status='unpaid'
+                    )
+                    s.add(new_dues)
+                    records_created += 1
+            
+            s.commit()
+            flash(f"Generated {records_created} dues records successfully.", "success")
+            
+        except Exception as e:
+            s.rollback()
+            flash(f"Error generating dues: {str(e)}", "danger")
     
     return redirect(url_for('members.dues_management', tenant_id=tenant_id))
 

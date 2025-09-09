@@ -93,16 +93,32 @@
                             </div>
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-sm text-gray-600">
-                            {{ dues_type.name if dues_type else 'Unknown' }}
+                            {% if dues_record %}
+                            {{ dues_record.dues_type_name }}
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            ${{ "%.2f"|format(dues_record.amount_due) }}
+                            {% if dues_record %}
+                            ${{ dues_record.amount_due }}
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            ${{ "%.2f"|format(dues_record.amount_paid) }}
+                            {% if dues_record %}
+                            ${{ dues_record.amount_paid }}
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                            {% if dues_record %}
                             {{ dues_record.due_date.strftime('%Y-%m-%d') }}
+                            {% else %}
+                            -
+                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
                             {% if dues_record.status == 'paid' %}
