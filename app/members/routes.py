@@ -411,7 +411,7 @@ def dues(tenant_id):
         logger.error(f"Error in dues route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("An error occurred while accessing dues. Please contact administrator.", "danger")
-        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+        return redirect(url_for('auth.index'))
 
 @members_bp.route('/dues/<tenant_id>/management')
 def dues_management(tenant_id):
@@ -484,7 +484,7 @@ def dues_management(tenant_id):
         logger.error(f"Error in dues_management route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("An error occurred while accessing dues management. Please contact administrator.", "danger")
-        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+        return redirect(url_for('auth.index'))
 
 @members_bp.route('/dues/<tenant_id>/generate', methods=['POST'])
 def generate_dues(tenant_id):
@@ -625,8 +625,9 @@ def my_dues_history(tenant_id):
         logger.error(f"Error in my_dues_history route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         
-        # Render safe version without error message
+        # Show error page instead of redirecting
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+        flash("Dues history is temporarily unavailable. Please try again later or contact administrator.", "warning")
         return render_template('my_dues_history.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
@@ -708,7 +709,7 @@ def member_dues_history(tenant_id, member_id):
         logger.error(f"Error in member_dues_history route: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("Member dues history temporarily unavailable. Please contact administrator.", "danger")
-        return redirect(url_for('members.dues_management', tenant_id=tenant_id))
+        return redirect(url_for('auth.index'))
 
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):
