@@ -17,8 +17,7 @@ def index():
         # If superadmin (website), redirect to Admin Panel immediately after login
         if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
-        else:
-            return redirect(url_for('auth.index'))
+        # Regular users: let them stay on index page to choose where to go
     
     inferred_tenant = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
