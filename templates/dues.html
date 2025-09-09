@@ -3,9 +3,102 @@
 {% block title %}{{ tenant_display_name }} Dues{% endblock %}
 
 {% block content %}
-<div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl mt-10 mx-auto text-center">
-    <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ tenant_display_name }} Dues</h1>
-    <p class="text-gray-600">This is the Dues page for {{ tenant_display_name }}.</p>
-    <p class="text-gray-600 mt-4">Feature development coming soon!</p>
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">{{ tenant_display_name }} Dues</h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mb-4">
+            {% for category, message in messages %}
+            <div
+                class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if can_manage_dues %}
+        <!-- Privileged User Interface -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Dues Management</h2>
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-blue-700">
+                            {{ message if message else "Use the Admin Panel to manage dues records directly. Navigate to
+                            Admin Panel → Select Database → Table: dues_records to create and manage dues." }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{{ url_for('admin.admin_panel', selected_tenant_id=tenant_id) }}"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                    Go to Admin Panel
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Regular User Interface -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">My Dues Information</h2>
+            <div class="bg-gray-50 border-l-4 border-gray-400 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                            fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                                clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-gray-700">
+                            Dues information and payment history will be available here. Contact your administrator for
+                            current dues status and payment options.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-md font-semibold text-gray-700 mb-2">Current Functionality</h3>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• View dues records via Admin Panel</li>
+                    <li>• Create new dues entries</li>
+                    <li>• Track payment status</li>
+                    <li>• Member-specific dues history</li>
+                </ul>
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h3 class="text-md font-semibold text-gray-700 mb-2">Available via Admin Panel</h3>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>• dues_records table management</li>
+                    <li>• dues_types configuration</li>
+                    <li>• Bulk operations</li>
+                    <li>• Data export capabilities</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
