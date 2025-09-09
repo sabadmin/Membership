@@ -598,101 +598,36 @@ def my_dues_history(tenant_id):
             # Get dues records based on user permissions
             my_dues = []
             try:
-                # Use raw SQL to bypass any model issues
-                from sqlalchemy import text
-                
                 if can_manage_dues:
-                    # Privileged users: get ALL dues records from all users
+                    # Privileged users: get ALL dues records from all users with User preloaded
                     logger.info("Querying ALL dues records for privileged user...")
-                    try:
-                        # Use direct query without joins since schema may not have foreign keys yet
-                        dues_records = s.query(DuesRecord).options(
-                            joinedload(DuesRecord.user)
-                        ).order_by(DuesRecord.due_date.desc()).all()
-                        logger.info(f"Found {len(dues_records)} total dues records")
-                        
-                        # Create mock data for template compatibility
-                        my_dues = []
-                        for record in dues_records:
-                            # Get dues type from the legacy dues_type field
-                            dues_type_name = 'Unknown'
-                            try:
-                                # Check if record has legacy dues_type field
-                                if hasattr(record, 'dues_type') and record.dues_type:
-                                    dues_type_name = record.dues_type
-                                elif hasattr(record, 'dues_type_id') and record.dues_type_id:
-                                    # Try to query the DuesType by ID if foreign key exists
-                                    dues_type = s.query(DuesType).filter_by(id=record.dues_type_id).first()
-                                    if dues_type:
-                                        dues_type_name = dues_type.name
-                                    else:
-                                        dues_type_name = f"Type {record.dues_type_id}"
-                                else:
-                                    dues_type_name = 'Legacy'
-                            except Exception as dt_error:
-                                logger.warning(f"Could not resolve dues type for record {record.id}: {str(dt_error)}")
-                                dues_type_name = 'Unknown'
-                            
-                            mock_dues_type = type('MockDuesType', (), {
-                                'name': dues_type_name,
-                                'description': f'{dues_type_name} dues'
-                            })()
-                            my_dues.append((record, mock_dues_type))
-                            
-                    except Exception as priv_dues_error:
-                        logger.error(f"Query failed for privileged user: {str(priv_dues_error)}")
-                        # Complete rollback to avoid transaction errors
-                        s.rollback()
-                        my_dues = []
+                    dues_records = s.query(DuesRecord).options(
+                        joinedload(DuesRecord.user)
+                    ).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(dues_records)} total dues records")
                 else:
                     # Regular users: get only their own dues records
-                    logger.info("Querying dues records for current user...")
-                    try:
-                        # Use direct query without joins since schema may not have foreign keys yet
-                        dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
-                        logger.info(f"Found {len(dues_records)} dues records for user")
-                        
-                        # Create mock data for template compatibility
-                        my_dues = []
-                        for record in dues_records:
-                            # Get dues type from the legacy dues_type field
-                            dues_type_name = 'Unknown'
-                            try:
-                                # Check if record has legacy dues_type field
-                                if hasattr(record, 'dues_type') and record.dues_type:
-                                    dues_type_name = record.dues_type
-                                elif hasattr(record, 'dues_type_id') and record.dues_type_id:
-                                    # Try to query the DuesType by ID if foreign key exists
-                                    dues_type = s.query(DuesType).filter_by(id=record.dues_type_id).first()
-                                    if dues_type:
-                                        dues_type_name = dues_type.name
-                                    else:
-                                        dues_type_name = f"Type {record.dues_type_id}"
-                                else:
-                                    dues_type_name = 'Legacy'
-                            except Exception as dt_error:
-                                logger.warning(f"Could not resolve dues type for record {record.id}: {str(dt_error)}")
-                                dues_type_name = 'Unknown'
-                            
-                            mock_dues_type = type('MockDuesType', (), {
-                                'name': dues_type_name,
-                                'description': f'{dues_type_name} dues'
-                            })()
-                            my_dues.append((record, mock_dues_type))
-                            
-                    except Exception as user_dues_error:
-                        logger.error(f"Query failed for regular user: {str(user_dues_error)}")
-                        # Complete rollback to avoid transaction errors
-                        s.rollback()
-                        my_dues = []
+                    logger.info(f"Querying dues records for current user ID: {current_user.id}")
+                    dues_records = s.query(DuesRecord).filter_by(user_id=current_user.id).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(dues_records)} dues records for user {current_user.id}")
+                
+                # Create template data for all records
+                for record in dues_records:
+                    # Get dues type from the legacy dues_type field
+                    dues_type_name = getattr(record, 'dues_type', 'Unknown')
+                    mock_dues_type = type('MockDuesType', (), {
+                        'name': dues_type_name,
+                        'description': f'{dues_type_name} dues'
+                    })()
+                    my_dues.append((record, mock_dues_type))
                     
             except Exception as dues_error:
                 logger.error(f"Error querying dues records: {str(dues_error)}")
-                # Return empty list but don't show error message
+                s.rollback()
                 my_dues = []
         
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-        logger.info("Rendering my_dues_history.html")
+        logger.info(f"Rendering my_dues_history.html with {len(my_dues)} dues entries")
         return render_template('my_dues_history.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
