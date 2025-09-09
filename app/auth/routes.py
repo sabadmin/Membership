@@ -18,7 +18,7 @@ def index():
         if session['tenant_id'] == Config.SUPERADMIN_TENANT_ID:
             return redirect(url_for('admin.admin_panel', selected_tenant_id=session['tenant_id']))
         else:
-            return redirect(url_for('members.my_demographics', tenant_id=session['tenant_id']))
+            return redirect(url_for('auth.index'))
     
     inferred_tenant = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
@@ -113,8 +113,8 @@ def register():
                         flash("Welcome to admin! Access the admin panel.", "info")
                         return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                     else:
-                        flash("Registration successful! Please fill in your demographic information.", "success")
-                        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+                        flash("Registration successful! Welcome to the system.", "success")
+                        return redirect(url_for('auth.index'))
                         
             except Exception as e:
                 logger.error(f"Database error during registration: {str(e)}")
@@ -189,7 +189,7 @@ def login():
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
-                    return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+                    return redirect(url_for('auth.index'))
             else:
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
