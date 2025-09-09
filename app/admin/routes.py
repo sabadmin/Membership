@@ -4,7 +4,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord, MembershipType
+from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord, MembershipType, DuesType
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
 from datetime import datetime
@@ -34,6 +34,8 @@ def get_table_and_model(table_name, tenant_id):
         return AttendanceRecord
     elif table_name == 'dues_records':
         return DuesRecord
+    elif table_name == 'dues_types':
+        return DuesType
     elif table_name == 'referral_records':
         return ReferralRecord
     elif table_name == 'membership_types':
@@ -109,14 +111,16 @@ def admin_panel(selected_tenant_id):
             users = s.query(User).order_by(User.first_name, User.last_name).all()
             users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
         
-        # Get dues types list - use full names for flexibility
+        # Get dues types from auxiliary table for foreign key dropdown
         dues_types_list = []
         if table_name == 'dues_records':
-            dues_types_list = [
-                ('Annual', 'Annual'),
-                ('Quarterly', 'Quarterly'),
-                ('Assessment', 'Assessment')
-            ]
+            try:
+                dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.sort_order, DuesType.name).all()
+                dues_types_list = [(dt.id, dt.name) for dt in dues_types]
+            except Exception as e:
+                logger.warning(f"Could not load dues types: {str(e)}")
+                # Fallback empty list - user needs to create dues types first
+                dues_types_list = []
         
         if table_name:
             model = get_table_and_model(table_name, tenant_id_to_manage)

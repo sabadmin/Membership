@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord
+from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord, DuesType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import datetime
@@ -385,12 +385,15 @@ def dues(tenant_id):
                 # Get all users for dues generation
                 all_users = s.query(User).order_by(User.last_name, User.first_name).all()
                 
-                # Create simple dues types list using full names
-                dues_types = [
-                    {'id': 'Annual', 'name': 'Annual'},
-                    {'id': 'Quarterly', 'name': 'Quarterly'},
-                    {'id': 'Assessment', 'name': 'Assessment'}
-                ]
+                # Get dues types from auxiliary table
+                dues_types = []
+                try:
+                    dt_list = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.sort_order, DuesType.name).all()
+                    dues_types = [{'id': dt.id, 'name': dt.name} for dt in dt_list]
+                    logger.info(f"Found {len(dues_types)} dues types from auxiliary table")
+                except Exception as dt_error:
+                    logger.error(f"Error loading dues types: {str(dt_error)}")
+                    dues_types = []
                 
                 logger.info("Rendering dues_management.html directly")
                 return render_template('dues_management.html',
@@ -528,19 +531,19 @@ def generate_dues(tenant_id):
             records_created = 0
             
             for user in all_users:
-                # Check if user already has this type of dues for this date (using full names)
+                # Check if user already has this type of dues for this date (using foreign key)
                 existing_record = s.query(DuesRecord).filter_by(
                     user_id=user.id,
-                    dues_type=dues_type_id,  # This is now the full name
+                    dues_type_id=dues_type_id,  # This is now the foreign key ID
                     due_date=due_date
                 ).first()
                 
                 if not existing_record:
-                    # Create new record using full name
+                    # Create new record using foreign key
                     new_dues = DuesRecord(
                         user_id=user.id,
-                        dues_type=dues_type_id,  # Store the full name
-                        amount_due=str(amount),  # Store as string for existing schema
+                        dues_type_id=dues_type_id,  # Store the foreign key ID
+                        amount_due=amount,  # Use decimal amount
                         due_date=due_date,
                         status='unpaid'
                     )
@@ -586,43 +589,23 @@ def my_dues_history(tenant_id):
                 from sqlalchemy import text
                 
                 if can_manage_dues:
-                    # Privileged users: get ALL dues records from all users
-                    logger.info("Querying ALL dues records for privileged user...")
-                    result = s.execute(text("SELECT * FROM dues_records ORDER BY due_date DESC"))
-                    dues_rows = result.fetchall()
-                    logger.info(f"Found {len(dues_rows)} total dues records via raw SQL")
+                    # Privileged users: get ALL dues records from all users with proper joins
+                    logger.info("Querying ALL dues records for privileged user with joins...")
+                    my_dues_query = s.query(DuesRecord, DuesType).join(
+                        DuesType, DuesRecord.dues_type_id == DuesType.id
+                    ).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(my_dues_query)} total dues records")
+                    my_dues = my_dues_query
                 else:
-                    # Regular users: get only their own dues records
-                    logger.info("Querying dues records for current user only...")
-                    result = s.execute(text("SELECT * FROM dues_records WHERE user_id = :user_id ORDER BY due_date DESC"),
-                                     {'user_id': current_user.id})
-                    dues_rows = result.fetchall()
-                    logger.info(f"Found {len(dues_rows)} dues records for user via raw SQL")
-                
-                # Create template-compatible data structure
-                for row in dues_rows:
-                    # Use dues_type as-is since it's now stored as full name
-                    dues_type_name = getattr(row, 'dues_type', 'Unknown')
-                    
-                    # Create mock objects for template
-                    mock_record = type('MockRecord', (), {
-                        'id': getattr(row, 'id', 0),
-                        'user_id': getattr(row, 'user_id', 0),
-                        'dues_type': dues_type_code,
-                        'amount_due': getattr(row, 'amount_due', '0.00'),
-                        'amount_paid': getattr(row, 'amount_paid', '0.00'),
-                        'due_date': getattr(row, 'due_date', None),
-                        'payment_date': getattr(row, 'payment_date', None),
-                        'status': getattr(row, 'status', 'unpaid'),
-                        'user': s.query(User).filter_by(id=getattr(row, 'user_id', 0)).first()
-                    })()
-                    
-                    mock_dues_type = type('MockDuesType', (), {
-                        'name': dues_type_name,
-                        'description': f'{dues_type_name} dues'
-                    })()
-                    
-                    my_dues.append((mock_record, mock_dues_type))
+                    # Regular users: get only their own dues records with joins
+                    logger.info("Querying dues records for current user with joins...")
+                    my_dues_query = s.query(DuesRecord, DuesType).join(
+                        DuesType, DuesRecord.dues_type_id == DuesType.id
+                    ).filter(
+                        DuesRecord.user_id == current_user.id
+                    ).order_by(DuesRecord.due_date.desc()).all()
+                    logger.info(f"Found {len(my_dues_query)} dues records for user")
+                    my_dues = my_dues_query
                     
             except Exception as dues_error:
                 logger.error(f"Error querying dues records: {str(dues_error)}")

@@ -92,17 +92,31 @@ class AttendanceRecord(Base):
     def __repr__(self):
         return f'<AttendanceRecord {self.user_id} - {self.event_name} on {self.event_date}>'
 
-# NOTE: DuesType model temporarily removed to avoid schema conflicts
-# Will be re-enabled after database migration is complete
+# NEW: DuesType auxiliary table for configurable dues categories per tenant
+class DuesType(Base):
+    __tablename__ = 'dues_types'
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)  # Annual, Quarterly, Assessment, etc.
+    description = Column(String(255), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    sort_order = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-# NEW: DuesRecord model for dues management subsystem (existing schema)
+    # Define relationship with DuesRecord
+    dues_records = relationship("DuesRecord", back_populates="dues_type_obj")
+
+    def __repr__(self):
+        return f'<DuesType {self.name}>'
+
+# NEW: DuesRecord model for dues management subsystem with proper foreign key
 class DuesRecord(Base):
     __tablename__ = 'dues_records'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    dues_type = Column(String(50), nullable=False)  # Store full names: Annual, Quarterly, Assessment
-    amount_due = Column(String(10), nullable=False)  # Store as string for existing schema
-    amount_paid = Column(String(10), default='0.00', nullable=False)
+    dues_type_id = Column(Integer, ForeignKey('dues_types.id'), nullable=False)
+    amount_due = Column(DECIMAL(10, 2), nullable=False)
+    amount_paid = Column(DECIMAL(10, 2), default=0.00, nullable=False)
     due_date = Column(DateTime, nullable=False)
     payment_date = Column(DateTime, nullable=True)
     payment_method = Column(String(50), nullable=True)  # cash, check, card, online, etc.
@@ -112,8 +126,9 @@ class DuesRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
-    # Define relationship with User
+    # Define relationships
     user = relationship("User", backref="dues_records")
+    dues_type_obj = relationship("DuesType", back_populates="dues_records")
 
     @property
     def is_paid(self):
@@ -121,18 +136,10 @@ class DuesRecord(Base):
 
     @property
     def balance_due(self):
-        try:
-            return float(self.amount_due) - float(self.amount_paid)
-        except (ValueError, TypeError):
-            return 0.0
-
-    @property
-    def dues_type_name(self):
-        """Return dues_type as-is since it's now stored as full name"""
-        return self.dues_type or 'Unknown'
+        return float(self.amount_due) - float(self.amount_paid)
 
     def __repr__(self):
-        return f'<DuesRecord {self.user_id} - {self.dues_type_name} ${self.amount_due} due {self.due_date}>'
+        return f'<DuesRecord {self.user_id} - {self.dues_type_obj.name if self.dues_type_obj else "Unknown"} ${self.amount_due} due {self.due_date}>'
 
 # NEW: ReferralRecord model for referrals subsystem
 class ReferralRecord(Base):
