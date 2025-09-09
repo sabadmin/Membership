@@ -22,7 +22,7 @@ def migrate_dues_table_schema():
     """Migrate dues_records table schema for all tenants"""
     
     # Get all tenant IDs from config
-    tenant_ids = list(Config.TENANT_DB_CONFIGS.keys())
+    tenant_ids = list(Config.TENANT_DATABASES.keys())
     logger.info(f"Found {len(tenant_ids)} tenants: {tenant_ids}")
     
     for tenant_id in tenant_ids:
@@ -93,7 +93,7 @@ def migrate_dues_table_schema():
 
 def verify_migration():
     """Verify the migration was successful"""
-    tenant_ids = list(Config.TENANT_DB_CONFIGS.keys())
+    tenant_ids = list(Config.TENANT_DATABASES.keys())
     
     for tenant_id in tenant_ids:
         try:

@@ -20,7 +20,7 @@ def purge_dues_records():
     """Purge all dues records from all tenants"""
     
     # Get all tenant IDs from config
-    tenant_ids = list(Config.TENANT_DB_CONFIGS.keys())
+    tenant_ids = list(Config.TENANT_DATABASES.keys())
     logger.info(f"Found {len(tenant_ids)} tenants: {tenant_ids}")
     
     total_deleted = 0
