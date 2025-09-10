@@ -3,10 +3,12 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType
+from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord, DuesType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
+from .forms import DuesCreateForm, DuesPaymentForm, DuesUpdateForm
+
 
 # Define the Blueprint
 members_bp = Blueprint('members', __name__, url_prefix='/')
@@ -196,7 +198,6 @@ def attendance_history(tenant_id):
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
         
         # Get selected date from form or default to today
-        from datetime import date, datetime
         selected_date = date.today()
         
         if request.method == 'POST':
@@ -261,12 +262,14 @@ def attendance_history(tenant_id):
                              event_names=event_names,  # Individual event names per user
                              can_view_all=can_view_all,
                              page_title=page_title)
-                             
+                              
     except Exception as e:
         logger.error(f"Error in attendance_history: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("An error occurred while retrieving attendance history.", "danger")
         return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+
+
 @members_bp.route('/attendance/<tenant_id>/create', methods=['GET', 'POST'])
 def attendance_create(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
@@ -292,7 +295,6 @@ def _attendance_view(tenant_id, editable=True):
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
                 # Parse the date
-                from datetime import datetime
                 try:
                     parsed_date = datetime.strptime(event_date, '%Y-%m-%d')
                 except ValueError:
@@ -337,6 +339,7 @@ def _attendance_view(tenant_id, editable=True):
             
             return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
         return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
+    
     # Get existing attendance for today if available (GET request)
     today = date.today()
 
@@ -357,6 +360,8 @@ def _attendance_view(tenant_id, editable=True):
                          existing_attendance=existing_attendance,
                          today=today.strftime('%Y-%m-%d'),
                          editable=editable)
+
+
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
@@ -397,3 +402,87 @@ def security(tenant_id):
                                tenant_id=tenant_id,
                                tenant_display_name=Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize()),
                                auth_details=current_user_auth_details)
+
+
+
+@members_bp.route('/dues/<tenant_id>', methods=['GET', 'POST'])
+def dues(tenant_id):
+
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).get(session['user_id'])
+        can_edit = current_user.membership_type.can_edit_attendance if current_user and current_user.membership_type else False
+
+        dues_types = s.query(DuesType).filter_by(is_active=True).all()
+        dues_create_form = DuesCreateForm()
+        dues_create_form.dues_type_id.choices = [(dues_type.id, dues_type.dues_type) for dues_type in dues_types]
+        dues_create_form.member_id.choices = [(user.id, f"{user.first_name} {user.last_name}") for user in s.query(User).all()]
+
+        if request.method == 'POST' and can_edit:
+            if dues_create_form.validate_on_submit():
+                dues_record = DuesRecord(
+                    member_id=dues_create_form.member_id.data,
+                    dues_amount=dues_create_form.dues_amount.data,
+                    dues_type_id=dues_create_form.dues_type_id.data,
+                    due_date=dues_create_form.due_date.data,
+                    date_dues_generated=date.today()
+                )
+                s.add(dues_record)
+                s.commit()
+                flash('Dues record created successfully!', 'success')
+                return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+        # Query dues records, open dues first, then sorted
+        dues_records = s.query(DuesRecord).join(User).join(DuesType).order_by(
+            DuesRecord.amount_paid < DuesRecord.dues_amount,  # Open dues first
+            DuesRecord.due_date,
+            User.last_name,
+            User.first_name
+        ).all()
+
+        return render_template('dues.html', tenant_id=tenant_id, dues_records=dues_records, form=dues_create_form, can_edit=can_edit, dues_types=dues_types)
+    return "Dues subsystem is under construction."
+
+
+
+@members_bp.route('/dues/<tenant_id>/payment/<int:dues_record_id>', methods=['GET', 'POST'])
+def dues_payment(tenant_id, dues_record_id):
+    with get_tenant_db_session(tenant_id) as s:
+        dues_record = s.query(DuesRecord).get(dues_record_id)
+        if not dues_record:
+            flash('Dues record not found.', 'danger')
+            return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+        form = DuesPaymentForm(obj=dues_record) # Pre-populate form with existing data
+
+        if form.validate_on_submit():
+            dues_record.amount_paid = form.amount_paid.data
+            dues_record.document_number = form.document_number.data
+            dues_record.payment_received_date = form.payment_received_date.data
+            s.commit()
+            flash('Payment recorded successfully!', 'success')
+            return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+        return render_template('dues_payment.html', tenant_id=tenant_id, form=form, dues_record=dues_record)
+
+
+@members_bp.route('/dues/<tenant_id>/update/<int:dues_record_id>', methods=['GET', 'POST'])
+def dues_update(tenant_id, dues_record_id):
+    with get_tenant_db_session(tenant_id) as s:
+        dues_record = s.query(DuesRecord).get(dues_record_id)
+
+        if not dues_record:
+            flash('Dues record not found.', 'danger')
+            return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+        form = DuesUpdateForm(obj=dues_record)
+
+        if form.validate_on_submit():
+            dues_record.dues_amount = form.dues_amount.data
+            dues_record.due_date = form.due_date.data
+            s.commit()
+            flash('Dues record updated successfully!', 'success')
+            return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+        return render_template('dues_update.html', tenant_id=tenant_id, form=form, dues_record=dues_record)
+
+

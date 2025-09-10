@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Update Dues Record for {{ dues_record.member.first_name }} {{ dues_record.member.last_name }}</h1>
+
+<form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.dues_amount.label }} {{ form.dues_amount }}<br>
+    {{ form.due_date.label }} {{ form.due_date }}<br>
+    {{ form.submit() }}
+</form>
+
+{% endblock %}

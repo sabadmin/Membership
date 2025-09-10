@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Record Payment for {{ dues_record.member.first_name }} {{ dues_record.member.last_name }}</h1>
+
+<form method="post">
+    {{ form.hidden_tag() }}
+    {{ form.amount_paid.label }} {{ form.amount_paid(value=dues_record.dues_amount - dues_record.amount_paid) }}<br>
+    {{ form.document_number.label }} {{ form.document_number }}<br>
+    {{ form.payment_received_date.label }} {{ form.payment_received_date }}<br>
+    {{ form.submit() }}
+</form>
+
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Dues Records</h1>
+
+{% if can_edit %}
+<h2>Create Dues Record</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.member_id.label }} {{ form.member_id }}
+    {{ form.dues_type_id.label }} {{ form.dues_type_id }}
+    {{ form.dues_amount.label }} {{ form.dues_amount }}
+    {{ form.due_date.label }} {{ form.due_date }}
+    {{ form.submit() }}
+</form>
+{% endif %}
+
+
+<h2>Dues Records</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Member</th>
+            <th>Dues Type</th>
+            <th>Dues Amount</th>
+            <th>Due Date</th>
+            <th>Date Generated</th>
+            <th>Amount Paid</th>
+            <th>Document #</th>
+            <th>Payment Date</th>
+            {% if can_edit %}
+            <th>Actions</th>
+            {% endif %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in dues_records %}
+        <tr>
+            <td>{{ record.member.first_name }} {{ record.member.last_name }}</td>
+            <td>{{ record.dues_type.dues_type }}</td>
+            <td>{{ record.dues_amount }}</td>
+            <td>{{ record.due_date.strftime('%Y-%m-%d') }}</td>
+            <td>{{ record.date_dues_generated.strftime('%Y-%m-%d') }}</td>
+            <td>{{ record.amount_paid }}</td>
+            <td>{{ record.document_number }}</td>
+            <td>{{ record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '' }}</td>
+            {% if can_edit %}
+            <td>
+                <a href="{{ url_for('members.dues_payment', tenant_id=tenant_id, dues_record_id=record.id) }}"
+                    class="btn btn-primary btn-sm">Payment</a>
+                <a href="{{ url_for('members.dues_update', tenant_id=tenant_id, dues_record_id=record.id) }}"
+                    class="btn btn-secondary btn-sm">Update</a>
+            </td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
