@@ -267,6 +267,12 @@ def attendance_history(tenant_id):
         logger.error(f"Error type: {type(e).__name__}")
         flash("An error occurred while retrieving attendance history.", "danger")
         return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+@members_bp.route('/attendance/<tenant_id>/create', methods=['GET', 'POST'])
+def attendance_create(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    return _attendance_view(tenant_id)
 
 def _attendance_view(tenant_id, editable=True):
     """Common attendance view logic"""
@@ -330,10 +336,10 @@ def _attendance_view(tenant_id, editable=True):
                 flash(f"Failed to save attendance: {str(e)}", "danger")
             
             return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
-        
-        # For GET requests, get existing attendance for today if available
-        from datetime import date
-        today = date.today()
+        return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
+    
+    # For GET requests, get existing attendance for today if available
+    from datetime import date
         existing_attendance = {}
         
         # Get attendance records for today
