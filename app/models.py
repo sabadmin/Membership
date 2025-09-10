@@ -102,4 +102,12 @@ class DuesRecord(db.Model):
     document_number = db.Column(db.String(255))
     payment_received_date = db.Column(db.Date)
 
+
+class ReferralRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # Add other relevant fields here
+    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    referred_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
     member = db.relationship('User', backref='dues_records')
