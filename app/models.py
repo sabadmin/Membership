@@ -114,4 +114,4 @@ class ReferralRecord(db.Model):
     referred_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
-    member = db.relationship('User', backref='dues_records', foreign_keys=[referred_id])
+    member = db.relationship('User', backref='referral_records', foreign_keys=[referred_id])
