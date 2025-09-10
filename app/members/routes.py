@@ -6,7 +6,7 @@ from database import get_tenant_db_session
 from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
-from datetime import datetime
+from datetime import date, datetime
 
 # Define the Blueprint
 members_bp = Blueprint('members', __name__, url_prefix='/')
@@ -337,11 +337,10 @@ def _attendance_view(tenant_id, editable=True):
             
             return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
         return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
-    
-    # For GET requests, get existing attendance for today if available
-    from datetime import date
-    existing_attendance = {}
+    # Get existing attendance for today if available (GET request)
     today = date.today()
+
+    existing_attendance = {}
     if editable: # Only fetch existing attendance if view is editable
         # Get attendance records for today
         today_records = s.query(AttendanceRecord).filter_by(
