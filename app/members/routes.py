@@ -340,15 +340,16 @@ def _attendance_view(tenant_id, editable=True):
     
     # For GET requests, get existing attendance for today if available
     from datetime import date
-        existing_attendance = {}
-        
-        # Get attendance records for today
-        today_records = s.query(AttendanceRecord).filter_by(
-            event_date=today
-        ).all()
-        
-        for record in today_records:
-            existing_attendance[record.user_id] = record.status
+    existing_attendance = {}
+        today = date.today()
+        if editable: # Only fetch existing attendance if view is editable
+            # Get attendance records for today
+            today_records = s.query(AttendanceRecord).filter_by(
+                event_date=today
+            ).all()
+            
+            for record in today_records:
+                existing_attendance[record.user_id] = record.status
             
         return render_template('attendance_matrix.html',
                              tenant_id=tenant_id,
