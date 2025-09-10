@@ -8,7 +8,7 @@ Script to migrate the dues_records table structure:
 import sys
 sys.path.append('.')
 
-from database import get_tenant_db_session
+from database import get_tenant_db_session, init_db_for_tenant
 from app.models import DuesRecord, DuesType
 from config import Config
 import logging
@@ -29,11 +29,14 @@ def migrate_dues_table_schema():
         try:
             logger.info(f"Processing tenant: {tenant_id}")
             
+            # Initialize database engine and session for the current tenant
+            init_db_for_tenant(Flask(__name__), tenant_id)  # Create a dummy Flask app for context
+            
             with get_tenant_db_session(tenant_id) as s:
                 # Check if the table exists and get current schema
                 result = s.execute(text("""
-                    SELECT column_name, data_type 
-                    FROM information_schema.columns 
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
                     WHERE table_name = 'dues_records'
                     ORDER BY column_name
                 """))
@@ -57,7 +60,7 @@ def migrate_dues_table_schema():
                 if not has_dues_type_id:
                     logger.info(f"Adding dues_type_id column for tenant {tenant_id}")
                     s.execute(text("""
-                        ALTER TABLE dues_records 
+                        ALTER TABLE dues_records
                         ADD COLUMN dues_type_id INTEGER
                     """))
                     s.commit()
@@ -66,8 +69,8 @@ def migrate_dues_table_schema():
                 logger.info(f"Adding foreign key constraint for tenant {tenant_id}")
                 try:
                     s.execute(text("""
-                        ALTER TABLE dues_records 
-                        ADD CONSTRAINT fk_dues_records_dues_type_id 
+                        ALTER TABLE dues_records
+                        ADD CONSTRAINT fk_dues_records_dues_type_id
                         FOREIGN KEY (dues_type_id) REFERENCES dues_types(id)
                     """))
                     s.commit()
@@ -78,7 +81,7 @@ def migrate_dues_table_schema():
                 # Step 3: Drop the old dues_type column
                 logger.info(f"Dropping dues_type column for tenant {tenant_id}")
                 s.execute(text("""
-                    ALTER TABLE dues_records 
+                    ALTER TABLE dues_records
                     DROP COLUMN IF EXISTS dues_type
                 """))
                 s.commit()
@@ -97,10 +100,13 @@ def verify_migration():
     
     for tenant_id in tenant_ids:
         try:
+            # Initialize database engine and session for verification
+            init_db_for_tenant(Flask(__name__), tenant_id)
+            
             with get_tenant_db_session(tenant_id) as s:
                 result = s.execute(text("""
-                    SELECT column_name, data_type 
-                    FROM information_schema.columns 
+                    SELECT column_name, data_type
+                    FROM information_schema.columns
                     WHERE table_name = 'dues_records'
                     ORDER BY column_name
                 """))
