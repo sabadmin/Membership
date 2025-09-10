@@ -29,7 +29,7 @@ def create_app():
 
         # Import models here to ensure they're registered before table creation
         logger.info("Importing all models...")
-        from app.models import User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord, MembershipType
+        from app.models import User, UserAuthDetails, AttendanceRecord, ReferralRecord, MembershipType
         logger.info("All models imported successfully")
 
         with app.app_context():
