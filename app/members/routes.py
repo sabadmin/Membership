@@ -94,7 +94,7 @@ def my_demographics(tenant_id):
 
         # Get membership types for dropdown
         membership_types = s.query(MembershipType).filter_by(is_active=True).order_by(MembershipType.sort_order, MembershipType.name).all()
-        
+
     return render_template('demographics_form.html',
                            tenant_id=tenant_id,
                            user=current_user,
@@ -102,8 +102,8 @@ def my_demographics(tenant_id):
                            membership_types=membership_types,
                            editable=True,
                            page_title="My Demographics",
-                           format_phone_number=_format_phone)
-
+                           format_phone_number=_format_phone
+                           )
 @members_bp.route('/demographics/<tenant_id>/list')
 def membership_list(tenant_id):
     import logging

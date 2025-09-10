@@ -101,10 +101,7 @@
                             </button>
                             <div
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
-                                <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues Management</a>
-                                <a href="{{ url_for('members.my_dues_history', tenant_id=g.tenant_id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues History</a>
+
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Financial
                                     Reports</a>
                             </div>
@@ -200,9 +197,8 @@
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Attendance
                 </a>
-                <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
-                    class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
-                    Dues Management
+                class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
+                Dues Management
                 </a>
                 <a href="#" class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Referrals
