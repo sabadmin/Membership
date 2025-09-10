@@ -104,7 +104,7 @@ def register():
                     session['user_id'] = new_user.id
                     session['tenant_id'] = tenant_id  # Use tenant_id from current context
                     session['user_email'] = new_user.email
-                    session['user_name'] = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip() or new_user.email
+                    session['user_name'] = f"{new_user.first_name or ''} {new_user.last_name or ''}".strip() or new_user.email or 'User'
                     session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
                     # Redirect based on tenant
@@ -182,7 +182,7 @@ def login():
                 session['user_id'] = user.id
                 session['tenant_id'] = tenant_id  # Use tenant_id from current context
                 session['user_email'] = user.email
-                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email
+                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email or 'User'
                 session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
                 
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
