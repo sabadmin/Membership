@@ -57,15 +57,54 @@
 
         <style>
             .resizable-table {
-                table-layout: fixed;
+                table-layout: auto;
                 width: 100%;
+                border-collapse: collapse;
             }
 
             .resizable-col {
+                position: relative;
+                min-width: 120px;
+                max-width: 500px;
                 resize: horizontal;
                 overflow: auto;
-                min-width: 100px;
-                max-width: 400px;
+                border-right: 2px solid #e5e7eb;
+                padding: 8px 12px;
+            }
+
+            .resizable-col:hover {
+                background-color: #f9fafb;
+            }
+
+            /* Improved input field resizing */
+            .resizable-input {
+                resize: horizontal;
+                min-width: 80px;
+                max-width: 300px;
+                overflow: auto;
+            }
+
+            /* Better table cell styling */
+            .admin-table-cell {
+                padding: 8px 12px;
+                border-right: 1px solid #e5e7eb;
+                vertical-align: top;
+                word-wrap: break-word;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .admin-table-cell:hover {
+                background-color: #f3f4f6;
+            }
+
+            /* Responsive table wrapper */
+            .table-wrapper {
+                overflow-x: auto;
+                max-width: 100%;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
             }
         </style>
 

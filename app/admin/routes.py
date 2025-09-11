@@ -23,32 +23,57 @@ def check_admin_access():
 
 def get_all_table_names(engine):
     inspector = inspect(engine)
-    return inspector.get_table_names()
+    all_tables = inspector.get_table_names()
+    
+    # Remove duplicate tables (keep singular versions, remove plurals)
+    # Priority: keep the table name that matches our model naming convention
+    preferred_tables = []
+    table_mapping = {
+        'users': 'user',
+        'attendance_records': 'attendance_record', 
+        'referral_records': 'referral_record',
+        'dues_records': 'dues_record',
+        'membership_types': 'membership_type',
+        'dues_types': 'dues_type'
+    }
+    
+    # Add tables, preferring singular versions
+    for table in all_tables:
+        if table in table_mapping.values():
+            # This is a preferred singular version
+            preferred_tables.append(table)
+        elif table not in table_mapping.keys():
+            # This table doesn't have a duplicate, include it
+            preferred_tables.append(table)
+        # Skip plural versions that have singular equivalents
+    
+    return sorted(preferred_tables)
 
 def get_table_and_model(table_name, tenant_id):
-    if table_name == 'users':
-        return User
-    elif table_name == 'user_auth_details':
-        return UserAuthDetails
-    elif table_name == 'attendance_records':
-        return AttendanceRecord
-    elif table_name == 'referral_records':
-        return ReferralRecord
-    elif table_name == 'membership_types':
-        return MembershipType
-    return None
+    # Handle both singular and plural table names
+    table_model_mapping = {
+        'user': User,
+        'users': User,
+        'user_auth_details': UserAuthDetails,
+        'attendance_record': AttendanceRecord,
+        'attendance_records': AttendanceRecord,
+        'referral_record': ReferralRecord,
+        'referral_records': ReferralRecord,
+        'membership_type': MembershipType,
+        'membership_types': MembershipType,
+        'dues_record': None,  # Add DuesRecord model if it exists
+        'dues_records': None,
+        'dues_type': None,    # Add DuesType model if it exists
+        'dues_types': None
+    }
+    
+    return table_model_mapping.get(table_name)
 
 def get_column_names(model):
     if model:
+        # Return ALL columns as requested - no exclusions
         columns = [c.key for c in model.__table__.columns]
-        # Remove unwanted columns from all tables
-        exclude_columns = ['sort_order']
-        
-        # Remove specific fields from referral records
-        if model.__name__ == 'ReferralRecord':
-            exclude_columns.extend(['converted_to_member', 'conversion_date', 'created_at'])
-            
-        return [col for col in columns if col not in exclude_columns]
+        return columns
     return []
 
 def serialize_row(row):
