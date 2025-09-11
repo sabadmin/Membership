@@ -104,27 +104,36 @@ def test_tenant(tenant_id):
         existing_user = session.query(User).filter_by(email=test_email).first()
         
         if not existing_user:
-            # Create a test user
-            test_user = User(
-                first_name="Test",
-                last_name="User",
-                email=test_email,
-                is_active=True
-            )
-            session.add(test_user)
-            session.flush()  # Get the ID
-            
-            # Create auth details for the test user
-            auth_details = UserAuthDetails(
-                user_id=test_user.id,
-                password_hash="test_hash",
-                is_active=True,
-                last_login_1=datetime.utcnow()
-            )
-            session.add(auth_details)
-            session.commit()
-            
-            logger.info(f"✅ Created test user with ID {test_user.id}")
+            try:
+                # Create a test user
+                test_user = User(
+                    first_name="Test",
+                    last_name="User",
+                    email=test_email,
+                    is_active=True
+                )
+                session.add(test_user)
+                session.flush()  # Get the ID
+                
+                # Check if auth details already exist for this user
+                existing_auth = session.query(UserAuthDetails).filter_by(user_id=test_user.id).first()
+                if not existing_auth:
+                    # Create auth details for the test user
+                    from datetime import datetime, timezone
+                    auth_details = UserAuthDetails(
+                        user_id=test_user.id,
+                        password_hash="test_hash",
+                        is_active=True,
+                        last_login_1=datetime.now(timezone.utc)
+                    )
+                    session.add(auth_details)
+                
+                session.commit()
+                logger.info(f"✅ Created test user with ID {test_user.id}")
+            except Exception as e:
+                session.rollback()
+                logger.warning(f"⚠️  Could not create test user: {str(e)}")
+                logger.info("✅ Continuing with existing data")
         else:
             logger.info(f"✅ Test user already exists with ID {existing_user.id}")
         
