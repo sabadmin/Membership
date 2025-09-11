@@ -65,7 +65,8 @@ def test_tenant(tenant_id):
         
         # Test 1: Basic database connectivity
         logger.info("Test 1: Database connectivity")
-        result = session.execute("SELECT 1").fetchone()
+        from sqlalchemy import text
+        result = session.execute(text("SELECT 1")).fetchone()
         assert result[0] == 1, "Database connection failed"
         logger.info("✅ Database connection successful")
         
