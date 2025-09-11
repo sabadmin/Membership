@@ -40,10 +40,14 @@ DB_CONFIG = {
     'password': 'Bellm0re'
 }
 
-# List of databases to clean
+# List of databases to clean - all tenant databases
 TENANT_DATABASES = [
+    'tenant1_db',
+    'tenant2_db', 
+    'website_db',
+    'closers_db',
     'liconnects_db',
-    'website_db'
+    'lieg_db'
 ]
 
 # SQL commands to clean up orphaned records
