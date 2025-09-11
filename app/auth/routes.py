@@ -83,26 +83,19 @@ def register():
                         company_phone=None, company_title=None,
                         network_group_title=None, member_anniversary=None
                     )
-                    # This will now create a UserAuthDetails instance and set the hash
-                    new_user.set_password(password)
-
-                    # Set other properties on the newly created auth_details
-                    new_user.auth_details.is_active = True
-                    new_user.auth_details.last_login_1 = datetime.utcnow()
-
                     logger.info("User object created, adding to session")
-
                     s.add(new_user)
                     s.flush() # Flush to get the new_user.id
                     logger.info(f"New user ID: {new_user.id}")
                     
-                    # Create the corresponding UserAuthDetails entry
-                    new_auth_details = UserAuthDetails(
-                        user_id=new_user.id,
-                        is_active=True,
-                        last_login_1=datetime.utcnow()
-                    )
-                    s.add(new_auth_details)
+                    # This will create a UserAuthDetails instance and set the hash
+                    new_user.set_password(password)
+
+                    # Set other properties on the newly created auth_details
+                    new_user.auth_details.is_active = True
+                    from datetime import datetime, timezone
+                    new_user.auth_details.last_login_1 = datetime.now(timezone.utc)
+
                     s.commit()
                     logger.info("User and auth details committed successfully")
 
@@ -248,14 +241,13 @@ def manage_users_api(tenant_id):
                 s.add(new_user)
                 s.flush()
                 
-                new_auth_details = UserAuthDetails(
-                    user_id=new_user.id,
-                    is_active=True,
-                    last_login_1=datetime.utcnow()
-                )
-                s.add(new_auth_details)
+                # set_password already creates UserAuthDetails, just set additional properties
+                new_user.auth_details.is_active = True
+                from datetime import datetime, timezone
+                new_user.auth_details.last_login_1 = datetime.now(timezone.utc)
+                
                 s.commit()
-                session.refresh(new_user)
+                s.refresh(new_user)
             return jsonify({"message": "User added successfully!", "user": {"id": new_user.id, "first_name": new_user.first_name, "last_name": new_user.last_name, "email": new_user.email}}), 201
         except Exception as e:
             s.rollback()
