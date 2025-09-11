@@ -43,7 +43,8 @@ def init_db_for_tenant(app, tenant_id):
 
         # Use the engine to create all tables for the tenant's database
         print(f"Ensuring tables for tenant '{tenant_id}' at {get_tenant_db_url(tenant_id)}...")
-        Base.metadata.create_all(_tenant_engines[tenant_id])
+        # Use Flask-SQLAlchemy's metadata instead of Base.metadata
+        db.metadata.create_all(_tenant_engines[tenant_id])
         print(f"Tables ensured for tenant '{tenant_id}'.")
 
 
