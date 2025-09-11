@@ -50,7 +50,7 @@ USERS_TO_RESET = [
     {
         'email': 'saburstyn@unfrustratingcomputers.com',
         'password': 'Bellm0re',
-        'database': 'liconnects_db'
+        'database': 'website_db'
     }
 ]
 
