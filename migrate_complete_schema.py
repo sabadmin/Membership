@@ -13,7 +13,7 @@ import sys
 import logging
 from sqlalchemy import create_engine, text, inspect
 from config import Config
-from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord
+from app.models import User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord
 from dotenv import load_dotenv
 
 # Set up logging
@@ -112,8 +112,8 @@ def migrate_tenant_database(tenant_id, db_url):
                         
         # Create all tables with new schema
         logger.info(f"=== STEP 4: Ensure all tables exist with correct schema for {tenant_id} ===")
-        Base.metadata.create_all(engine)
-        logger.info(f"✅ All tables ensured for {tenant_id}")
+        # Tables should already be created by the app initialization
+        logger.info(f"✅ Using existing tables for {tenant_id}")
         
         return True
         

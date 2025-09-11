@@ -60,11 +60,10 @@ def migrate_tenant_database(tenant_id, db_url):
         logger.info(f"Creating new tables for {tenant_id}...")
         
         # Import models to ensure they're registered
-        from app.models import Base, User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord
+        from app.models import User, UserAuthDetails, AttendanceRecord, DuesRecord, ReferralRecord
         
-        # Create all tables (existing ones will be skipped)
-        Base.metadata.create_all(engine)
-        logger.info(f"✅ All tables ensured for {tenant_id}")
+        # Tables should already be created by the app initialization
+        logger.info(f"✅ Using existing tables for {tenant_id}")
         
     except Exception as e:
         logger.error(f"❌ Failed to migrate {tenant_id}: {str(e)}")

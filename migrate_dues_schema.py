@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(__file__))
 # Import Flask app to ensure proper initialization
 from app import create_app
 from database import get_tenant_db_session, _tenant_engines
-from app.models import DuesType, DuesRecord, Base
+from app.models import DuesType, DuesRecord
 from config import Config
 from sqlalchemy import text, inspect
 import logging
@@ -33,8 +33,8 @@ def migrate_dues_schema():
             
             # Ensure tables exist
             engine = _tenant_engines[tenant_id]
-            Base.metadata.create_all(engine)
-            logger.info(f"Tables created/verified for {tenant_id}")
+            # Tables should already be created by the app initialization
+            logger.info(f"Using existing tables for {tenant_id}")
             
             # Check if migration is needed
             inspector = inspect(engine)

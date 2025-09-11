@@ -4,7 +4,7 @@ import logging
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import Base, User, UserAuthDetails, AttendanceRecord, ReferralRecord, MembershipType
+from app.models import User, UserAuthDetails, AttendanceRecord, ReferralRecord, MembershipType
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
 from datetime import datetime

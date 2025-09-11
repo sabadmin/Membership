@@ -9,7 +9,7 @@ import os
 sys.path.append(os.path.dirname(__file__))
 
 from database import get_tenant_db_session, _tenant_engines
-from app.models import DuesType, Base
+from app.models import DuesType
 from config import Config
 import logging
 
@@ -32,8 +32,8 @@ def setup_dues_types():
             
             # Ensure tables exist
             engine = _tenant_engines[tenant_id]
-            Base.metadata.create_all(engine)
-            logger.info(f"Tables ensured for tenant: {tenant_id}")
+            # Tables should already be created by the app initialization
+            logger.info(f"Using existing tables for tenant: {tenant_id}")
             
             with get_tenant_db_session(tenant_id) as session:
                 # Check if dues types already exist
