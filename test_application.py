@@ -59,6 +59,7 @@ def test_tenant(tenant_id):
     """Test functionality for a specific tenant"""
     
     from database import get_tenant_db_session
+    from app.models import User, UserAuthDetails, MembershipType, AttendanceRecord, DuesType, DuesRecord
     
     with get_tenant_db_session(tenant_id) as session:
         logger.info(f"Testing database connection for {tenant_id}...")
