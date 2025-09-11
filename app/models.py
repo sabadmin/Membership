@@ -1,4 +1,4 @@
-from sqlalchemy.ext.declarative import declarative_base
+a from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
@@ -39,9 +39,13 @@ class User(db.Model, UserMixin):
     dues_records = db.relationship('DuesRecord', backref='member', lazy=True)
 
     def set_password(self, password):
+        if self.auth_details is None:
+            self.auth_details = UserAuthDetails(user=self)
         self.auth_details.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        if self.auth_details is None or self.auth_details.password_hash is None:
+            return False
         return check_password_hash(self.auth_details.password_hash, password)
 
     def __repr__(self):
@@ -53,7 +57,19 @@ class UserAuthDetails(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     password_hash = db.Column(db.String(128))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255))
     user = relationship("User", back_populates="auth_details")
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    last_login_1 = db.Column(db.DateTime, nullable=True)
+    last_login_2 = db.Column(db.DateTime, nullable=True)
+    last_login_3 = db.Column(db.DateTime, nullable=True)
+
+    def update_last_login(self):
+        """Shifts login timestamps to keep a history of the last 3."""
+        self.last_login_3 = self.last_login_2
+        self.last_login_2 = self.last_login_1
+        self.last_login_1 = datetime.utcnow()
 
     def __repr__(self):
         return f'<UserAuthDetails {self.user_id}>'
@@ -115,3 +131,4 @@ class ReferralRecord(db.Model):
 
 
     member = db.relationship('User', backref='referral_records', foreign_keys=[referred_id])
+

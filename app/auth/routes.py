@@ -83,7 +83,13 @@ def register():
                         company_phone=None, company_title=None,
                         network_group_title=None, member_anniversary=None
                     )
+                    # This will now create a UserAuthDetails instance and set the hash
                     new_user.set_password(password)
+
+                    # Set other properties on the newly created auth_details
+                    new_user.auth_details.is_active = True
+                    new_user.auth_details.last_login_1 = datetime.utcnow()
+
                     logger.info("User object created, adding to session")
 
                     s.add(new_user)
