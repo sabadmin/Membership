@@ -60,9 +60,10 @@ WHERE user_id NOT IN (SELECT id FROM "user");
 DELETE FROM dues_record 
 WHERE member_id NOT IN (SELECT id FROM "user");
 
--- Remove orphaned referral_record records (where user doesn't exist)
+-- Remove orphaned referral_record records (where referrer or referred user doesn't exist)
 DELETE FROM referral_record 
-WHERE user_id NOT IN (SELECT id FROM "user");
+WHERE referrer_id NOT IN (SELECT id FROM "user") 
+   OR referred_id NOT IN (SELECT id FROM "user");
 
 -- Show counts after cleanup
 SELECT 'Users' as table_name, COUNT(*) as count FROM "user"
@@ -181,7 +182,8 @@ def show_orphaned_records(db_name: str):
             UNION ALL
             SELECT 'Orphaned referral_record' as issue, COUNT(*) as count 
             FROM referral_record 
-            WHERE user_id NOT IN (SELECT id FROM "user");
+            WHERE referrer_id NOT IN (SELECT id FROM "user") 
+               OR referred_id NOT IN (SELECT id FROM "user");
             """
         ]
         
