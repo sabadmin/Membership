@@ -183,7 +183,7 @@ def view_member_demographics(tenant_id, member_id):
 
 
 
-@members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
+@members_bp.route('/attendance/<tenant_id>/history', methods=['GET', 'POST'])
 def attendance_history(tenant_id):
     import logging
     logger = logging.getLogger(__name__)
@@ -484,5 +484,3 @@ def dues_update(tenant_id, dues_record_id):
             return redirect(url_for('members.dues', tenant_id=tenant_id))
 
         return render_template('dues_update.html', tenant_id=tenant_id, form=form, dues_record=dues_record)
-
-
