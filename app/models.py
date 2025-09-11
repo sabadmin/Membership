@@ -1,4 +1,4 @@
-a from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
@@ -55,8 +55,6 @@ class User(db.Model, UserMixin):
 class UserAuthDetails(db.Model):
     __tablename__ = 'user_auth_details'
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    password_hash = db.Column(db.String(128))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=False)
     password_hash = db.Column(db.String(255))
     user = relationship("User", back_populates="auth_details")
@@ -131,4 +129,3 @@ class ReferralRecord(db.Model):
 
 
     member = db.relationship('User', backref='referral_records', foreign_keys=[referred_id])
-
