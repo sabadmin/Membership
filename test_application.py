@@ -25,7 +25,6 @@ def test_application():
         # Import after adding to path
         from config import Config
         from app import create_app
-        from database import get_tenant_db_session
         from app.models import User, UserAuthDetails, MembershipType, AttendanceRecord, DuesType, DuesRecord
         
         # Initialize Flask app
@@ -58,6 +57,8 @@ def test_application():
 
 def test_tenant(tenant_id):
     """Test functionality for a specific tenant"""
+    
+    from database import get_tenant_db_session
     
     with get_tenant_db_session(tenant_id) as session:
         logger.info(f"Testing database connection for {tenant_id}...")
