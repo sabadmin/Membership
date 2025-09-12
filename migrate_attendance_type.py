@@ -85,11 +85,20 @@ def migrate_database(database_name):
     if not run_sql_command(database_name, update_existing_records_sql):
         return False
     
-    # Step 5: Add foreign key constraint
+    # Step 5: Add foreign key constraint (check if it exists first)
     add_foreign_key_sql = """
-    ALTER TABLE attendance_record 
-    ADD CONSTRAINT IF NOT EXISTS fk_attendance_record_attendance_type 
-    FOREIGN KEY (attendance_type_id) REFERENCES attendance_type(id);
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints 
+            WHERE constraint_name = 'fk_attendance_record_attendance_type'
+            AND table_name = 'attendance_record'
+        ) THEN
+            ALTER TABLE attendance_record 
+            ADD CONSTRAINT fk_attendance_record_attendance_type 
+            FOREIGN KEY (attendance_type_id) REFERENCES attendance_type(id);
+        END IF;
+    END $$;
     """
     
     if not run_sql_command(database_name, add_foreign_key_sql):
