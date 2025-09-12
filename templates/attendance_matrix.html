@@ -30,15 +30,25 @@
                         {% endif %}
                     </div>
                     <div>
-                        <label for="event_name" class="block text-gray-700 text-sm font-bold mb-2">Event Name:</label>
+                        <label for="attendance_type_id" class="block text-gray-700 text-sm font-bold mb-2">Attendance Type:</label>
                         {% if editable %}
-                        <input type="text" id="event_name" name="event_name" value="Meeting"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        <select id="attendance_type_id" name="attendance_type_id"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline border-blue-400"
                             required>
+                            <option value="">Select Attendance Type</option>
+                            {% for attendance_type in attendance_types %}
+                            <option value="{{ attendance_type.id }}">{{ attendance_type.type }} - {{ attendance_type.description }}</option>
+                            {% endfor %}
+                        </select>
                         {% else %}
-                        <input type="text" id="event_name" value="Meeting"
+                        <select id="attendance_type_id"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight bg-gray-100"
-                            readonly>
+                            disabled>
+                            <option value="">Select Attendance Type</option>
+                            {% for attendance_type in attendance_types %}
+                            <option value="{{ attendance_type.id }}">{{ attendance_type.type }} - {{ attendance_type.description }}</option>
+                            {% endfor %}
+                        </select>
                         {% endif %}
                     </div>
                 </div>
