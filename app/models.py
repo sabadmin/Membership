@@ -31,8 +31,8 @@ class User(db.Model, UserMixin):
     membership_type_id = db.Column(db.Integer, db.ForeignKey('membership_type.id'))
     is_active = db.Column(db.Boolean, default=True)
     auth_details = relationship("UserAuthDetails", uselist=False, back_populates="user", cascade="all, delete-orphan")
-    attendance_records = db.relationship('AttendanceRecord', backref='user', lazy=True)
-    dues_records = db.relationship('DuesRecord', backref='member', lazy=True)
+    attendance_records = db.relationship('AttendanceRecord', backref='user', lazy=True, cascade='all, delete-orphan')
+    dues_records = db.relationship('DuesRecord', backref='member', lazy=True, cascade='all, delete-orphan')
 
     def set_password(self, password):
         if self.auth_details is None:
