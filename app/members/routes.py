@@ -368,28 +368,27 @@ def _attendance_view(tenant_id, editable=True):
                 flash(f"Failed to save attendance: {str(e)}", "danger")
             
             return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
-        return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
-    
-    # Get existing attendance for today if available (GET request)
-    today = date.today()
-
-    existing_attendance = {}
-    if editable: # Only fetch existing attendance if view is editable
-        # Get attendance records for today
-        today_records = s.query(AttendanceRecord).filter_by(
-            event_date=today
-        ).all()
         
-        for record in today_records:
-            existing_attendance[record.user_id] = record.status
+        # Get existing attendance for today if available (GET request)
+        today = date.today()
+        existing_attendance = {}
         
-    return render_template('attendance_matrix.html',
-                         tenant_id=tenant_id,
-                         tenant_display_name=tenant_display_name,
-                         all_users=all_users,
-                         existing_attendance=existing_attendance,
-                         today=today.strftime('%Y-%m-%d'),
-                         editable=editable)
+        if editable: # Only fetch existing attendance if view is editable
+            # Get attendance records for today
+            today_records = s.query(AttendanceRecord).filter_by(
+                event_date=today
+            ).all()
+            
+            for record in today_records:
+                existing_attendance[record.user_id] = record.status
+            
+        return render_template('attendance_matrix.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_users=all_users,
+                             existing_attendance=existing_attendance,
+                             today=today.strftime('%Y-%m-%d'),
+                             editable=editable)
 
 
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
