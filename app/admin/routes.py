@@ -230,6 +230,24 @@ def admin_panel(selected_tenant_id):
                             error_msg = f"Error deleting {table_name} record: {str(e)}"
                             flash(error_msg, "danger")
                             logger.error(error_msg)
+                    
+                    elif action == 'reset_password' and row_id:
+                        try:
+                            logger.info(f"Resetting password for user ID {row_id}")
+                            user = s.query(User).filter_by(id=row_id).first()
+                            if user:
+                                user.set_password("Member")  # Reset to default password
+                                s.commit()
+                                flash(f"Password reset to 'Member' for user: {user.first_name or ''} {user.last_name or ''} ({user.email})", "success")
+                                logger.info(f"Successfully reset password for user ID {row_id}")
+                            else:
+                                flash("User not found.", "danger")
+                                logger.warning(f"User not found for ID {row_id}")
+                        except Exception as e:
+                            s.rollback()
+                            error_msg = f"Error resetting password: {str(e)}"
+                            flash(error_msg, "danger")
+                            logger.error(error_msg)
                 
                 if table_name == 'user_auth_details':
                     # Join with users table to show usernames instead of user_id

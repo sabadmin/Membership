@@ -241,6 +241,10 @@
                         {% endfor %}
                         <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
                             <button type="submit" class="text-indigo-600 hover:text-indigo-900 mr-2">Update</button>
+                            {% if selected_table == 'user' %}
+                            <button type="button" onclick="confirmPasswordReset('{{ row.id }}', '{{ row.first_name or '' }} {{ row.last_name or '' }} ({{ row.email }})')"
+                                class="text-orange-600 hover:text-orange-900 mr-2">Reset Password</button>
+                            {% endif %}
                             <button type="button" onclick="confirmDelete('{{ row.id }}')"
                                 class="text-red-600 hover:text-red-900">Delete</button>
                         </td>
@@ -284,6 +288,41 @@
             idInput.type = 'hidden';
             idInput.name = 'id';
             idInput.value = rowId;
+            form.appendChild(idInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function confirmPasswordReset(userId, userName) {
+        if (confirm(`Are you sure you want to reset the password to "Member" for user: ${userName}?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('admin.admin_panel', selected_tenant_id=selected_tenant_id) }}";
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'reset_password';
+            form.appendChild(actionInput);
+
+            const tenantInput = document.createElement('input');
+            tenantInput.type = 'hidden';
+            tenantInput.name = 'tenant_to_manage';
+            tenantInput.value = '{{ selected_tenant_id }}';
+            form.appendChild(tenantInput);
+
+            const tableInput = document.createElement('input');
+            tableInput.type = 'hidden';
+            tableInput.name = 'table_name';
+            tableInput.value = '{{ selected_table }}';
+            form.appendChild(tableInput);
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = userId;
             form.appendChild(idInput);
 
             document.body.appendChild(form);
