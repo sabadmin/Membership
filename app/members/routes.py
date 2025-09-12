@@ -344,8 +344,15 @@ def _attendance_view(tenant_id, editable=True):
         # Get all users for attendance matrix
         all_users = s.query(User).order_by(User.first_name, User.last_name).all()
         
-        # Get attendance types for dropdown
-        attendance_types = s.query(AttendanceType).filter_by(is_active=True).order_by(AttendanceType.sort_order, AttendanceType.type).all()
+        # Get attendance types for dropdown - handle case where table doesn't exist yet
+        attendance_types = []
+        try:
+            attendance_types = s.query(AttendanceType).filter_by(is_active=True).order_by(AttendanceType.sort_order, AttendanceType.type).all()
+        except Exception as e:
+            # AttendanceType table doesn't exist yet - create a default type for backward compatibility
+            from collections import namedtuple
+            DefaultType = namedtuple('AttendanceType', ['id', 'type', 'description'])
+            attendance_types = [DefaultType(id=1, type='Meeting', description='Regular membership meeting')]
         
         if request.method == 'POST' and editable:
             try:
@@ -356,10 +363,6 @@ def _attendance_view(tenant_id, editable=True):
                     flash("Event date is required.", "danger")
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
-                if not attendance_type_id:
-                    flash("Attendance type is required.", "danger")
-                    return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
-                
                 # Parse the date
                 try:
                     parsed_date = datetime.strptime(event_date, '%Y-%m-%d')
@@ -367,34 +370,65 @@ def _attendance_view(tenant_id, editable=True):
                     flash("Invalid date format.", "danger")
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
+                # Check if we have AttendanceType table or need to use legacy mode
+                use_legacy_mode = len(attendance_types) == 1 and hasattr(attendance_types[0], '_fields')
+                
+                if not use_legacy_mode and not attendance_type_id:
+                    flash("Attendance type is required.", "danger")
+                    return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
+                
                 # Process attendance for each user
                 records_created = 0
                 for user in all_users:
                     attendance_value = request.form.get(f'attendance_{user.id}')
                     if attendance_value:
-                        # Check if record already exists for this date and type
-                        existing_record = s.query(AttendanceRecord).filter_by(
-                            user_id=user.id,
-                            event_date=parsed_date,
-                            attendance_type_id=attendance_type_id
-                        ).first()
-                        
-                        if existing_record:
-                            # Update existing record
-                            existing_record.status = attendance_value
-                            existing_record.updated_at = datetime.utcnow()
-                        else:
-                            # Create new record
-                            new_record = AttendanceRecord(
+                        if use_legacy_mode:
+                            # Legacy mode: use event_name field (before migration)
+                            existing_record = s.query(AttendanceRecord).filter_by(
                                 user_id=user.id,
-                                attendance_type_id=attendance_type_id,
+                                event_date=parsed_date
+                            ).first()
+                            
+                            if existing_record:
+                                # Update existing record
+                                existing_record.status = attendance_value
+                                existing_record.updated_at = datetime.utcnow()
+                            else:
+                                # Create new record with event_name
+                                new_record = AttendanceRecord(
+                                    user_id=user.id,
+                                    event_name='Meeting',  # Default event name
+                                    event_date=parsed_date,
+                                    status=attendance_value,
+                                    created_at=datetime.utcnow(),
+                                    updated_at=datetime.utcnow()
+                                )
+                                s.add(new_record)
+                                records_created += 1
+                        else:
+                            # New mode: use attendance_type_id
+                            existing_record = s.query(AttendanceRecord).filter_by(
+                                user_id=user.id,
                                 event_date=parsed_date,
-                                status=attendance_value,
-                                created_at=datetime.utcnow(),
-                                updated_at=datetime.utcnow()
-                            )
-                            s.add(new_record)
-                            records_created += 1
+                                attendance_type_id=attendance_type_id
+                            ).first()
+                            
+                            if existing_record:
+                                # Update existing record
+                                existing_record.status = attendance_value
+                                existing_record.updated_at = datetime.utcnow()
+                            else:
+                                # Create new record
+                                new_record = AttendanceRecord(
+                                    user_id=user.id,
+                                    attendance_type_id=attendance_type_id,
+                                    event_date=parsed_date,
+                                    status=attendance_value,
+                                    created_at=datetime.utcnow(),
+                                    updated_at=datetime.utcnow()
+                                )
+                                s.add(new_record)
+                                records_created += 1
                 
                 s.commit()
                 flash(f"Attendance saved successfully! {records_created} new records created.", "success")
