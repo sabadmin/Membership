@@ -279,11 +279,19 @@ def attendance_history(tenant_id):
                         selected_date = prev_date[0]
             
             # Get attendance records for the selected date with attendance types
-            attendance_records = s.query(AttendanceRecord).options(
-                joinedload(AttendanceRecord.attendance_type)
-            ).filter(
-                AttendanceRecord.event_date == selected_date
-            ).all()
+            # Handle case where attendance_type_id column doesn't exist yet
+            try:
+                attendance_records = s.query(AttendanceRecord).options(
+                    joinedload(AttendanceRecord.attendance_type)
+                ).filter(
+                    AttendanceRecord.event_date == selected_date
+                ).all()
+            except Exception as e:
+                # Fallback to basic query without attendance_type join if column doesn't exist
+                logger.warning(f"AttendanceType join failed, using fallback query: {e}")
+                attendance_records = s.query(AttendanceRecord).filter(
+                    AttendanceRecord.event_date == selected_date
+                ).all()
             
             logger.info(f"Found {len(attendance_records)} attendance records for {selected_date}")
             
@@ -298,9 +306,18 @@ def attendance_history(tenant_id):
             
             for record in attendance_records:
                 existing_attendance[record.user_id] = record.status
-                if record.attendance_type:
-                    attendance_types_dict[record.user_id] = record.attendance_type.type
-                    default_attendance_type = record.attendance_type.type  # Keep last one as fallback
+                # Handle attendance type safely - may not exist if column doesn't exist yet
+                try:
+                    if hasattr(record, 'attendance_type') and record.attendance_type:
+                        attendance_types_dict[record.user_id] = record.attendance_type.type
+                        default_attendance_type = record.attendance_type.type  # Keep last one as fallback
+                    elif hasattr(record, 'event_name') and record.event_name:
+                        # Fallback to event_name for legacy records
+                        attendance_types_dict[record.user_id] = record.event_name
+                        default_attendance_type = record.event_name
+                except Exception:
+                    # If there's any issue accessing attendance_type, skip it
+                    pass
         
         logger.info("Rendering attendance_history.html template")
         return render_template('attendance_history.html',

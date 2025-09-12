@@ -13,13 +13,13 @@ def run_sql_command(database_name, sql_command):
         # Use psql to execute the SQL command
         cmd = [
             'psql',
-            '-h', Config.DB_HOST,
-            '-U', Config.DB_USER,
+            '-h', 'localhost',
+            '-U', 'sabadmin',
             '-d', database_name,
             '-c', sql_command
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, env={'PGPASSWORD': Config.DB_PASSWORD})
+        result = subprocess.run(cmd, capture_output=True, text=True, env={'PGPASSWORD': 'Bellm0re'})
         
         if result.returncode == 0:
             print(f"✓ Successfully executed SQL on {database_name}")
