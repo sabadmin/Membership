@@ -90,11 +90,24 @@ class MembershipType(db.Model):
         return f'<MembershipType {self.name}>'
 
 
+class AttendanceType(db.Model):
+    __tablename__ = 'attendance_type'
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(64), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    attendance_records = db.relationship('AttendanceRecord', backref='attendance_type', lazy=True)
+
+    def __repr__(self):
+        return f'<AttendanceType {self.type}>'
+
+
 class AttendanceRecord(db.Model):
     __tablename__ = 'attendance_record'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    event_name = db.Column(db.String(255))
+    attendance_type_id = db.Column(db.Integer, db.ForeignKey('attendance_type.id'), nullable=False)
     event_date = db.Column(db.Date, nullable=False)
     status = db.Column(db.String(20), nullable=False)  # e.g., 'present', 'absent', 'excused'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

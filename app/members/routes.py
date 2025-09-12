@@ -3,7 +3,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, UserAuthDetails, AttendanceRecord, MembershipType, DuesRecord, DuesType
+from app.models import User, UserAuthDetails, AttendanceRecord, AttendanceType, MembershipType, DuesRecord, DuesType
 from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
@@ -209,6 +209,7 @@ def view_member_demographics(tenant_id, member_id):
 @members_bp.route('/attendance/<tenant_id>/history', methods=['GET', 'POST'])
 def attendance_history(tenant_id):
     import logging
+    from sqlalchemy import func
     logger = logging.getLogger(__name__)
     
     try:
@@ -222,9 +223,12 @@ def attendance_history(tenant_id):
         
         # Get selected date from form or default to today
         selected_date = date.today()
+        navigation_action = None
         
         if request.method == 'POST':
             date_str = request.form.get('selected_date')
+            navigation_action = request.form.get('navigation_action')
+            
             if date_str:
                 try:
                     selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -257,22 +261,46 @@ def attendance_history(tenant_id):
             
             logger.info(f"Retrieved {len(all_users)} users")
             
-            # Get attendance records for the selected date
-            attendance_records = s.query(AttendanceRecord).filter(
+            # Handle navigation actions (next/prev day)
+            if navigation_action:
+                if navigation_action == 'next':
+                    # Find next date with attendance records
+                    next_date = s.query(AttendanceRecord.event_date).filter(
+                        AttendanceRecord.event_date > selected_date
+                    ).order_by(AttendanceRecord.event_date.asc()).first()
+                    if next_date:
+                        selected_date = next_date[0]
+                elif navigation_action == 'prev':
+                    # Find previous date with attendance records
+                    prev_date = s.query(AttendanceRecord.event_date).filter(
+                        AttendanceRecord.event_date < selected_date
+                    ).order_by(AttendanceRecord.event_date.desc()).first()
+                    if prev_date:
+                        selected_date = prev_date[0]
+            
+            # Get attendance records for the selected date with attendance types
+            attendance_records = s.query(AttendanceRecord).options(
+                joinedload(AttendanceRecord.attendance_type)
+            ).filter(
                 AttendanceRecord.event_date == selected_date
             ).all()
             
             logger.info(f"Found {len(attendance_records)} attendance records for {selected_date}")
             
-            # Create attendance dictionary and event names dictionary
+            # Get all dates with attendance records for calendar highlighting
+            attendance_dates = s.query(func.distinct(AttendanceRecord.event_date)).all()
+            attendance_dates_list = [date_tuple[0].strftime('%Y-%m-%d') for date_tuple in attendance_dates]
+            
+            # Create attendance dictionary and attendance types dictionary
             existing_attendance = {}
-            event_names = {}  # Maps user_id to their specific event name
-            default_event_name = "Meeting"  # Default for template compatibility
+            attendance_types_dict = {}  # Maps user_id to their attendance type
+            default_attendance_type = "Meeting"  # Default for template compatibility
             
             for record in attendance_records:
                 existing_attendance[record.user_id] = record.status
-                event_names[record.user_id] = record.event_name  # Store individual event names
-                default_event_name = record.event_name  # Keep last one as fallback
+                if record.attendance_type:
+                    attendance_types_dict[record.user_id] = record.attendance_type.type
+                    default_attendance_type = record.attendance_type.type  # Keep last one as fallback
         
         logger.info("Rendering attendance_history.html template")
         return render_template('attendance_history.html',
@@ -281,8 +309,9 @@ def attendance_history(tenant_id):
                              all_users=all_users,
                              existing_attendance=existing_attendance,
                              selected_date=selected_date.strftime('%Y-%m-%d'),
-                             event_name=default_event_name,  # Keep for compatibility
-                             event_names=event_names,  # Individual event names per user
+                             attendance_type=default_attendance_type,  # Keep for compatibility
+                             attendance_types_dict=attendance_types_dict,  # Individual attendance types per user
+                             attendance_dates=attendance_dates_list,  # For calendar highlighting
                              can_view_all=can_view_all,
                              page_title=page_title)
                               
@@ -315,13 +344,20 @@ def _attendance_view(tenant_id, editable=True):
         # Get all users for attendance matrix
         all_users = s.query(User).order_by(User.first_name, User.last_name).all()
         
+        # Get attendance types for dropdown
+        attendance_types = s.query(AttendanceType).filter_by(is_active=True).order_by(AttendanceType.sort_order, AttendanceType.type).all()
+        
         if request.method == 'POST' and editable:
             try:
                 event_date = request.form.get('event_date')
-                event_name = request.form.get('event_name', 'Meeting')
+                attendance_type_id = request.form.get('attendance_type_id')
                 
                 if not event_date:
                     flash("Event date is required.", "danger")
+                    return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
+                
+                if not attendance_type_id:
+                    flash("Attendance type is required.", "danger")
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
                 # Parse the date
@@ -336,11 +372,11 @@ def _attendance_view(tenant_id, editable=True):
                 for user in all_users:
                     attendance_value = request.form.get(f'attendance_{user.id}')
                     if attendance_value:
-                        # Check if record already exists for this date
+                        # Check if record already exists for this date and type
                         existing_record = s.query(AttendanceRecord).filter_by(
                             user_id=user.id,
                             event_date=parsed_date,
-                            event_name=event_name
+                            attendance_type_id=attendance_type_id
                         ).first()
                         
                         if existing_record:
@@ -351,7 +387,7 @@ def _attendance_view(tenant_id, editable=True):
                             # Create new record
                             new_record = AttendanceRecord(
                                 user_id=user.id,
-                                event_name=event_name,
+                                attendance_type_id=attendance_type_id,
                                 event_date=parsed_date,
                                 status=attendance_value,
                                 created_at=datetime.utcnow(),
@@ -386,6 +422,7 @@ def _attendance_view(tenant_id, editable=True):
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              all_users=all_users,
+                             attendance_types=attendance_types,
                              existing_attendance=existing_attendance,
                              today=today.strftime('%Y-%m-%d'),
                              editable=editable)
