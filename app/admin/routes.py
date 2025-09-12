@@ -142,6 +142,9 @@ def admin_panel(selected_tenant_id):
                 # For user_auth_details, add username column and modify columns list
                 if table_name == 'user_auth_details':
                     columns = [col for col in columns if col != 'user_id'] + ['username']
+                # For attendance_record, replace IDs with readable names
+                elif table_name == 'attendance_record':
+                    columns = [col for col in columns if col not in ['user_id', 'attendance_type_id']] + ['member_name', 'attendance_type_name']
                 if request.method == 'POST':
                     action = request.form.get('action')
                     row_id = request.form.get('id')
@@ -260,12 +263,30 @@ def admin_panel(selected_tenant_id):
                         username = f"{first_name or ''} {last_name or ''}".strip() or email
                         row_data['username'] = username
                         data.append(row_data)
-                elif table_name in ['attendance_records', 'referral_records']:
+                elif table_name == 'attendance_record':
+                    # Join with users and attendance_type tables to show names instead of IDs
+                    rows = s.query(
+                        AttendanceRecord, 
+                        User.email, 
+                        User.first_name, 
+                        User.last_name,
+                        AttendanceType.type,
+                        AttendanceType.description
+                    ).join(User, AttendanceRecord.user_id == User.id)\
+                     .join(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
+                    
+                    data = []
+                    for record, email, first_name, last_name, att_type, att_description in rows:
+                        row_data = record.__dict__.copy()
+                        row_data.pop('_sa_instance_state', None)
+                        # Replace IDs with readable names
+                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                        row_data['member_name'] = member_name
+                        row_data['attendance_type_name'] = f"{att_type} - {att_description}"
+                        data.append(row_data)
+                elif table_name == 'referral_records':
                     # Join with users table to show member names instead of user_id
-                    if table_name == 'attendance_records':
-                        rows = s.query(AttendanceRecord, User.email, User.first_name, User.last_name).join(User, AttendanceRecord.user_id == User.id).all()
-                    elif table_name == 'referral_records':
-                        rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).join(User, ReferralRecord.referrer_id == User.id).all()
+                    rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).join(User, ReferralRecord.referrer_id == User.id).all()
                     
                     data = []
                     for record, email, first_name, last_name in rows:
