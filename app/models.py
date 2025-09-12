@@ -58,6 +58,13 @@ class UserAuthDetails(db.Model):
     last_login_1 = db.Column(db.DateTime, nullable=True)
     last_login_2 = db.Column(db.DateTime, nullable=True)
     last_login_3 = db.Column(db.DateTime, nullable=True)
+    
+    # New granular permission fields
+    can_edit_dues = db.Column(db.Boolean, default=False, nullable=False)
+    can_edit_security = db.Column(db.Boolean, default=False, nullable=False)
+    can_edit_referrals = db.Column(db.Boolean, default=False, nullable=False)
+    can_edit_members = db.Column(db.Boolean, default=False, nullable=False)
+    can_edit_attendance = db.Column(db.Boolean, default=False, nullable=False)
 
     def update_last_login(self):
         """Shifts login timestamps to keep a history of the last 3."""

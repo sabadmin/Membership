@@ -18,6 +18,29 @@ def before_request():
     # If not a superadmin, ensure a user is logged in
     if g.tenant_id != Config.SUPERADMIN_TENANT_ID and 'user_id' not in session:
         return redirect(url_for('auth.login', tenant_id=g.tenant_id))
+    
+    # Load current user permissions for template access
+    if 'user_id' in session:
+        with get_tenant_db_session(g.tenant_id) as s:
+            current_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=session['user_id']).first()
+            if current_user and current_user.auth_details:
+                # Store permissions in session for template access
+                session['user_permissions'] = {
+                    'can_edit_dues': current_user.auth_details.can_edit_dues,
+                    'can_edit_security': current_user.auth_details.can_edit_security,
+                    'can_edit_referrals': current_user.auth_details.can_edit_referrals,
+                    'can_edit_members': current_user.auth_details.can_edit_members,
+                    'can_edit_attendance': current_user.auth_details.can_edit_attendance
+                }
+            else:
+                # Default to no permissions if no auth details
+                session['user_permissions'] = {
+                    'can_edit_dues': False,
+                    'can_edit_security': False,
+                    'can_edit_referrals': False,
+                    'can_edit_members': False,
+                    'can_edit_attendance': False
+                }
 
 def _get_current_user(s, user_id):
     return s.query(User).filter_by(id=user_id).options(joinedload(User.auth_details)).first()
@@ -275,6 +298,13 @@ def attendance_create(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
+    
+    # Check if user has permission to create attendance records
+    user_permissions = session.get('user_permissions', {})
+    if not user_permissions.get('can_edit_attendance', False):
+        flash("You do not have permission to create attendance records.", "danger")
+        return redirect(url_for('members.attendance_history', tenant_id=tenant_id))
+    
     return _attendance_view(tenant_id)
 
 def _attendance_view(tenant_id, editable=True):
