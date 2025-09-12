@@ -63,12 +63,8 @@
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
                                 <a href="{{ url_for('members.my_demographics', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My Information</a>
-                                {% if session.get('user_permissions', {}).get('can_edit_members', False) %}
                                 <a href="{{ url_for('members.membership_list', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">View Members</a>
-                                {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">View Members (No Permission)</span>
-                                {% endif %}
                             </div>
                         </div>
 
@@ -90,7 +86,7 @@
                                     Attendance</a>
                                 {% else %}
                                 <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Create
-                                    Attendance (No Permission)</span>
+                                    Attendance</span>
                                 {% endif %}
                                 <a href="{{ url_for('members.attendance_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Attendance
@@ -114,13 +110,13 @@
                                 <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues Management</a>
                                 {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Dues Management (No Permission)</span>
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Dues Management</span>
                                 {% endif %}
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Financial
                                     Reports</a>
                                 {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Financial Reports (No Permission)</span>
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Financial Reports</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -143,7 +139,7 @@
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Add
                                     Referral</a>
                                 {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Add Referral (No Permission)</span>
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Add Referral</span>
                                 {% endif %}
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Referral
                                     History</a>
