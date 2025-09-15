@@ -109,8 +109,8 @@ def purge_user_from_database(database_name, user_id, identifier_type="ID"):
     if not run_sql_command(database_name, delete_dues_sql):
         success = False
     
-    # Step 3: Delete referral records (both as referrer and referee)
-    delete_referrals_sql = f"DELETE FROM referral_record WHERE referrer_id = {user_id} OR referee_id = {user_id};"
+    # Step 3: Delete referral records (both as referrer and referred)
+    delete_referrals_sql = f"DELETE FROM referral_record WHERE referrer_id = {user_id} OR referred_id = {user_id};"
     if not run_sql_command(database_name, delete_referrals_sql):
         success = False
     
