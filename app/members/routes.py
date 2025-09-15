@@ -394,11 +394,15 @@ def _attendance_view(tenant_id, editable=True):
                     flash("Attendance type is required.", "danger")
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
-                # Process attendance for each user
+                # Process attendance only for selected users (those with checkboxes checked)
                 records_created = 0
                 for user in all_users:
+                    # Check if this user was selected via checkbox
+                    user_selected = request.form.get(f'select_{user.id}') == 'on'
                     attendance_value = request.form.get(f'attendance_{user.id}')
-                    if attendance_value:
+                    
+                    # Only process if user is selected AND has attendance value
+                    if user_selected and attendance_value:
                         if use_legacy_mode:
                             # Legacy mode: use event_name field (before migration)
                             existing_record = s.query(AttendanceRecord).filter_by(

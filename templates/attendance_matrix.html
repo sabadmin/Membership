@@ -59,6 +59,13 @@
                 <table class="min-w-full border-collapse border border-gray-300">
                     <thead>
                         <tr class="bg-gray-100">
+                            {% if editable %}
+                            <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold text-gray-700">
+                                <input type="checkbox" id="selectAll" onclick="toggleAllMembers()" 
+                                    class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                <br><span class="text-xs text-gray-500">Select</span>
+                            </th>
+                            {% endif %}
                             <th class="border border-gray-300 px-4 py-2 text-left text-sm font-bold text-gray-700">
                                 Member Name</th>
                             <th class="border border-gray-300 px-3 py-2 text-center text-sm font-bold text-gray-700">
@@ -75,6 +82,12 @@
                         {% for user in all_users %}
                         <tr data-user-id="{{ user.id }}"
                             class="{% if loop.index % 2 == 0 %}bg-gray-50{% else %}bg-white{% endif %} hover:bg-blue-50 transition duration-150">
+                            {% if editable %}
+                            <td class="border border-gray-300 px-2 py-2 text-center">
+                                <input type="checkbox" id="select_{{ user.id }}" name="select_{{ user.id }}" class="member-select w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300" 
+                                    onchange="updateSelectAllState()" checked>
+                            </td>
+                            {% endif %}
                             <td class="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-900">
                                 {{ user.first_name or '' }} {{ user.last_name or '' }}
                                 {% if not user.first_name and not user.last_name %}
@@ -162,24 +175,49 @@
         });
     });
 
+    function toggleAllMembers() {
+        const selectAll = document.getElementById('selectAll');
+        const memberSelects = document.querySelectorAll('.member-select');
+        
+        memberSelects.forEach(checkbox => {
+            checkbox.checked = selectAll.checked;
+        });
+        
+        updateCheckedCount();
+    }
+
+    function updateSelectAllState() {
+        const memberSelects = document.querySelectorAll('.member-select');
+        const selectAll = document.getElementById('selectAll');
+        const checkedCount = document.querySelectorAll('.member-select:checked').length;
+        
+        selectAll.checked = checkedCount === memberSelects.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < memberSelects.length;
+        
+        updateCheckedCount();
+    }
+
     function updateCheckedCount() {
         let checkedUsers = 0;
+        const selectedMembers = document.querySelectorAll('.member-select:checked').length;
         const totalUsers = document.querySelectorAll('tr[data-user-id]').length;
 
-        // Count users with checked radio buttons
+        // Count users with checked radio buttons among selected members
         document.querySelectorAll('tr[data-user-id]').forEach(row => {
             const userId = row.getAttribute('data-user-id');
+            const memberSelect = document.querySelector('#select_' + userId);
             const checkedRadio = document.querySelector('input[name="attendance_' + userId + '"]:checked');
-            if (checkedRadio) {
+            
+            if (memberSelect && memberSelect.checked && checkedRadio) {
                 checkedUsers++;
             }
         });
 
-        document.getElementById('checkedCount').textContent = checkedUsers;
+        document.getElementById('checkedCount').textContent = checkedUsers + ' of ' + selectedMembers + ' selected';
 
         // Change color based on completion
         const counter = document.getElementById('checkedCount');
-        if (checkedUsers === totalUsers) {
+        if (checkedUsers === selectedMembers && selectedMembers > 0) {
             counter.className = 'text-green-600 font-bold';
         } else if (checkedUsers > 0) {
             counter.className = 'text-yellow-600 font-bold';
@@ -189,30 +227,45 @@
     }
 
     function markAllPresent() {
-        const presentRadios = document.querySelectorAll('input[value="P"]:not([disabled])');
-        presentRadios.forEach(radio => {
-            radio.checked = true;
+        // Only mark selected members as present
+        document.querySelectorAll('.member-select:checked').forEach(checkbox => {
+            const userId = checkbox.id.replace('select_', '');
+            const presentRadio = document.querySelector('#present_' + userId);
+            if (presentRadio) {
+                presentRadio.checked = true;
+            }
         });
         updateCheckedCount();
     }
 
-    // Validation before form submission
+    // Updated validation before form submission - only require selected members to have attendance
     document.getElementById('attendanceForm').addEventListener('submit', function (e) {
         let checkedUsers = 0;
-        const totalUsers = document.querySelectorAll('tr[data-user-id]').length;
+        let selectedMembers = 0;
 
-        // Count checked users
+        // Count selected members and their attendance status
         document.querySelectorAll('tr[data-user-id]').forEach(row => {
             const userId = row.getAttribute('data-user-id');
-            const checkedRadio = document.querySelector('input[name="attendance_' + userId + '"]:checked');
-            if (checkedRadio) {
-                checkedUsers++;
+            const memberSelect = document.querySelector('#select_' + userId);
+            
+            if (memberSelect && memberSelect.checked) {
+                selectedMembers++;
+                const checkedRadio = document.querySelector('input[name="attendance_' + userId + '"]:checked');
+                if (checkedRadio) {
+                    checkedUsers++;
+                }
             }
         });
 
-        if (checkedUsers < totalUsers) {
+        if (selectedMembers === 0) {
             e.preventDefault();
-            alert('Please mark attendance for all ' + totalUsers + ' members. Currently ' + checkedUsers + ' marked.');
+            alert('Please select at least one member for attendance.');
+            return false;
+        }
+
+        if (checkedUsers < selectedMembers) {
+            e.preventDefault();
+            alert('Please mark attendance for all ' + selectedMembers + ' selected members. Currently ' + checkedUsers + ' marked.');
             return false;
         }
     });
