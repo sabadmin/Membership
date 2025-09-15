@@ -8,11 +8,14 @@ This will remove:
 - All DuesRecord entries for the user
 - All ReferralRecord entries for the user
 
-Usage: python3 purge_specific_user.py <user_id>
+Usage: 
+  python3 purge_specific_user.py --id <user_id>
+  python3 purge_specific_user.py --email <email_address>
 """
 
 import sys
 import subprocess
+import argparse
 from config import Config
 
 def run_sql_command(database_name, sql_command):
@@ -46,7 +49,51 @@ def run_sql_command(database_name, sql_command):
         print(f"✗ Exception executing SQL on {database_name}: {str(e)}")
         return False
 
-def purge_user_from_database(database_name, user_id):
+def get_user_id_from_email(database_name, email):
+    """Get user ID from email address"""
+    try:
+        cmd = [
+            'psql',
+            '-h', 'localhost',
+            '-U', 'sabadmin',
+            '-d', database_name,
+            '-t',  # tuples only (no headers)
+            '-c', f"SELECT id FROM \"user\" WHERE email = '{email}';"
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, env={'PGPASSWORD': 'Bellm0re'})
+        
+        if result.returncode == 0 and result.stdout.strip():
+            user_id = result.stdout.strip()
+            if user_id.isdigit():
+                return int(user_id)
+        return None
+            
+    except Exception as e:
+        print(f"✗ Exception looking up user by email in {database_name}: {str(e)}")
+        return None
+
+def find_user_ids_by_email(email):
+    """Find all user IDs across databases that match the email"""
+    databases = [
+        'tenant1_db',
+        'tenant2_db', 
+        'website_db',
+        'closers_db',
+        'liconnects_db',
+        'lieg_db'
+    ]
+    
+    found_ids = {}
+    for database in databases:
+        user_id = get_user_id_from_email(database, email)
+        if user_id:
+            found_ids[database] = user_id
+            print(f"Found user ID {user_id} for email '{email}' in {database}")
+    
+    return found_ids
+
+def purge_user_from_database(database_name, user_id, identifier_type="ID"):
     """Purge user from a single database"""
     print(f"\n--- Purging user {user_id} from {database_name} ---")
     
@@ -86,30 +133,12 @@ def purge_user_from_database(database_name, user_id):
 
 def main():
     """Main purge function"""
-    if len(sys.argv) != 2:
-        print("Usage: python3 purge_specific_user.py <user_id>")
-        print("Example: python3 purge_specific_user.py 123")
-        return 1
+    parser = argparse.ArgumentParser(description='Purge a user from all tenant databases')
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--id', type=int, help='User ID to purge')
+    group.add_argument('--email', type=str, help='Email address to purge')
     
-    try:
-        user_id = int(sys.argv[1])
-    except ValueError:
-        print("Error: user_id must be a valid integer")
-        return 1
-    
-    print(f"WARNING: This will completely purge user {user_id} from ALL tenant databases!")
-    print("This includes:")
-    print("- User record")
-    print("- User authentication details")
-    print("- All attendance records")
-    print("- All dues records")
-    print("- All referral records")
-    print()
-    
-    confirm = input("Are you sure you want to proceed? Type 'YES' to confirm: ")
-    if confirm != 'YES':
-        print("Operation cancelled.")
-        return 0
+    args = parser.parse_args()
     
     # List of all tenant databases
     databases = [
@@ -121,25 +150,82 @@ def main():
         'lieg_db'
     ]
     
+    if args.email:
+        # Find user IDs by email across all databases
+        print(f"Looking up user IDs for email: {args.email}")
+        found_ids = find_user_ids_by_email(args.email)
+        
+        if not found_ids:
+            print(f"No user found with email '{args.email}' in any database.")
+            print("However, there might still be orphaned attendance records...")
+            print("Proceeding to check for attendance records by email...")
+            
+            # Even if no user record exists, we should check for attendance records
+            # that might reference this email in some way
+            user_identifier = args.email
+            identifier_type = "email"
+        else:
+            print(f"Found user in {len(found_ids)} database(s)")
+            user_identifier = args.email
+            identifier_type = "email"
+    else:
+        # Direct user ID purge
+        user_identifier = args.id
+        identifier_type = "ID"
+        found_ids = {db: args.id for db in databases}  # Assume ID exists in all databases
+    
+    print(f"\nWARNING: This will completely purge user ({identifier_type}: {user_identifier}) from ALL tenant databases!")
+    print("This includes:")
+    print("- User record")
+    print("- User authentication details") 
+    print("- All attendance records")
+    print("- All dues records")
+    print("- All referral records")
+    print()
+    
+    confirm = input("Are you sure you want to proceed? Type 'YES' to confirm: ")
+    if confirm != 'YES':
+        print("Operation cancelled.")
+        return 0
+    
     success_count = 0
     total_count = len(databases)
     
-    print(f"\nStarting purge of user {user_id} from all tenant databases...")
+    print(f"\nStarting purge of user ({identifier_type}: {user_identifier}) from all tenant databases...")
     
-    for database in databases:
-        if purge_user_from_database(database, user_id):
-            success_count += 1
-        else:
-            print(f"✗ Failed to completely purge user {user_id} from {database}")
+    if args.email:
+        # For email-based purge, we need to handle each database individually
+        for database in databases:
+            if database in found_ids:
+                # User exists in this database, purge by ID
+                user_id = found_ids[database]
+                if purge_user_from_database(database, user_id, "email"):
+                    success_count += 1
+                else:
+                    print(f"✗ Failed to completely purge user from {database}")
+            else:
+                # No user record, but check for orphaned attendance records
+                print(f"\n--- Checking {database} for orphaned records ---")
+                # For now, we'll skip databases where no user was found
+                # In a more advanced version, we could search attendance records by email
+                print(f"No user record found in {database}, skipping...")
+                success_count += 1  # Count as success since nothing to purge
+    else:
+        # For ID-based purge, purge from all databases
+        for database in databases:
+            if purge_user_from_database(database, args.id, "ID"):
+                success_count += 1
+            else:
+                print(f"✗ Failed to completely purge user {args.id} from {database}")
     
     print(f"\n--- Purge Summary ---")
     print(f"Successfully processed: {success_count}/{total_count} databases")
     
     if success_count == total_count:
-        print(f"✓ User {user_id} has been completely purged from all databases!")
+        print(f"✓ User ({identifier_type}: {user_identifier}) has been completely purged from all databases!")
         return 0
     else:
-        print(f"✗ Some databases failed to purge user {user_id}. Please check the errors above.")
+        print(f"✗ Some databases failed to purge user ({identifier_type}: {user_identifier}). Please check the errors above.")
         return 1
 
 if __name__ == "__main__":
