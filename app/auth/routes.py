@@ -134,10 +134,10 @@ def login():
     inferred_tenant_id = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
     
-    # For member.unfc.it, show as admin portal but use website tenant
+    # For member.unfc.it, show as admin portal but use website tenant - no tenant dropdown needed
     if current_hostname == 'member.unfc.it':
         inferred_tenant_display_name = 'Admin Portal'
-        show_tenant_dropdown = True
+        show_tenant_dropdown = False  # Admin panel doesn't need tenant selection on login
     else:
         inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
         show_tenant_dropdown = (inferred_tenant_id == 'website')
