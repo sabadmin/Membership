@@ -70,7 +70,7 @@
                 </thead>
                 <tbody>
                     {% for dues_record, dues_type in my_dues %}
-                    {% set balance = dues_record.amount_due - dues_record.amount_paid %}
+                    {% set balance = dues_record.dues_amount - dues_record.amount_paid %}
                     <tr
                         class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %} {% if balance > 0 %}bg-red-50{% endif %}">
                         {% if can_manage_dues %}
@@ -90,14 +90,14 @@
                             {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            ${{ dues_record.amount_due }}
+                            ${{ dues_record.dues_amount }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                             ${{ dues_record.amount_paid }}
                         </td>
                         <td
-                            class="border border-gray-300 px-4 py-2 text-center text-sm {% if (dues_record.amount_due|float - dues_record.amount_paid|float) > 0 %}text-red-600 font-medium{% else %}text-green-600{% endif %}">
-                            ${{ "%.2f"|format(dues_record.amount_due|float - dues_record.amount_paid|float) }}
+                            class="border border-gray-300 px-4 py-2 text-center text-sm {% if (dues_record.dues_amount|float - dues_record.amount_paid|float) > 0 %}text-red-600 font-medium{% else %}text-green-600{% endif %}">
+                            ${{ "%.2f"|format(dues_record.dues_amount|float - dues_record.amount_paid|float) }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                             {{ dues_record.due_date.strftime('%Y-%m-%d') }}
@@ -110,7 +110,7 @@
                             {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
-                            {% set balance = dues_record.amount_due - dues_record.amount_paid %}
+                            {% set balance = dues_record.dues_amount - dues_record.amount_paid %}
                             {% if balance <= 0 %}
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -147,7 +147,7 @@
                 %}</h3>
             {% set ns = namespace(total_due=0, total_paid=0) %}
             {% for dues_record, dues_type in my_dues %}
-            {% set ns.total_due = ns.total_due + (dues_record.amount_due|float) %}
+            {% set ns.total_due = ns.total_due + (dues_record.dues_amount|float) %}
             {% set ns.total_paid = ns.total_paid + (dues_record.amount_paid|float) %}
             {% endfor %}
             {% set total_balance = ns.total_due - ns.total_paid %}
