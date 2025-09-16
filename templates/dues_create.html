@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - Generate Dues{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Generate Dues for Members</h1>
+            <p class="text-gray-600 mt-2">Create dues records for multiple members at once. Select members and set dues details.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mb-4">
+            {% for category, message in messages %}
+            <div
+                class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Dues Generation Form -->
+        <div class="bg-gray-50 p-4 rounded-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Dues Details</h2>
+            <form method="POST" action="{{ url_for('members.generate_dues', tenant_id=tenant_id) }}">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label for="dues_type_id" class="block text-gray-700 text-sm font-bold mb-2">Dues Type:</label>
+                        <select id="dues_type_id" name="dues_type_id" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">-- Select Type --</option>
+                            {% for dues_type in dues_types %}
+                            <option value="{{ dues_type.id }}">{{ dues_type.dues_type }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="amount_due" class="block text-gray-700 text-sm font-bold mb-2">Amount Due:</label>
+                        <input type="number" id="amount_due" name="amount_due" step="0.01" min="0" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            placeholder="0.00">
+                    </div>
+                    <div>
+                        <label for="due_date" class="block text-gray-700 text-sm font-bold mb-2">Due Date:</label>
+                        <input type="date" id="due_date" name="due_date" required
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                </div>
+
+                <!-- Member Selection -->
+                <div class="mb-4">
+                    <h3 class="text-md font-semibold text-gray-700 mb-3">Select Members:</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto border rounded p-4 bg-white">
+                        {% for user in all_users %}
+                        <div class="flex items-center">
+                            <input type="checkbox" id="select_{{ user.id }}" name="select_{{ user.id }}"
+                                class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="select_{{ user.id }}" class="text-sm text-gray-700">
+                                {{ user.last_name or '' }}, {{ user.first_name or '' }}
+                                {% if not user.first_name and not user.last_name %}
+                                {{ user.email }}
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-4">
+                    <button type="button" onclick="selectAllMembers()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Select All
+                    </button>
+                    <button type="button" onclick="deselectAllMembers()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Deselect All
+                    </button>
+                    <button type="submit"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Generate Dues
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-blue-800">How to Generate Dues</h3>
+                    <div class="mt-2 text-sm text-blue-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Select a dues type (Annual, Quarterly, Assessment, etc.)</li>
+                            <li>Enter the amount due for each selected member</li>
+                            <li>Set the due date</li>
+                            <li>Check the boxes for members who should receive these dues</li>
+                            <li>Click "Generate Dues" to create the records</li>
+                        </ul>
+                        <p class="mt-2">If a member already has dues for the selected type and due date, the amount will be updated.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectAllMembers() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+    checkboxes.forEach(checkbox => checkbox.checked = true);
+}
+
+function deselectAllMembers() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+    checkboxes.forEach(checkbox => checkbox.checked = false);
+}
+</script>
+{% endblock %}

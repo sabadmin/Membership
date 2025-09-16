@@ -653,3 +653,237 @@ def dues_update(tenant_id, dues_record_id):
             return redirect(url_for('members.dues', tenant_id=tenant_id))
 
         return render_template('dues_update.html', tenant_id=tenant_id, form=form, dues_record=dues_record)
+
+
+@members_bp.route('/dues/<tenant_id>/generate', methods=['GET', 'POST'])
+def generate_dues(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+    # Check if user has permission to create dues records
+    user_permissions = session.get('user_permissions', {})
+    if not user_permissions.get('can_edit_dues', False):
+        flash("You do not have permission to generate dues records.", "danger")
+        return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+    with get_tenant_db_session(tenant_id) as s:
+        # Get all active dues types
+        dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.dues_type).all()
+
+        if request.method == 'POST':
+            try:
+                dues_type_id = request.form.get('dues_type_id')
+                amount_due = request.form.get('amount_due')
+                due_date_str = request.form.get('due_date')
+
+                if not dues_type_id or not amount_due or not due_date_str:
+                    flash("All fields are required.", "danger")
+                    return redirect(url_for('members.generate_dues', tenant_id=tenant_id))
+
+                # Parse amount and date
+                try:
+                    amount_due = float(amount_due)
+                    due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    flash("Invalid amount or date format.", "danger")
+                    return redirect(url_for('members.generate_dues', tenant_id=tenant_id))
+
+                # Get all active users
+                all_users = s.query(User).filter_by(is_active=True).order_by(User.first_name, User.last_name).all()
+
+                records_created = 0
+                for user in all_users:
+                    # Check if user was selected (checkbox checked)
+                    user_selected = request.form.get(f'select_{user.id}') == 'on'
+
+                    if user_selected:
+                        # Check if dues record already exists for this user, dues type, and due date
+                        existing_record = s.query(DuesRecord).filter_by(
+                            member_id=user.id,
+                            dues_type_id=dues_type_id,
+                            due_date=due_date
+                        ).first()
+
+                        if existing_record:
+                            # Update existing record
+                            existing_record.dues_amount = amount_due
+                            existing_record.date_dues_generated = date.today()
+                        else:
+                            # Create new record
+                            new_record = DuesRecord(
+                                member_id=user.id,
+                                dues_amount=amount_due,
+                                dues_type_id=dues_type_id,
+                                due_date=due_date,
+                                date_dues_generated=date.today()
+                            )
+                            s.add(new_record)
+                            records_created += 1
+
+                s.commit()
+                flash(f"Dues generated successfully! {records_created} new records created.", "success")
+
+            except Exception as e:
+                s.rollback()
+                flash(f"Failed to generate dues: {str(e)}", "danger")
+
+            return redirect(url_for('members.generate_dues', tenant_id=tenant_id))
+
+        # GET request - show the form
+        all_users = s.query(User).filter_by(is_active=True).order_by(User.first_name, User.last_name).all()
+
+        return render_template('dues_create.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_users=all_users,
+                             dues_types=dues_types)
+
+
+@members_bp.route('/dues/<tenant_id>/collection', methods=['GET', 'POST'])
+def dues_collection(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+    # Check if user has permission to manage dues
+    user_permissions = session.get('user_permissions', {})
+    if not user_permissions.get('can_edit_dues', False):
+        flash("You do not have permission to manage dues collection.", "danger")
+        return redirect(url_for('members.dues', tenant_id=tenant_id))
+
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+    with get_tenant_db_session(tenant_id) as s:
+        if request.method == 'POST':
+            try:
+                # Process bulk payment updates
+                dues_records = s.query(DuesRecord).join(User).join(DuesType).all()
+                payments_processed = 0
+
+                for record in dues_records:
+                    # Check if payment was recorded for this record
+                    payment_amount = request.form.get(f'payment_{record.id}')
+                    payment_date_str = request.form.get(f'payment_date_{record.id}')
+                    document_number = request.form.get(f'document_{record.id}')
+
+                    if payment_amount and payment_date_str:
+                        try:
+                            payment_amount = float(payment_amount)
+                            payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
+
+                            # Update the record
+                            record.amount_paid = payment_amount
+                            record.payment_received_date = payment_date
+                            if document_number:
+                                record.document_number = document_number
+
+                            payments_processed += 1
+
+                        except ValueError:
+                            continue  # Skip invalid entries
+
+                s.commit()
+                flash(f"Payments processed successfully! {payments_processed} records updated.", "success")
+
+            except Exception as e:
+                s.rollback()
+                flash(f"Failed to process payments: {str(e)}", "danger")
+
+            return redirect(url_for('members.dues_collection', tenant_id=tenant_id))
+
+        # GET request - show outstanding dues for collection
+        # Get dues records with outstanding balances, ordered by due date
+        dues_records = s.query(DuesRecord).join(User).join(DuesType).filter(
+            DuesRecord.amount_paid < DuesRecord.dues_amount
+        ).order_by(DuesRecord.due_date).all()
+
+        return render_template('dues_collection.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             dues_records=dues_records)
+
+
+@members_bp.route('/dues/<tenant_id>/history')
+def my_dues_history(tenant_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    current_user_id = session['user_id']
+
+    with get_tenant_db_session(tenant_id) as s:
+        current_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=current_user_id).first()
+        if not current_user:
+            session.clear()
+            flash("User not found.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+        # Check if user can view all dues or just their own
+        can_manage_dues = current_user.auth_details and current_user.auth_details.can_edit_dues
+
+        if can_manage_dues:
+            # Show all dues records for privileged users
+            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User)
+            page_title = "All Dues History"
+        else:
+            # Show only current user's dues
+            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id)
+            page_title = "My Dues History"
+
+        # Order by due date, with unpaid dues first
+        my_dues = dues_query.order_by(
+            DuesRecord.amount_paid < DuesRecord.dues_amount,  # Unpaid first
+            DuesRecord.due_date.desc()
+        ).all()
+
+        return render_template('my_dues_history.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             my_dues=my_dues,
+                             can_manage_dues=can_manage_dues,
+                             page_title=page_title)
+
+
+@members_bp.route('/dues/<tenant_id>/member/<int:member_id>/history')
+def member_dues_history(tenant_id, member_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        flash("You must be logged in to view this page.", "danger")
+        return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+    # Check if user has permission to view member dues
+    user_permissions = session.get('user_permissions', {})
+    if not user_permissions.get('can_edit_dues', False):
+        flash("You do not have permission to view member dues history.", "danger")
+        return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+    with get_tenant_db_session(tenant_id) as s:
+        # Get the selected member
+        selected_member = s.query(User).filter_by(id=member_id).first()
+        if not selected_member:
+            flash("Member not found.", "danger")
+            return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
+
+        # Get member's dues records
+        member_dues = s.query(DuesRecord, DuesType).join(DuesType).filter(
+            DuesRecord.member_id == member_id
+        ).order_by(DuesRecord.due_date.desc()).all()
+
+        # Calculate summary
+        total_due = sum(record.dues_amount for record, _ in member_dues)
+        total_paid = sum(record.amount_paid for record, _ in member_dues)
+        total_balance = total_due - total_paid
+
+        return render_template('member_dues_history.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             selected_member=selected_member,
+                             member_dues=member_dues,
+                             total_due=total_due,
+                             total_paid=total_paid,
+                             total_balance=total_balance)

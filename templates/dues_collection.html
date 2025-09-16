@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - Dues Collection{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Dues Collection</h1>
+            <p class="text-gray-600 mt-2">Record payments for outstanding dues. Fill in payment details for members who have paid.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="mb-4">
+            {% for category, message in messages %}
+            <div
+                class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if dues_records %}
+        <!-- Payment Recording Form -->
+        <form method="POST" action="{{ url_for('members.dues_collection', tenant_id=tenant_id) }}">
+            <div class="overflow-x-auto">
+                <table class="min-w-full border-collapse border border-gray-300 mb-4">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                Member</th>
+                            <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
+                                Dues Type</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Amount Due</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Amount Paid</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Balance</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Due Date</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Payment Amount</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Payment Date</th>
+                            <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                Document #</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in dues_records %}
+                        {% set balance = record.dues_amount - record.amount_paid %}
+                        <tr class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %}">
+                            <td class="border border-gray-300 px-4 py-2">
+                                <div class="font-medium text-gray-900">
+                                    {{ record.member.last_name or '' }}, {{ record.member.first_name or '' }}
+                                    {% if not record.member.first_name and not record.member.last_name %}
+                                    {{ record.member.email }}
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                                {{ record.dues_type.dues_type }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                                ${{ "%.2f"|format(record.dues_amount) }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                                ${{ "%.2f"|format(record.amount_paid) }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center text-sm {% if balance > 0 %}text-red-600 font-medium{% else %}text-green-600{% endif %}">
+                                ${{ "%.2f"|format(balance) }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                                {{ record.due_date.strftime('%Y-%m-%d') }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <input type="number" name="payment_{{ record.id }}" step="0.01" min="0"
+                                    class="w-20 text-center border-gray-300 rounded-md text-sm"
+                                    placeholder="0.00">
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <input type="date" name="payment_date_{{ record.id }}"
+                                    class="w-32 text-center border-gray-300 rounded-md text-sm">
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <input type="text" name="document_{{ record.id }}"
+                                    class="w-24 text-center border-gray-300 rounded-md text-sm"
+                                    placeholder="Check #">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-600">
+                    Only fill in payment details for members who have made payments. Leave blank for others.
+                </div>
+                <div class="flex space-x-4">
+                    <a href="{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        View History
+                    </a>
+                    <button type="submit"
+                        class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Record Payments
+                    </button>
+                </div>
+            </div>
+        </form>
+        {% else %}
+        <!-- No outstanding dues -->
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">All caught up!</h3>
+            <p class="mt-1 text-sm text-gray-500">There are no outstanding dues to collect.</p>
+            <div class="mt-6">
+                <a href="{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}"
+                    class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                    View Dues History
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Instructions -->
+        {% if dues_records %}
+        <div class="bg-green-50 border-l-4 border-green-400 p-4 mt-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
+                        fill="currentColor">
+                        <path fill-rule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                            clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-green-800">Recording Payments</h3>
+                    <div class="mt-2 text-sm text-green-700">
+                        <ul class="list-disc list-inside space-y-1">
+                            <li>Enter the payment amount received from each member</li>
+                            <li>Set the date the payment was received</li>
+                            <li>Optionally enter a document number (check number, transaction ID, etc.)</li>
+                            <li>Only fill in rows for members who have made payments</li>
+                            <li>Click "Record Payments" to save all changes at once</li>
+                        </ul>
+                        <p class="mt-2">Payments will be added to existing amounts paid. The system tracks cumulative payments.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
