@@ -55,31 +55,38 @@
         <!-- Date Navigation -->
         <div class="mb-4">
             <div class="flex justify-between items-center bg-gray-100 p-4 rounded-md">
-                <button type="button" onclick="navigateDate(-1)"
-                    class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
-                        </path>
-                    </svg>
-                    Previous Day
-                </button>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="selected_date" value="{{ selected_date }}">
+                    <input type="hidden" name="navigation_action" value="prev">
+                    <button type="submit"
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                        Previous Records
+                    </button>
+                </form>
 
                 <span class="text-lg font-semibold text-gray-800">
-                    Navigate Attendance History
+                    {{ selected_date }}
                 </span>
 
-                <button type="button" onclick="navigateDate(1)"
-                    class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
-                    Next Day
-                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                    </svg>
-                </button>
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="selected_date" value="{{ selected_date }}">
+                    <input type="hidden" name="navigation_action" value="next">
+                    <button type="submit"
+                        class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                        Next Records
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </form>
             </div>
         </div>
 
-        <!-- Attendance Matrix - Only Show if attendance exists -->
-        {% if existing_attendance %}
+        <!-- Attendance Matrix -->
         <div class="overflow-x-auto">
             <table class="min-w-full border-collapse border border-gray-300">
                 <thead>
@@ -156,11 +163,6 @@
                 </tbody>
             </table>
         </div>
-        {% else %}
-        <div class="text-center py-8">
-            <p class="text-gray-500">No attendance records found for {{ selected_date }}.</p>
-        </div>
-        {% endif %}
 
         <!-- Navigation Help -->
         <div class="mt-6 text-center text-gray-600">

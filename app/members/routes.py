@@ -261,6 +261,37 @@ def attendance_history(tenant_id):
             
             logger.info(f"Retrieved {len(all_users)} users")
             
+            # If this is a GET request (initial page load) and no navigation action,
+            # check if there are records for the selected date. If not, jump to most recent date with records.
+            if request.method == 'GET' and not navigation_action:
+                # Check if there are any records for the selected date
+                if can_view_all:
+                    records_exist = s.query(AttendanceRecord).filter(
+                        AttendanceRecord.event_date == selected_date
+                    ).first()
+                else:
+                    records_exist = s.query(AttendanceRecord).filter(
+                        AttendanceRecord.event_date == selected_date,
+                        AttendanceRecord.user_id == current_user.id
+                    ).first()
+                
+                # If no records exist for selected date, jump to most recent date with records
+                if not records_exist:
+                    if can_view_all:
+                        # Find most recent date with any attendance records
+                        most_recent_date = s.query(AttendanceRecord.event_date).order_by(
+                            AttendanceRecord.event_date.desc()
+                        ).first()
+                    else:
+                        # Find most recent date with attendance records for current user
+                        most_recent_date = s.query(AttendanceRecord.event_date).filter(
+                            AttendanceRecord.user_id == current_user.id
+                        ).order_by(AttendanceRecord.event_date.desc()).first()
+                    
+                    if most_recent_date:
+                        selected_date = most_recent_date[0]
+                        logger.info(f"No records found for today, jumping to most recent date: {selected_date}")
+            
             # Handle navigation actions (next/prev day)
             if navigation_action:
                 if navigation_action == 'next':
