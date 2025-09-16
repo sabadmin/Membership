@@ -23,20 +23,44 @@
                     {% if fix_scripts %}
                         <div class="row">
                             {% for script in fix_scripts %}
-                            <div class="col-md-6 col-lg-4 mb-3">
-                                <div class="card h-100">
+                            <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="card h-100 shadow-sm">
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title">
-                                            <i class="fas fa-file-code me-2"></i>{{ script }}
+                                            <i class="fas fa-file-code me-2 text-primary"></i>{{ script.replace('_', ' ').replace('.py', '').title() }}
                                         </h5>
-                                        <p class="card-text text-muted small">
-                                            Database maintenance script
+                                        <p class="card-text text-muted small mb-3">
+                                            {% if 'database' in script.lower() %}
+                                                <i class="fas fa-database me-1"></i>Database schema and structure fixes
+                                            {% elif 'migrate' in script.lower() %}
+                                                <i class="fas fa-exchange-alt me-1"></i>Data migration and transformation
+                                            {% elif 'fix' in script.lower() %}
+                                                <i class="fas fa-wrench me-1"></i>Bug fixes and corrections
+                                            {% elif 'add' in script.lower() %}
+                                                <i class="fas fa-plus me-1"></i>Add missing data or columns
+                                            {% elif 'remove' in script.lower() %}
+                                                <i class="fas fa-minus me-1"></i>Remove obsolete data
+                                            {% elif 'generate' in script.lower() %}
+                                                <i class="fas fa-magic me-1"></i>Generate missing records
+                                            {% elif 'reset' in script.lower() %}
+                                                <i class="fas fa-undo me-1"></i>Reset data to defaults
+                                            {% elif 'purge' in script.lower() %}
+                                                <i class="fas fa-trash me-1"></i>Clean up old data
+                                            {% elif 'seed' in script.lower() %}
+                                                <i class="fas fa-seedling me-1"></i>Populate initial data
+                                            {% elif 'setup' in script.lower() %}
+                                                <i class="fas fa-cogs me-1"></i>System setup and configuration
+                                            {% elif 'test' in script.lower() %}
+                                                <i class="fas fa-vial me-1"></i>Testing and validation
+                                            {% else %}
+                                                <i class="fas fa-file-code me-1"></i>Maintenance script
+                                            {% endif %}
                                         </p>
                                         <div class="mt-auto">
                                             <form method="post" class="d-inline">
                                                 <input type="hidden" name="script_name" value="{{ script }}">
-                                                <button type="submit" class="btn btn-primary btn-sm"
-                                                        onclick="return confirm('Are you sure you want to run {{ script }}? This may modify the database.')">
+                                                <button type="submit" class="btn btn-primary btn-sm w-100"
+                                                        onclick="return confirm('Are you sure you want to run {{ script }}?\n\nThis script may modify the database. Make sure you have backups!')">
                                                     <i class="fas fa-play me-1"></i>Run Script
                                                 </button>
                                             </form>
