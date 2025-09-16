@@ -41,6 +41,10 @@
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
                                 <a href="{{ url_for('admin.admin_panel', selected_tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Admin Dashboard</a>
+                                <a href="{{ url_for('admin.fix_scripts') }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                                    <i class="fas fa-tools me-2"></i>Fix Scripts
+                                </a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Manage
                                     Tenants</a>
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">System

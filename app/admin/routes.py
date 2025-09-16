@@ -349,23 +349,23 @@ def fix_scripts():
     scripts_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     fix_scripts = []
 
-    # Common fix script patterns
-    script_patterns = [
-        'fix_*.py', 'migrate_*.py', 'add_*.py', 'remove_*.py',
-        'database_*.py', 'generate_*.py', 'reset_*.py', 'purge_*.py',
-        'safe_*.py', 'seed_*.py', 'setup_*.py', 'test_*.py'
-    ]
+    # Get all .py files in the scripts directory
+    try:
+        all_files = os.listdir(scripts_dir)
+        for filename in all_files:
+            if filename.endswith('.py') and not filename.startswith('__'):
+                # Include scripts that match common fix patterns
+                if any(pattern in filename.lower() for pattern in [
+                    'fix_', 'migrate_', 'add_', 'remove_', 'database_',
+                    'generate_', 'reset_', 'purge_', 'safe_', 'seed_',
+                    'setup_', 'test_'
+                ]):
+                    fix_scripts.append(filename)
+    except Exception as e:
+        logger.error(f"Error listing scripts directory: {str(e)}")
 
-    for pattern in script_patterns:
-        import glob
-        matches = glob.glob(os.path.join(scripts_dir, pattern))
-        for match in matches:
-            script_name = os.path.basename(match)
-            if script_name.endswith('.py'):
-                fix_scripts.append(script_name)
-
-    # Remove duplicates and sort
-    fix_scripts = sorted(list(set(fix_scripts)))
+    # Sort the scripts
+    fix_scripts = sorted(fix_scripts)
 
     return render_template('fix_scripts.html',
                           fix_scripts=fix_scripts,
