@@ -26,9 +26,13 @@ def generate_missing_auth_details():
         for tenant_id in Config.TENANT_DATABASES.keys():
             print(f"\nProcessing tenant: {tenant_id}")
 
-            # Switch to tenant database
-            from database import get_tenant_engine
-            engine = get_tenant_engine(tenant_id)
+            # Get the tenant engine from the database module
+            from database import _tenant_engines
+            if tenant_id not in _tenant_engines:
+                print(f"Warning: Engine not initialized for tenant {tenant_id}, skipping...")
+                continue
+
+            engine = _tenant_engines[tenant_id]
 
             with db.session.connection(engine) as conn:
                 # Find users without UserAuthDetails
