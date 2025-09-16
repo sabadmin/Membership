@@ -26,54 +26,58 @@ def generate_missing_auth_details():
         for tenant_id in Config.TENANT_DATABASES.keys():
             print(f"\nProcessing tenant: {tenant_id}")
 
-            # Get the tenant engine from the database module
-            from database import _tenant_engines
-            if tenant_id not in _tenant_engines:
-                print(f"Warning: Engine not initialized for tenant {tenant_id}, skipping...")
-                continue
+            # Use the proper tenant session management
+            from database import get_tenant_db_session
 
-            engine = _tenant_engines[tenant_id]
+            try:
+                with get_tenant_db_session(tenant_id) as session:
+                    # Find users without UserAuthDetails using raw SQL
+                    from sqlalchemy import text
+                    result = session.execute(text("""
+                        SELECT u.id, u.email
+                        FROM "user" u
+                        LEFT JOIN user_auth_details uad ON u.id = uad.user_id
+                        WHERE uad.user_id IS NULL
+                    """))
 
-            with db.session.connection(engine) as conn:
-                # Find users without UserAuthDetails
-                result = conn.execute(db.text("""
-                    SELECT u.id, u.email
-                    FROM "user" u
-                    LEFT JOIN user_auth_details uad ON u.id = uad.user_id
-                    WHERE uad.user_id IS NULL
-                """))
+                    users_without_auth = result.fetchall()
 
-                users_without_auth = result.fetchall()
+                    if not users_without_auth:
+                        print(f"No users missing UserAuthDetails in tenant {tenant_id}")
+                        continue
 
-                if not users_without_auth:
-                    print(f"No users missing UserAuthDetails in tenant {tenant_id}")
-                    continue
+                    print(f"Found {len(users_without_auth)} users missing UserAuthDetails in tenant {tenant_id}")
 
-                print(f"Found {len(users_without_auth)} users missing UserAuthDetails in tenant {tenant_id}")
-
-                # Create UserAuthDetails for each user
-                for user_id, email in users_without_auth:
-                    try:
-                        # Insert new UserAuthDetails record
-                        conn.execute(db.text("""
-                            INSERT INTO user_auth_details (
-                                user_id, password_hash, is_active, last_login_1,
-                                can_edit_dues, can_edit_security, can_edit_referrals,
-                                can_edit_members, can_edit_attendance
-                            ) VALUES (
-                                :user_id, NULL, true, NULL,
-                                false, false, false, false, false
+                    # Create UserAuthDetails for each user
+                    from app.models import UserAuthDetails
+                    for user_id, email in users_without_auth:
+                        try:
+                            # Create new UserAuthDetails record
+                            new_auth = UserAuthDetails(
+                                user_id=user_id,
+                                password_hash=None,
+                                is_active=True,
+                                last_login_1=None,
+                                can_edit_dues=False,
+                                can_edit_security=False,
+                                can_edit_referrals=False,
+                                can_edit_members=False,
+                                can_edit_attendance=False
                             )
-                        """), {"user_id": user_id})
+                            session.add(new_auth)
 
-                        print(f"Created UserAuthDetails for user: {email} (ID: {user_id})")
-                        total_created += 1
+                            print(f"Created UserAuthDetails for user: {email} (ID: {user_id})")
+                            total_created += 1
 
-                    except Exception as e:
-                        print(f"Error creating UserAuthDetails for user {email} (ID: {user_id}): {str(e)}")
+                        except Exception as e:
+                            print(f"Error creating UserAuthDetails for user {email} (ID: {user_id}): {str(e)}")
 
-                conn.commit()
-                total_processed += len(users_without_auth)
+                    session.commit()
+                    total_processed += len(users_without_auth)
+
+            except Exception as e:
+                print(f"Error processing tenant {tenant_id}: {str(e)}")
+                continue
 
         print("\nSummary:")
         print(f"Total users processed: {total_processed}")
