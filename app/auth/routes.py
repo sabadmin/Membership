@@ -90,6 +90,9 @@ def register():
                     
                     # This will create a UserAuthDetails instance and set the hash
                     new_user.set_password(password)
+                    
+                    # Explicitly add the UserAuthDetails to the session
+                    s.add(new_user.auth_details)
 
                     # Set other properties on the newly created auth_details
                     new_user.auth_details.is_active = True
@@ -240,6 +243,9 @@ def manage_users_api(tenant_id):
             with get_tenant_db_session(g.tenant_id) as s:
                 s.add(new_user)
                 s.flush()
+                
+                # Explicitly add the UserAuthDetails to the session
+                s.add(new_user.auth_details)
                 
                 # set_password already creates UserAuthDetails, just set additional properties
                 new_user.auth_details.is_active = True
