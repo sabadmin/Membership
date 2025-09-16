@@ -264,17 +264,34 @@ def attendance_history(tenant_id):
             # Handle navigation actions (next/prev day)
             if navigation_action:
                 if navigation_action == 'next':
-                    # Find next date with attendance records
-                    next_date = s.query(AttendanceRecord.event_date).filter(
-                        AttendanceRecord.event_date > selected_date
-                    ).order_by(AttendanceRecord.event_date.asc()).first()
+                    if can_view_all:
+                        # Privileged users: Find next date with any attendance records
+                        next_date = s.query(AttendanceRecord.event_date).filter(
+                            AttendanceRecord.event_date > selected_date
+                        ).order_by(AttendanceRecord.event_date.asc()).first()
+                    else:
+                        # Non-privileged users: Find next date with attendance records for current user only
+                        next_date = s.query(AttendanceRecord.event_date).filter(
+                            AttendanceRecord.event_date > selected_date,
+                            AttendanceRecord.user_id == current_user.id
+                        ).order_by(AttendanceRecord.event_date.asc()).first()
+                    
                     if next_date:
                         selected_date = next_date[0]
+                        
                 elif navigation_action == 'prev':
-                    # Find previous date with attendance records
-                    prev_date = s.query(AttendanceRecord.event_date).filter(
-                        AttendanceRecord.event_date < selected_date
-                    ).order_by(AttendanceRecord.event_date.desc()).first()
+                    if can_view_all:
+                        # Privileged users: Find previous date with any attendance records
+                        prev_date = s.query(AttendanceRecord.event_date).filter(
+                            AttendanceRecord.event_date < selected_date
+                        ).order_by(AttendanceRecord.event_date.desc()).first()
+                    else:
+                        # Non-privileged users: Find previous date with attendance records for current user only
+                        prev_date = s.query(AttendanceRecord.event_date).filter(
+                            AttendanceRecord.event_date < selected_date,
+                            AttendanceRecord.user_id == current_user.id
+                        ).order_by(AttendanceRecord.event_date.desc()).first()
+                    
                     if prev_date:
                         selected_date = prev_date[0]
             
