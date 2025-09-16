@@ -23,10 +23,14 @@
         {% endwith %}
 
         {% if can_manage_dues %}
-        <div class="mb-4">
-            <a href="{{ url_for('members.dues', tenant_id=tenant_id) }}"
+        <div class="mb-4 flex space-x-4">
+            <a href="{{ url_for('members.generate_dues', tenant_id=tenant_id) }}"
                 class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                Generate New Dues
+                Generate Dues
+            </a>
+            <a href="{{ url_for('members.dues_collection', tenant_id=tenant_id) }}"
+                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                Collect Payments
             </a>
         </div>
 
@@ -66,20 +70,21 @@
                 </thead>
                 <tbody>
                     {% for dues_record, dues_type in my_dues %}
+                    {% set balance = dues_record.amount_due - dues_record.amount_paid %}
                     <tr
-                        class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %} {% if dues_record.status != 'paid' %}bg-red-50{% endif %}">
+                        class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %} {% if balance > 0 %}bg-red-50{% endif %}">
                         {% if can_manage_dues %}
                         <td class="border border-gray-300 px-4 py-2">
                             <div class="font-medium text-gray-900">
-                                {{ dues_record.user.last_name or '' }}, {{ dues_record.user.first_name or '' }}
-                                {% if not dues_record.user.first_name and not dues_record.user.last_name %}
-                                {{ dues_record.user.email }}
+                                {{ dues_record.member.last_name or '' }}, {{ dues_record.member.first_name or '' }}
+                                {% if not dues_record.member.first_name and not dues_record.member.last_name %}
+                                {{ dues_record.member.email }}
                                 {% endif %}
                             </div>
                         </td>
                         {% endif %}
                         <td class="border border-gray-300 px-4 py-2">
-                            <div class="font-medium text-gray-900">{{ dues_type.name }}</div>
+                            <div class="font-medium text-gray-900">{{ dues_type.dues_type }}</div>
                             {% if dues_type.description %}
                             <div class="text-sm text-gray-600">{{ dues_type.description }}</div>
                             {% endif %}
@@ -98,27 +103,23 @@
                             {{ dues_record.due_date.strftime('%Y-%m-%d') }}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            {% if dues_record.payment_date %}
-                            {{ dues_record.payment_date.strftime('%Y-%m-%d') }}
+                            {% if dues_record.payment_received_date %}
+                            {{ dues_record.payment_received_date.strftime('%Y-%m-%d') }}
                             {% else %}
                             -
                             {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">
-                            {% if dues_record.status == 'paid' %}
+                            {% set balance = dues_record.amount_due - dues_record.amount_paid %}
+                            {% if balance <= 0 %}
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                 Paid
                             </span>
-                            {% elif dues_record.status == 'partial' %}
+                            {% elif dues_record.amount_paid > 0 %}
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                 Partial
-                            </span>
-                            {% elif dues_record.status == 'overdue' %}
-                            <span
-                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                Overdue
                             </span>
                             {% else %}
                             <span
