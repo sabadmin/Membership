@@ -6,7 +6,7 @@ import subprocess
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import User, UserAuthDetails, AttendanceRecord, AttendanceType, ReferralRecord, MembershipType
+from app.models import User, UserAuthDetails, AttendanceRecord, AttendanceType, ReferralRecord, MembershipType, DuesRecord, DuesType
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
 from datetime import datetime
@@ -65,10 +65,10 @@ def get_table_and_model(table_name, tenant_id):
         'referral_records': ReferralRecord,
         'membership_type': MembershipType,
         'membership_types': MembershipType,
-        'dues_record': None,  # Add DuesRecord model if it exists
-        'dues_records': None,
-        'dues_type': None,    # Add DuesType model if it exists
-        'dues_types': None
+        'dues_record': DuesRecord,
+        'dues_records': DuesRecord,
+        'dues_type': DuesType,
+        'dues_types': DuesType
     }
     
     return table_model_mapping.get(table_name)
@@ -132,7 +132,7 @@ def admin_panel(selected_tenant_id):
         tables = get_all_table_names(_tenant_engines[tenant_id_to_manage])
         
         # Get users list for foreign key dropdowns
-        if table_name in ['attendance_records', 'referral_records', 'user_auth_details']:
+        if table_name in ['attendance_records', 'referral_records', 'user_auth_details', 'dues_records']:
             users = s.query(User).order_by(User.first_name, User.last_name).all()
             users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
         
@@ -147,6 +147,9 @@ def admin_panel(selected_tenant_id):
                 # For attendance_record, replace IDs with readable names
                 elif table_name == 'attendance_record':
                     columns = [col for col in columns if col not in ['user_id', 'attendance_type_id']] + ['member_name', 'attendance_type_name']
+                # For dues_record, replace IDs with readable names
+                elif table_name == 'dues_record':
+                    columns = [col for col in columns if col not in ['member_id', 'dues_type_id']] + ['member_name', 'dues_type_name']
                 if request.method == 'POST':
                     action = request.form.get('action')
                     row_id = request.form.get('id')
@@ -289,7 +292,7 @@ def admin_panel(selected_tenant_id):
                 elif table_name == 'referral_records':
                     # Join with users table to show member names instead of user_id
                     rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).join(User, ReferralRecord.referrer_id == User.id).all()
-                    
+
                     data = []
                     for record, email, first_name, last_name in rows:
                         row_data = record.__dict__.copy()
@@ -298,12 +301,39 @@ def admin_panel(selected_tenant_id):
                         member_name = f"{first_name or ''} {last_name or ''}".strip() or email
                         row_data['member_name'] = member_name
                         data.append(row_data)
+                elif table_name == 'dues_record':
+                    # Join with users and dues_type tables to show names instead of IDs
+                    rows = s.query(
+                        DuesRecord,
+                        User.email,
+                        User.first_name,
+                        User.last_name,
+                        DuesType.dues_type,
+                        DuesType.description
+                    ).join(User, DuesRecord.member_id == User.id)\
+                     .join(DuesType, DuesRecord.dues_type_id == DuesType.id).all()
+
+                    data = []
+                    for record, email, first_name, last_name, dues_type_name, dues_description in rows:
+                        row_data = record.__dict__.copy()
+                        row_data.pop('_sa_instance_state', None)
+                        # Replace IDs with readable names
+                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                        row_data['member_name'] = member_name
+                        row_data['dues_type_name'] = f"{dues_type_name} - {dues_description}"
+                        data.append(row_data)
                 else:
                     rows = s.query(model).all()
                     data = [row.__dict__ for row in rows]
                     for row in data:
                         row.pop('_sa_instance_state', None)
-    
+
+        # Get dues types list for foreign key dropdowns
+        dues_types_list = []
+        if table_name == 'dues_records':
+            dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.dues_type).all()
+            dues_types_list = [(dt.id, f"{dt.dues_type} - {dt.description}") for dt in dues_types]
+
     return render_template('admin_panel.html',
                            tables=tables,
                            selected_tenant_id=tenant_id_to_manage,
@@ -312,6 +342,7 @@ def admin_panel(selected_tenant_id):
                            columns=columns,
                            data=data,
                            users_list=users_list,  # For foreign key dropdowns
+                           dues_types_list=dues_types_list,  # For dues type dropdowns
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
                            Config=Config)
 

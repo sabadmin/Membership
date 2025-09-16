@@ -113,10 +113,10 @@
                                 <a href="{{ url_for('members.my_dues_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues History</a>
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
-                                <a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}"
-                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues Management</a>
+                                <a href="{{ url_for('members.generate_dues', tenant_id=g.tenant_id) }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Create Dues</a>
                                 {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Dues Management</span>
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Create Dues</span>
                                 {% endif %}
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Financial
