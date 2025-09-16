@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Database Fix Scripts - Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="mb-0">
+                        <i class="fas fa-tools me-2"></i>Database Fix Scripts
+                    </h2>
+                    <small class="text-muted">Run database maintenance and fix scripts</small>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Warning:</strong> These scripts modify the database. Make sure you have backups before running them.
+                        Only run scripts that you understand and need.
+                    </div>
+
+                    {% if fix_scripts %}
+                        <div class="row">
+                            {% for script in fix_scripts %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">
+                                            <i class="fas fa-file-code me-2"></i>{{ script }}
+                                        </h5>
+                                        <p class="card-text text-muted small">
+                                            Database maintenance script
+                                        </p>
+                                        <div class="mt-auto">
+                                            <form method="post" class="d-inline">
+                                                <input type="hidden" name="script_name" value="{{ script }}">
+                                                <button type="submit" class="btn btn-primary btn-sm"
+                                                        onclick="return confirm('Are you sure you want to run {{ script }}? This may modify the database.')">
+                                                    <i class="fas fa-play me-1"></i>Run Script
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No fix scripts found in the project directory.
+                        </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <a href="{{ url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Admin Panel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-hide flash messages after 10 seconds
+setTimeout(function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+    });
+}, 10000);
+</script>
+{% endblock %}

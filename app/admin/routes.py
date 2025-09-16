@@ -1,6 +1,8 @@
 # app/admin/routes.py
 
 import logging
+import os
+import subprocess
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
@@ -312,3 +314,59 @@ def admin_panel(selected_tenant_id):
                            users_list=users_list,  # For foreign key dropdowns
                            tenant_display_names=Config.TENANT_DISPLAY_NAMES,
                            Config=Config)
+
+@admin_bp.route('/fix-scripts', methods=['GET', 'POST'])
+def fix_scripts():
+    """Admin panel for running database fix scripts."""
+    if request.method == 'POST':
+        script_name = request.form.get('script_name')
+        if script_name:
+            script_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), script_name)
+
+            if os.path.exists(script_path) and script_path.endswith('.py'):
+                try:
+                    # Run the script and capture output
+                    result = subprocess.run(['python3', script_path],
+                                          capture_output=True, text=True, cwd=os.path.dirname(script_path))
+
+                    if result.returncode == 0:
+                        flash(f"Script '{script_name}' executed successfully!", "success")
+                        if result.stdout:
+                            flash(f"Output: {result.stdout}", "info")
+                    else:
+                        flash(f"Script '{script_name}' failed with error code {result.returncode}", "danger")
+                        if result.stderr:
+                            flash(f"Error: {result.stderr}", "danger")
+
+                except Exception as e:
+                    flash(f"Error running script '{script_name}': {str(e)}", "danger")
+            else:
+                flash(f"Script '{script_name}' not found or not a Python file.", "danger")
+
+        return redirect(url_for('admin.fix_scripts'))
+
+    # List all available fix scripts
+    scripts_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    fix_scripts = []
+
+    # Common fix script patterns
+    script_patterns = [
+        'fix_*.py', 'migrate_*.py', 'add_*.py', 'remove_*.py',
+        'database_*.py', 'generate_*.py', 'reset_*.py', 'purge_*.py',
+        'safe_*.py', 'seed_*.py', 'setup_*.py', 'test_*.py'
+    ]
+
+    for pattern in script_patterns:
+        import glob
+        matches = glob.glob(os.path.join(scripts_dir, pattern))
+        for match in matches:
+            script_name = os.path.basename(match)
+            if script_name.endswith('.py'):
+                fix_scripts.append(script_name)
+
+    # Remove duplicates and sort
+    fix_scripts = sorted(list(set(fix_scripts)))
+
+    return render_template('fix_scripts.html',
+                          fix_scripts=fix_scripts,
+                          Config=Config)
