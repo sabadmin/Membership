@@ -14,10 +14,12 @@
         {% if messages %}
         <div class="mb-4">
             {% for category, message in messages %}
+            {% if 'history' not in message.lower() %}
             <div
                 class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                 {{ message }}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% endif %}
