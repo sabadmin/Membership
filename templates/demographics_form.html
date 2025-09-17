@@ -224,15 +224,10 @@
                         {% endif %}
                     </div>
                     {% if editable %}
-                    <input type="text" id="network_group_title" name="network_group_title"
-                        value="{{ user.network_group_title or '' }}" placeholder="Network Group Title"
-                        class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     <input type="text" id="member_anniversary" name="member_anniversary" pattern="\d{2}/\d{2}"
                         placeholder="Anniversary (MM/YY)" value="{{ user.member_anniversary or '' }}"
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
-                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
-                        user.network_group_title or 'Not provided' }}</div>
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
                         user.member_anniversary or 'Not provided' }}</div>
                     {% endif %}
