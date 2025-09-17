@@ -258,74 +258,120 @@ def admin_panel(selected_tenant_id):
                             logger.error(error_msg)
                 
                 if table_name == 'user_auth_details':
-                    # Join with users table to show usernames instead of user_id
-                    rows = s.query(model, User.email, User.first_name, User.last_name).join(User, model.user_id == User.id).all()
-                    data = []
-                    for auth_detail, email, first_name, last_name in rows:
-                        row_data = auth_detail.__dict__.copy()
-                        row_data.pop('_sa_instance_state', None)
-                        # Replace user_id with readable user info
-                        username = f"{first_name or ''} {last_name or ''}".strip() or email
-                        row_data['username'] = username
-                        data.append(row_data)
+                    # Try to join with users table, but show all records even if joins fail
+                    try:
+                        rows = s.query(model, User.email, User.first_name, User.last_name).outerjoin(User, model.user_id == User.id).all()
+                        data = []
+                        for auth_detail, email, first_name, last_name in rows:
+                            row_data = auth_detail.__dict__.copy()
+                            row_data.pop('_sa_instance_state', None)
+                            # Replace user_id with readable user info
+                            if first_name or last_name or email:
+                                username = f"{first_name or ''} {last_name or ''}".strip() or email
+                            else:
+                                username = f"User ID: {auth_detail.user_id} (not found)"
+                            row_data['username'] = username
+                            data.append(row_data)
+                    except Exception as e:
+                        # If joins fail, show raw data
+                        logger.warning(f"Failed to join user_auth_details: {e}, showing raw data")
+                        rows = s.query(model).all()
+                        data = [row.__dict__ for row in rows]
+                        for row in data:
+                            row.pop('_sa_instance_state', None)
                 elif table_name == 'attendance_record':
-                    # Join with users and attendance_type tables to show names instead of IDs
-                    # Use outer join to include records without attendance types
-                    rows = s.query(
-                        AttendanceRecord,
-                        User.email,
-                        User.first_name,
-                        User.last_name,
-                        AttendanceType.type,
-                        AttendanceType.description
-                    ).join(User, AttendanceRecord.user_id == User.id)\
-                     .outerjoin(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
+                    # Try to join with users and attendance_type tables, but show all records even if joins fail
+                    try:
+                        rows = s.query(
+                            AttendanceRecord,
+                            User.email,
+                            User.first_name,
+                            User.last_name,
+                            AttendanceType.type,
+                            AttendanceType.description
+                        ).outerjoin(User, AttendanceRecord.user_id == User.id)\
+                         .outerjoin(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
 
-                    data = []
-                    for record, email, first_name, last_name, att_type, att_description in rows:
-                        row_data = record.__dict__.copy()
-                        row_data.pop('_sa_instance_state', None)
-                        # Replace IDs with readable names
-                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                        row_data['member_name'] = member_name
-                        if att_type:
-                            row_data['attendance_type_name'] = f"{att_type} - {att_description}"
-                        else:
-                            row_data['attendance_type_name'] = "No Type Assigned"
-                        data.append(row_data)
+                        data = []
+                        for record, email, first_name, last_name, att_type, att_description in rows:
+                            row_data = record.__dict__.copy()
+                            row_data.pop('_sa_instance_state', None)
+                            # Replace IDs with readable names
+                            if first_name or last_name or email:
+                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                            else:
+                                member_name = f"User ID: {record.user_id} (not found)"
+                            row_data['member_name'] = member_name
+                            if att_type:
+                                row_data['attendance_type_name'] = f"{att_type} - {att_description}"
+                            else:
+                                row_data['attendance_type_name'] = f"Type ID: {record.attendance_type_id or 'None'}"
+                            data.append(row_data)
+                    except Exception as e:
+                        # If joins fail, show raw data
+                        logger.warning(f"Failed to join attendance records: {e}, showing raw data")
+                        rows = s.query(AttendanceRecord).all()
+                        data = [row.__dict__ for row in rows]
+                        for row in data:
+                            row.pop('_sa_instance_state', None)
                 elif table_name == 'referral_records':
-                    # Join with users table to show member names instead of user_id
-                    rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).join(User, ReferralRecord.referrer_id == User.id).all()
+                    # Try to join with users table, but show all records even if joins fail
+                    try:
+                        rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).outerjoin(User, ReferralRecord.referrer_id == User.id).all()
 
-                    data = []
-                    for record, email, first_name, last_name in rows:
-                        row_data = record.__dict__.copy()
-                        row_data.pop('_sa_instance_state', None)
-                        # Add member name
-                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                        row_data['member_name'] = member_name
-                        data.append(row_data)
+                        data = []
+                        for record, email, first_name, last_name in rows:
+                            row_data = record.__dict__.copy()
+                            row_data.pop('_sa_instance_state', None)
+                            # Add member name
+                            if first_name or last_name or email:
+                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                            else:
+                                member_name = f"User ID: {record.referrer_id} (not found)"
+                            row_data['member_name'] = member_name
+                            data.append(row_data)
+                    except Exception as e:
+                        # If joins fail, show raw data
+                        logger.warning(f"Failed to join referral records: {e}, showing raw data")
+                        rows = s.query(ReferralRecord).all()
+                        data = [row.__dict__ for row in rows]
+                        for row in data:
+                            row.pop('_sa_instance_state', None)
                 elif table_name == 'dues_record':
-                    # Join with users and dues_type tables to show names instead of IDs
-                    rows = s.query(
-                        DuesRecord,
-                        User.email,
-                        User.first_name,
-                        User.last_name,
-                        DuesType.dues_type,
-                        DuesType.description
-                    ).join(User, DuesRecord.member_id == User.id)\
-                     .join(DuesType, DuesRecord.dues_type_id == DuesType.id).all()
+                    # Try to join with users and dues_type tables, but show all records even if joins fail
+                    try:
+                        rows = s.query(
+                            DuesRecord,
+                            User.email,
+                            User.first_name,
+                            User.last_name,
+                            DuesType.dues_type,
+                            DuesType.description
+                        ).outerjoin(User, DuesRecord.member_id == User.id)\
+                         .outerjoin(DuesType, DuesRecord.dues_type_id == DuesType.id).all()
 
-                    data = []
-                    for record, email, first_name, last_name, dues_type_name, dues_description in rows:
-                        row_data = record.__dict__.copy()
-                        row_data.pop('_sa_instance_state', None)
-                        # Replace IDs with readable names
-                        member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                        row_data['member_name'] = member_name
-                        row_data['dues_type_name'] = f"{dues_type_name} - {dues_description}"
-                        data.append(row_data)
+                        data = []
+                        for record, email, first_name, last_name, dues_type_name, dues_description in rows:
+                            row_data = record.__dict__.copy()
+                            row_data.pop('_sa_instance_state', None)
+                            # Replace IDs with readable names
+                            if first_name or last_name or email:
+                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                            else:
+                                member_name = f"User ID: {record.member_id} (not found)"
+                            row_data['member_name'] = member_name
+                            if dues_type_name:
+                                row_data['dues_type_name'] = f"{dues_type_name} - {dues_description}"
+                            else:
+                                row_data['dues_type_name'] = f"Type ID: {record.dues_type_id or 'None'}"
+                            data.append(row_data)
+                    except Exception as e:
+                        # If joins fail, show raw data
+                        logger.warning(f"Failed to join dues records: {e}, showing raw data")
+                        rows = s.query(DuesRecord).all()
+                        data = [row.__dict__ for row in rows]
+                        for row in data:
+                            row.pop('_sa_instance_state', None)
                 else:
                     rows = s.query(model).all()
                     data = [row.__dict__ for row in rows]
