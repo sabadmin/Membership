@@ -768,17 +768,23 @@ def dues_collection(tenant_id):
                 for record in dues_records:
                     # Check if this record was selected for payment
                     selected = request.form.get(f'select_{record.id}') == 'on'
+                    payment_amount_str = request.form.get(f'payment_{record.id}')
 
-                    if selected:
-                        # Calculate outstanding balance and mark as fully paid
-                        outstanding_balance = record.dues_amount - record.amount_paid
-                        if outstanding_balance > 0:
-                            record.amount_paid = record.dues_amount  # Mark as fully paid
-                            record.payment_received_date = date.today()  # Set payment date to today
-                            payments_processed += 1
+                    if selected and payment_amount_str:
+                        try:
+                            payment_amount = float(payment_amount_str)
+                            if payment_amount > 0:
+                                # Add payment to existing amount paid
+                                record.amount_paid += payment_amount
+                                # Set payment date if not already set
+                                if not record.payment_received_date:
+                                    record.payment_received_date = date.today()
+                                payments_processed += 1
+                        except ValueError:
+                            continue  # Skip invalid payment amounts
 
                 s.commit()
-                flash(f"Payments processed successfully! {payments_processed} members marked as paid.", "success")
+                flash(f"Payments processed successfully! {payments_processed} payment(s) recorded.", "success")
 
             except Exception as e:
                 s.rollback()
