@@ -247,8 +247,9 @@ def attendance_history(tenant_id):
                 return redirect(url_for('auth.login', tenant_id=tenant_id))
             
             # Check if user has permission to see all users or just their own
-            can_view_all = current_user and current_user.membership_type and current_user.membership_type.can_edit_attendance
-            logger.info(f"User membership type: {current_user.membership_type.name if current_user.membership_type else 'None'}, can_view_all: {can_view_all}")
+            user_permissions = session.get('user_permissions', {})
+            can_view_all = user_permissions.get('can_edit_attendance', False)
+            logger.info(f"User permissions: {user_permissions}, can_view_all: {can_view_all}")
             
             if can_view_all:
                 # Show all users for privileged users
