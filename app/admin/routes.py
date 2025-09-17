@@ -270,16 +270,17 @@ def admin_panel(selected_tenant_id):
                         data.append(row_data)
                 elif table_name == 'attendance_record':
                     # Join with users and attendance_type tables to show names instead of IDs
+                    # Use outer join to include records without attendance types
                     rows = s.query(
-                        AttendanceRecord, 
-                        User.email, 
-                        User.first_name, 
+                        AttendanceRecord,
+                        User.email,
+                        User.first_name,
                         User.last_name,
                         AttendanceType.type,
                         AttendanceType.description
                     ).join(User, AttendanceRecord.user_id == User.id)\
-                     .join(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
-                    
+                     .outerjoin(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
+
                     data = []
                     for record, email, first_name, last_name, att_type, att_description in rows:
                         row_data = record.__dict__.copy()
@@ -287,7 +288,10 @@ def admin_panel(selected_tenant_id):
                         # Replace IDs with readable names
                         member_name = f"{first_name or ''} {last_name or ''}".strip() or email
                         row_data['member_name'] = member_name
-                        row_data['attendance_type_name'] = f"{att_type} - {att_description}"
+                        if att_type:
+                            row_data['attendance_type_name'] = f"{att_type} - {att_description}"
+                        else:
+                            row_data['attendance_type_name'] = "No Type Assigned"
                         data.append(row_data)
                 elif table_name == 'referral_records':
                     # Join with users table to show member names instead of user_id
