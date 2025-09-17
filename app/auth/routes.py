@@ -177,16 +177,24 @@ def login():
             if not user.auth_details.is_active:
                 return render_template('login.html', error="Account is inactive. Please contact support.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
             
+            # Check if user needs to set initial password
+            if not user.auth_details.password_hash:
+                # Store user info in session temporarily for password setup
+                session['temp_user_id'] = user.id
+                session['temp_tenant_id'] = tenant_id
+                session['temp_user_email'] = user.email
+                return redirect(url_for('auth.set_initial_password'))
+
             if user.check_password(password):
                 user.auth_details.update_last_login()
                 s.commit()
-                
+
                 session['user_id'] = user.id
                 session['tenant_id'] = tenant_id  # Use tenant_id from current context
                 session['user_email'] = user.email
                 session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email or 'User'
                 session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-                
+
                 if tenant_id == Config.SUPERADMIN_TENANT_ID:
                     return redirect(url_for('admin.admin_panel', selected_tenant_id=tenant_id))
                 else:
@@ -194,6 +202,86 @@ def login():
             else:
                 return render_template('login.html', error="Invalid email or password.", inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown), 401
     return render_template('login.html', inferred_tenant=inferred_tenant_id, inferred_tenant_display_name=inferred_tenant_display_name, tenant_display_names=Config.TENANT_DISPLAY_NAMES, show_tenant_dropdown=show_tenant_dropdown)
+
+@auth_bp.route('/set_initial_password', methods=['GET', 'POST'])
+def set_initial_password():
+    # Check if user is in the middle of setting initial password
+    if 'temp_user_id' not in session or 'temp_tenant_id' not in session:
+        flash("Session expired. Please login again.", "warning")
+        return redirect(url_for('auth.login'))
+
+    inferred_tenant_id = session['temp_tenant_id']
+    user_email = session['temp_user_email']
+
+    current_hostname = request.host.split(':')[0]
+    if current_hostname == 'member.unfc.it':
+        inferred_tenant_display_name = 'Admin Portal'
+    else:
+        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+
+        if not password:
+            return render_template('set_initial_password.html',
+                                 error="Password is required.",
+                                 user_email=user_email,
+                                 inferred_tenant_display_name=inferred_tenant_display_name), 400
+
+        if password != confirm_password:
+            return render_template('set_initial_password.html',
+                                 error="Passwords do not match.",
+                                 user_email=user_email,
+                                 inferred_tenant_display_name=inferred_tenant_display_name), 400
+
+        # Set the password and complete login
+        try:
+            with get_tenant_db_session(inferred_tenant_id) as s:
+                user = s.query(User).filter_by(id=session['temp_user_id']).first()
+                if not user:
+                    # Clear temp session and redirect to login
+                    session.pop('temp_user_id', None)
+                    session.pop('temp_tenant_id', None)
+                    session.pop('temp_user_email', None)
+                    flash("User not found. Please try logging in again.", "danger")
+                    return redirect(url_for('auth.login'))
+
+                # Set the password
+                user.set_password(password)
+                user.auth_details.update_last_login()
+                s.commit()
+
+                # Clear temp session variables
+                session.pop('temp_user_id', None)
+                session.pop('temp_tenant_id', None)
+                session.pop('temp_user_email', None)
+
+                # Set normal session variables
+                session['user_id'] = user.id
+                session['tenant_id'] = inferred_tenant_id
+                session['user_email'] = user.email
+                session['user_name'] = f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email or 'User'
+                session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+
+                flash("Password set successfully! Welcome to the system.", "success")
+
+                if inferred_tenant_id == Config.SUPERADMIN_TENANT_ID:
+                    return redirect(url_for('admin.admin_panel', selected_tenant_id=inferred_tenant_id))
+                else:
+                    return redirect(url_for('members.dashboard', tenant_id=inferred_tenant_id))
+
+        except Exception as e:
+            # Clear temp session on error
+            session.pop('temp_user_id', None)
+            session.pop('temp_tenant_id', None)
+            session.pop('temp_user_email', None)
+            flash(f"Failed to set password: {str(e)}", "danger")
+            return redirect(url_for('auth.login'))
+
+    return render_template('set_initial_password.html',
+                         user_email=user_email,
+                         inferred_tenant_display_name=inferred_tenant_display_name)
 
 @auth_bp.route('/logout')
 def logout():
