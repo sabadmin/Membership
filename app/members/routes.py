@@ -759,34 +759,26 @@ def dues_collection(tenant_id):
     with get_tenant_db_session(tenant_id) as s:
         if request.method == 'POST':
             try:
-                # Process bulk payment updates
-                dues_records = s.query(DuesRecord).join(User).join(DuesType).all()
+                # Process bulk payment updates for selected members
+                dues_records = s.query(DuesRecord).join(User).join(DuesType).filter(
+                    DuesRecord.amount_paid < DuesRecord.dues_amount
+                ).all()
                 payments_processed = 0
 
                 for record in dues_records:
-                    # Check if payment was recorded for this record
-                    payment_amount = request.form.get(f'payment_{record.id}')
-                    payment_date_str = request.form.get(f'payment_date_{record.id}')
-                    document_number = request.form.get(f'document_{record.id}')
+                    # Check if this record was selected for payment
+                    selected = request.form.get(f'select_{record.id}') == 'on'
 
-                    if payment_amount and payment_date_str:
-                        try:
-                            payment_amount = float(payment_amount)
-                            payment_date = datetime.strptime(payment_date_str, '%Y-%m-%d').date()
-
-                            # Update the record
-                            record.amount_paid = payment_amount
-                            record.payment_received_date = payment_date
-                            if document_number:
-                                record.document_number = document_number
-
+                    if selected:
+                        # Calculate outstanding balance and mark as fully paid
+                        outstanding_balance = record.dues_amount - record.amount_paid
+                        if outstanding_balance > 0:
+                            record.amount_paid = record.dues_amount  # Mark as fully paid
+                            record.payment_received_date = date.today()  # Set payment date to today
                             payments_processed += 1
 
-                        except ValueError:
-                            continue  # Skip invalid entries
-
                 s.commit()
-                flash(f"Payments processed successfully! {payments_processed} records updated.", "success")
+                flash(f"Payments processed successfully! {payments_processed} members marked as paid.", "success")
 
             except Exception as e:
                 s.rollback()

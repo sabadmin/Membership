@@ -23,21 +23,9 @@
         {% endwith %}
 
         {% if can_manage_dues %}
-        <div class="mb-4 flex space-x-4">
-            <a href="{{ url_for('members.generate_dues', tenant_id=tenant_id) }}"
-                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                Generate Dues
-            </a>
-            <a href="{{ url_for('members.dues_collection', tenant_id=tenant_id) }}"
-                class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                Collect Payments
-            </a>
-        </div>
-
         <div class="mb-4">
             <p class="text-sm text-gray-600">
-                <strong>Privileged View:</strong> You can see all member dues and mark payments. Regular users see only
-                their own dues.
+                <strong>Privileged View:</strong> You can see all member dues. Use "Collect Dues" from the Financial menu to record payments. Regular users see only their own dues.
             </p>
         </div>
         {% endif %}
