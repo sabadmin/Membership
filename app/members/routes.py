@@ -306,10 +306,13 @@ def attendance_history(tenant_id):
                             AttendanceRecord.event_date > selected_date,
                             AttendanceRecord.user_id == current_user.id
                         ).order_by(AttendanceRecord.event_date.asc()).first()
-                    
+
                     if next_date:
                         selected_date = next_date[0]
-                        
+                    else:
+                        # No further history - stay on current date and show message
+                        flash("No further history available.", "info")
+
                 elif navigation_action == 'prev':
                     if can_view_all:
                         # Privileged users: Find previous date with any attendance records
@@ -322,9 +325,12 @@ def attendance_history(tenant_id):
                             AttendanceRecord.event_date < selected_date,
                             AttendanceRecord.user_id == current_user.id
                         ).order_by(AttendanceRecord.event_date.desc()).first()
-                    
+
                     if prev_date:
                         selected_date = prev_date[0]
+                    else:
+                        # No further history - stay on current date and show message
+                        flash("No further history available.", "info")
             
             # Get attendance records for the selected date with attendance types
             # Handle case where attendance_type_id column doesn't exist yet
@@ -340,6 +346,24 @@ def attendance_history(tenant_id):
                 attendance_records = s.query(AttendanceRecord).filter(
                     AttendanceRecord.event_date == selected_date
                 ).all()
+
+            # Filter out records with empty meeting types
+            filtered_records = []
+            for record in attendance_records:
+                meeting_type = ""
+                try:
+                    if hasattr(record, 'attendance_type') and record.attendance_type:
+                        meeting_type = record.attendance_type.type or ""
+                    elif hasattr(record, 'event_name') and record.event_name:
+                        meeting_type = record.event_name or ""
+                except Exception:
+                    pass
+
+                # Only include records with non-empty meeting types
+                if meeting_type.strip():
+                    filtered_records.append(record)
+
+            attendance_records = filtered_records
             
             logger.info(f"Found {len(attendance_records)} attendance records for {selected_date}")
             
@@ -437,9 +461,9 @@ def _attendance_view(tenant_id, editable=True):
                 
                 # Check if we have AttendanceType table or need to use legacy mode
                 use_legacy_mode = len(attendance_types) == 1 and hasattr(attendance_types[0], '_fields')
-                
+
                 if not use_legacy_mode and not attendance_type_id:
-                    flash("Attendance type is required.", "danger")
+                    flash("Meeting type is required.", "danger")
                     return redirect(url_for('members.attendance_create', tenant_id=tenant_id))
                 
                 # Process attendance only for selected users (those with checkboxes checked)
