@@ -855,19 +855,19 @@ def my_dues_history(tenant_id):
 
         if can_manage_dues:
             # Show all dues records for privileged users
-            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(DuesRecord.member)
+            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User)
             page_title = "All Dues History"
         else:
             # Show only current user's dues
-            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(DuesRecord.member).filter(DuesRecord.member_id == current_user_id)
+            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id)
             page_title = "My Dues History"
 
         # Order by: unpaid dues first (by due date), then paid dues (by due date), then by name
         my_dues = dues_query.order_by(
             DuesRecord.amount_paid >= DuesRecord.dues_amount,  # Unpaid first, paid last
             DuesRecord.due_date.asc(),  # Earliest due dates first within each group
-            DuesRecord.member.last_name,
-            DuesRecord.member.first_name
+            User.last_name,
+            User.first_name
         ).all()
 
         return render_template('my_dues_history.html',
