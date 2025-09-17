@@ -32,8 +32,11 @@
                     <table class="min-w-full border-collapse border border-gray-300">
                         <thead>
                             <tr class="bg-gray-100">
-                                <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
-                                    Select</th>
+                                <th class="border border-gray-300 px-2 py-2 text-center text-sm font-bold text-gray-700">
+                                    <input type="checkbox" id="selectAll" onclick="toggleAllMembers()"
+                                        class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                    <br><span class="text-xs text-gray-500">Select</span>
+                                </th>
                                 <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
                                     Member</th>
                                 <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
@@ -165,14 +168,45 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to individual checkboxes to update select all state
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectAllState);
+    });
+
+    // Initialize select all state
+    updateSelectAllState();
+});
+
+function toggleAllMembers() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+}
+
+function updateSelectAllState() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+    const selectAll = document.getElementById('selectAll');
+    const checkedCount = document.querySelectorAll('input[type="checkbox"][name^="select_"]:checked').length;
+
+    selectAll.checked = checkedCount === checkboxes.length && checkboxes.length > 0;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+}
+
 function selectAllMembers() {
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
     checkboxes.forEach(checkbox => checkbox.checked = true);
+    updateSelectAllState();
 }
 
 function deselectAllMembers() {
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
     checkboxes.forEach(checkbox => checkbox.checked = false);
+    updateSelectAllState();
 }
 </script>
 {% endblock %}
