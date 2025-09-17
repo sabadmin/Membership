@@ -793,10 +793,15 @@ def dues_collection(tenant_id):
             return redirect(url_for('members.dues_collection', tenant_id=tenant_id))
 
         # GET request - show outstanding dues for collection
-        # Get dues records with outstanding balances, ordered by due date
+        # Get dues records with outstanding balances, ordered by: open balance first, then due date, then user name
         dues_records = s.query(DuesRecord).join(User).join(DuesType).filter(
             DuesRecord.amount_paid < DuesRecord.dues_amount
-        ).order_by(DuesRecord.due_date).all()
+        ).order_by(
+            DuesRecord.amount_paid < DuesRecord.dues_amount,  # Open dues first
+            DuesRecord.due_date,
+            User.last_name,
+            User.first_name
+        ).all()
 
         return render_template('dues_collection.html',
                              tenant_id=tenant_id,

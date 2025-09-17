@@ -73,9 +73,6 @@
                         {% endif %}
                         <td class="border border-gray-300 px-4 py-2">
                             <div class="font-medium text-gray-900">{{ dues_type.dues_type }}</div>
-                            {% if dues_type.description %}
-                            <div class="text-sm text-gray-600">{{ dues_type.description }}</div>
-                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                             ${{ dues_record.dues_amount }}
