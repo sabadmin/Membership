@@ -906,7 +906,7 @@ def my_dues_history(tenant_id):
         logger.error(f"Error in my_dues_history: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         flash("An error occurred while retrieving dues history.", "danger")
-        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
+        return redirect(url_for('members.my_dues_history', tenant_id=tenant_id))
 
 
 @members_bp.route('/dues/<tenant_id>/member/<int:member_id>/history')
