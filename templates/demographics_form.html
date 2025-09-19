@@ -44,7 +44,7 @@
                         required>
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.first_name or
-                        'Not provided' }}</div>
+                        'N/A' }}</div>
                     {% endif %}
                 </div>
                 <div>
@@ -55,7 +55,7 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
-                        user.middle_initial or '' }}</div>
+                        user.middle_initial or 'N/A' }}</div>
                     {% endif %}
                 </div>
                 <div>
@@ -66,7 +66,7 @@
                         required>
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.last_name or
-                        'Not provided' }}</div>
+                        'N/A' }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -79,8 +79,8 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline"
                         required>
                     {% else %}
-                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.email or 'Not
-                        provided' }}</div>
+                    <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.email or 'N/A'
+                        }}</div>
                     {% endif %}
                 </div>
                 <div>
@@ -91,7 +91,7 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.cell_phone |
-                        format_phone_number or 'Not provided' }}</div>
+                        format_phone_number or 'N/A' }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -109,7 +109,7 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.address_line1
-                        or 'Not provided' }}</div>
+                        or 'N/A' }}</div>
                     {% if user.address_line2 %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.address_line2
                         }}</div>
@@ -153,7 +153,7 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{ user.company or
-                        'Not provided' }}</div>
+                        'N/A' }}</div>
                     {% if user.company_address_line1 %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
                         user.company_address_line1 }}</div>
@@ -193,9 +193,9 @@
                             class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                         {% else %}
                         <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
-                            user.company_phone | format_phone_number or 'Not provided' }}</div>
+                            user.company_phone | format_phone_number or 'N/A' }}</div>
                         <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
-                            user.company_title or 'Not provided' }}</div>
+                            user.company_title or 'N/A' }}</div>
                         {% endif %}
                     </div>
                 </div>
@@ -229,7 +229,7 @@
                         class="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline">
                     {% else %}
                     <div class="bg-gray-100 border rounded w-full py-1 px-2 text-gray-700 text-sm">{{
-                        user.member_anniversary or 'Not provided' }}</div>
+                        user.member_anniversary or 'N/A' }}</div>
                     {% endif %}
                 </div>
             </div>

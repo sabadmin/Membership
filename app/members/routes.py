@@ -252,12 +252,23 @@ def attendance_history(tenant_id):
             logger.info(f"User permissions: {user_permissions}, can_view_all: {can_view_all}")
             
             if can_view_all:
-                # Show all users for privileged users
-                all_users = s.query(User).options(joinedload(User.membership_type)).order_by(User.first_name, User.last_name).all()
-                page_title = "Attendance History - All Members"
+                # For privileged users, only show users who have attendance records for this date
+                users_with_records = s.query(AttendanceRecord.user_id).filter(
+                    AttendanceRecord.event_date == selected_date
+                ).distinct().subquery()
+
+                all_users = s.query(User).options(joinedload(User.membership_type)).join(
+                    users_with_records, User.id == users_with_records.c.user_id
+                ).order_by(User.first_name, User.last_name).all()
+                page_title = f"Attendance History - {len(all_users)} Members"
             else:
-                # Show only current user for regular members
-                all_users = [current_user] if current_user else []
+                # Show only current user for regular members (only if they have a record for this date)
+                has_record = s.query(AttendanceRecord).filter(
+                    AttendanceRecord.event_date == selected_date,
+                    AttendanceRecord.user_id == current_user.id
+                ).first() is not None
+
+                all_users = [current_user] if current_user and has_record else []
                 page_title = "My Attendance History"
             
             logger.info(f"Retrieved {len(all_users)} users")
