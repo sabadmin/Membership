@@ -847,46 +847,66 @@ def dues_collection(tenant_id):
 
 @members_bp.route('/dues/<tenant_id>/history')
 def my_dues_history(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    import logging
+    logger = logging.getLogger(__name__)
 
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    current_user_id = session['user_id']
+    try:
+        logger.info(f"Starting my_dues_history for tenant: {tenant_id}")
 
-    with get_tenant_db_session(tenant_id) as s:
-        current_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=current_user_id).first()
-        if not current_user:
-            session.clear()
-            flash("User not found.", "danger")
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            logger.warning(f"Access denied for my_dues_history. Session user_id: {session.get('user_id')}, Session tenant_id: {session.get('tenant_id')}")
+            flash("You must be logged in to view this page.", "danger")
             return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-        # Check if user can view all dues or just their own
-        can_manage_dues = current_user.auth_details and current_user.auth_details.can_edit_dues
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+        current_user_id = session['user_id']
 
-        if can_manage_dues:
-            # Show all dues records for privileged users
-            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User)
-            page_title = "All Dues History"
-        else:
-            # Show only current user's dues
-            dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id)
-            page_title = "My Dues History"
+        with get_tenant_db_session(tenant_id) as s:
+            logger.info("Database session opened successfully")
 
-        # Order by: unpaid dues first (by due date), then paid dues (by due date), then by name
-        my_dues = dues_query.order_by(
-            DuesRecord.amount_paid >= DuesRecord.dues_amount,  # Unpaid first, paid last
-            DuesRecord.due_date.asc(),  # Earliest due dates first within each group
-            User.last_name,
-            User.first_name
-        ).all()
+            current_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=current_user_id).first()
+            if not current_user:
+                logger.error("Current user not found")
+                session.clear()
+                flash("User not found.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
 
+            # Check if user can view all dues or just their own
+            can_manage_dues = current_user.auth_details and current_user.auth_details.can_edit_dues
+            logger.info(f"User permissions - can_manage_dues: {can_manage_dues}")
+
+            if can_manage_dues:
+                # Show all dues records for privileged users
+                dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User)
+                page_title = "All Dues History"
+            else:
+                # Show only current user's dues
+                dues_query = s.query(DuesRecord, DuesType).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id)
+                page_title = "My Dues History"
+
+            # Order by: unpaid dues first (by due date), then paid dues (by due date), then by name
+            my_dues = dues_query.order_by(
+                DuesRecord.amount_paid >= DuesRecord.dues_amount,  # Unpaid first, paid last
+                DuesRecord.due_date.asc(),  # Earliest due dates first within each group
+                User.last_name,
+                User.first_name
+            ).all()
+
+            logger.info(f"Retrieved {len(my_dues)} dues records")
+
+        logger.info("Rendering my_dues_history.html template")
         return render_template('my_dues_history.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              my_dues=my_dues,
                              can_manage_dues=can_manage_dues,
                              page_title=page_title)
+
+    except Exception as e:
+        logger.error(f"Error in my_dues_history: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        flash("An error occurred while retrieving dues history.", "danger")
+        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
 
 @members_bp.route('/dues/<tenant_id>/member/<int:member_id>/history')
