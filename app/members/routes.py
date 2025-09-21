@@ -286,7 +286,7 @@ def attendance_history(tenant_id):
                         AttendanceRecord.event_date == selected_date,
                         AttendanceRecord.user_id == current_user.id
                     ).first()
-                
+
                 # If no records exist for selected date, jump to most recent date with records
                 if not records_exist:
                     if can_view_all:
@@ -299,10 +299,18 @@ def attendance_history(tenant_id):
                         most_recent_date = s.query(AttendanceRecord.event_date).filter(
                             AttendanceRecord.user_id == current_user.id
                         ).order_by(AttendanceRecord.event_date.desc()).first()
-                    
+
                     if most_recent_date:
                         selected_date = most_recent_date[0]
                         logger.info(f"No records found for today, jumping to most recent date: {selected_date}")
+                        # Re-check if user has records for the new date (for non-privileged users)
+                        if not can_view_all:
+                            has_record = s.query(AttendanceRecord).filter(
+                                AttendanceRecord.event_date == selected_date,
+                                AttendanceRecord.user_id == current_user.id
+                            ).first() is not None
+                            if not has_record:
+                                all_users = []
             
             # Handle navigation actions (next/prev day)
             if navigation_action:
@@ -321,6 +329,13 @@ def attendance_history(tenant_id):
 
                     if next_date:
                         selected_date = next_date[0]
+                        # Update user list for the new date (for non-privileged users)
+                        if not can_view_all:
+                            has_record = s.query(AttendanceRecord).filter(
+                                AttendanceRecord.event_date == selected_date,
+                                AttendanceRecord.user_id == current_user.id
+                            ).first() is not None
+                            all_users = [current_user] if current_user and has_record else []
                     else:
                         # No further history - stay on current date and show message
                         flash("No further history available.", "info")
@@ -340,6 +355,13 @@ def attendance_history(tenant_id):
 
                     if prev_date:
                         selected_date = prev_date[0]
+                        # Update user list for the new date (for non-privileged users)
+                        if not can_view_all:
+                            has_record = s.query(AttendanceRecord).filter(
+                                AttendanceRecord.event_date == selected_date,
+                                AttendanceRecord.user_id == current_user.id
+                            ).first() is not None
+                            all_users = [current_user] if current_user and has_record else []
                     else:
                         # No further history - stay on current date and show message
                         flash("No further history available.", "info")
@@ -572,10 +594,13 @@ def security(tenant_id):
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
-    
+
     current_user_id = session['user_id']
     current_user_auth_details = None
     user = None
+    selected_user = None
+    selected_user_auth_details = None
+    all_users = []
 
     with get_tenant_db_session(tenant_id) as s:
         user = _get_current_user(s, current_user_id)
@@ -583,30 +608,102 @@ def security(tenant_id):
             session.clear()
             flash("User not found.", "danger")
             return redirect(url_for('auth.login', tenant_id=tenant_id))
-        
-        current_user_auth_details = user.auth_details
-        
-        if request.method == 'POST':
-            new_password = request.form.get('password')
-            confirm_password = request.form.get('confirm_password')
 
-            if not new_password:
-                flash("Password field cannot be empty.", "danger")
-            elif new_password != confirm_password:
-                flash("New password and confirmation do not match.", "danger")
-            else:
-                try:
-                    user.set_password(new_password)
-                    s.commit()
-                    flash("Your password has been updated successfully!", "success")
-                except Exception as e:
-                    s.rollback()
-                    flash(f"Failed to update password: {str(e)}", "danger")
-        
+        current_user_auth_details = user.auth_details
+
+        # Check if current user can manage members (allows managing other users' privileges)
+        can_manage_members = current_user_auth_details and current_user_auth_details.can_edit_members
+
+        # Get all users for the dropdown (only if user can manage members)
+        if can_manage_members:
+            all_users = s.query(User).options(joinedload(User.auth_details)).order_by(User.last_name, User.first_name).all()
+
+        # Get selected user (default to current user if no selection or not privileged)
+        selected_user_id = request.args.get('user_id', current_user_id if not can_manage_members else None)
+        if selected_user_id:
+            selected_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
+            if selected_user:
+                selected_user_auth_details = selected_user.auth_details
+
+        if request.method == 'POST':
+            # Handle password change (only for current user)
+            if 'password' in request.form and not request.form.get('selected_user_id'):
+                new_password = request.form.get('password')
+                confirm_password = request.form.get('confirm_password')
+
+                if not new_password:
+                    flash("Password field cannot be empty.", "danger")
+                elif new_password != confirm_password:
+                    flash("New password and confirmation do not match.", "danger")
+                else:
+                    try:
+                        user.set_password(new_password)
+                        s.commit()
+                        flash("Your password has been updated successfully!", "success")
+                    except Exception as e:
+                        s.rollback()
+                        flash(f"Failed to update password: {str(e)}", "danger")
+
+            # Handle privilege and account management (for privileged users managing other users)
+            elif can_manage_members and 'manage_user' in request.form:
+                selected_user_id = request.form.get('selected_user_id')
+                if selected_user_id:
+                    target_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
+                    if target_user:
+                        try:
+                            # Ensure target user has auth details
+                            if not target_user.auth_details:
+                                from app.models import UserAuthDetails
+                                target_user.auth_details = UserAuthDetails(
+                                    user_id=target_user.id,
+                                    is_active=True
+                                )
+                                s.add(target_user.auth_details)
+
+                            # Update privileges
+                            target_user.auth_details.can_edit_dues = request.form.get('can_edit_dues') == 'on'
+                            target_user.auth_details.can_edit_security = request.form.get('can_edit_security') == 'on'
+                            target_user.auth_details.can_edit_referrals = request.form.get('can_edit_referrals') == 'on'
+                            target_user.auth_details.can_edit_members = request.form.get('can_edit_members') == 'on'
+                            target_user.auth_details.can_edit_attendance = request.form.get('can_edit_attendance') == 'on'
+
+                            # Update account status
+                            target_user.auth_details.is_active = request.form.get('is_active') == 'on'
+
+                            s.commit()
+
+                            # If updating current user's privileges, update session
+                            if str(target_user.id) == str(current_user_id):
+                                session['user_permissions'] = {
+                                    'can_edit_dues': target_user.auth_details.can_edit_dues,
+                                    'can_edit_security': target_user.auth_details.can_edit_security,
+                                    'can_edit_referrals': target_user.auth_details.can_edit_referrals,
+                                    'can_edit_members': target_user.auth_details.can_edit_members,
+                                    'can_edit_attendance': target_user.auth_details.can_edit_attendance
+                                }
+
+                            flash(f"{target_user.first_name} {target_user.last_name}'s account has been updated successfully!", "success")
+
+                            # Refresh selected user data
+                            selected_user = target_user
+                            selected_user_auth_details = target_user.auth_details
+
+                        except Exception as e:
+                            s.rollback()
+                            flash(f"Failed to update user account: {str(e)}", "danger")
+                    else:
+                        flash("Selected user not found.", "danger")
+                else:
+                    flash("No user selected for management.", "danger")
+
         return render_template('security.html',
                                tenant_id=tenant_id,
                                tenant_display_name=Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize()),
-                               auth_details=current_user_auth_details)
+                               auth_details=current_user_auth_details,
+                               can_manage_members=can_manage_members,
+                               all_users=all_users,
+                               selected_user=selected_user,
+                               selected_user_auth_details=selected_user_auth_details)
 
 
 

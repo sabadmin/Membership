@@ -223,12 +223,19 @@
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Demographics
                 </a>
-                <a href="{{ url_for('members.attendance_create', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('members.attendance_history', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
-                    Attendance
+                    Attendance History
                 </a>
-                class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
-                Dues Management
+                {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
+                <a href="{{ url_for('members.generate_dues', tenant_id=g.tenant_id) }}"
+                    class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
+                    Generate Dues
+                </a>
+                {% endif %}
+                <a href="{{ url_for('members.my_dues_history', tenant_id=g.tenant_id) }}"
+                    class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
+                    Dues History
                 </a>
                 <a href="#" class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Referrals

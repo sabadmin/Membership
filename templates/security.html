@@ -33,6 +33,108 @@
                 </form>
             </div>
 
+            <!-- User Management Section (only for users with member management privileges) -->
+            {% if can_manage_members %}
+            <div>
+                <form method="POST" action="{{ url_for('members.security', tenant_id=tenant_id) }}" class="space-y-4">
+                    <input type="hidden" name="manage_user" value="1">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Manage User Accounts</h2>
+
+                    <!-- User Selection -->
+                    <div>
+                        <label for="selected_user_id" class="block text-gray-700 text-sm font-bold mb-2">Select User:</label>
+                        <select id="selected_user_id" name="selected_user_id" required
+                            onchange="this.form.submit()"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">-- Select a User --</option>
+                            {% for user in all_users %}
+                            <option value="{{ user.id }}"
+                                {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                                {{ user.last_name }}, {{ user.first_name }} ({{ user.email }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    {% if selected_user %}
+                    <!-- User Info Display -->
+                    <div class="bg-gray-50 p-3 rounded-md">
+                        <h3 class="font-semibold text-gray-800">{{ selected_user.first_name }} {{ selected_user.last_name }}</h3>
+                        <p class="text-sm text-gray-600">{{ selected_user.email }}</p>
+                    </div>
+
+                    <!-- Account Status -->
+                    <div class="space-y-2">
+                        <h4 class="font-medium text-gray-700">Account Status:</h4>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="is_active" name="is_active"
+                                class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.is_active %}checked{% endif %}>
+                            <label for="is_active" class="ml-2 block text-sm text-gray-700">
+                                <strong>Account Active:</strong> User can log in and access the system
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privilege Management -->
+                    <div class="space-y-3">
+                        <h4 class="font-medium text-gray-700">Administrative Privileges:</h4>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="can_edit_dues" name="can_edit_dues"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.can_edit_dues %}checked{% endif %}>
+                            <label for="can_edit_dues" class="ml-2 block text-sm text-gray-700">
+                                <strong>Dues Management:</strong> Generate dues, collect payments, view all member dues
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="can_edit_security" name="can_edit_security"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.can_edit_security %}checked{% endif %}>
+                            <label for="can_edit_security" class="ml-2 block text-sm text-gray-700">
+                                <strong>Security Management:</strong> Manage user privileges and security settings
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="can_edit_referrals" name="can_edit_referrals"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.can_edit_referrals %}checked{% endif %}>
+                            <label for="can_edit_referrals" class="ml-2 block text-sm text-gray-700">
+                                <strong>Referral Management:</strong> Add and manage member referrals
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="can_edit_members" name="can_edit_members"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.can_edit_members %}checked{% endif %}>
+                            <label for="can_edit_members" class="ml-2 block text-sm text-gray-700">
+                                <strong>Member Management:</strong> Edit member information and manage memberships
+                            </label>
+                        </div>
+
+                        <div class="flex items-center">
+                            <input type="checkbox" id="can_edit_attendance" name="can_edit_attendance"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                {% if selected_user_auth_details and selected_user_auth_details.can_edit_attendance %}checked{% endif %}>
+                            <label for="can_edit_attendance" class="ml-2 block text-sm text-gray-700">
+                                <strong>Attendance Management:</strong> Create and manage attendance records
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit"
+                        class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-150">
+                        Update User Account
+                    </button>
+                    {% endif %}
+                </form>
+            </div>
+            {% endif %}
+
             <!-- Login History Section -->
             {% if auth_details %}
             <div>
