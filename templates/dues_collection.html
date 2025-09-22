@@ -44,6 +44,8 @@
                                 <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">
                                     Dues Type</th>
                                 <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                    Due Date</th>
+                                <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
                                     Amount Due</th>
                                 <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">
                                     Amount Paid</th>
@@ -73,6 +75,9 @@
                                     {{ record.dues_type.dues_type }}
                                 </td>
                                 <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                                    {{ record.due_date.strftime('%m/%d/%Y') if record.due_date else 'N/A' }}
+                                </td>
+                                <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                                     ${{ "%.2f"|format(record.dues_amount) }}
                                 </td>
                                 <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
@@ -84,7 +89,7 @@
                                 <td class="border border-gray-300 px-4 py-2 text-center">
                                     <input type="number" name="payment_{{ record.id }}" step="0.01" min="0" max="{{ balance }}"
                                         class="w-24 text-center border-gray-300 rounded-md text-sm"
-                                        placeholder="0.00">
+                                        placeholder="0.00" data-balance="{{ "%.2f"|format(balance) }}">
                                 </td>
                             </tr>
                             {% endfor %}
@@ -100,6 +105,10 @@
                         class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                         View History
                     </a>
+                    <button type="button" onclick="applyFullPayment()"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Apply Full Payment to Selected
+                    </button>
                     <button type="submit"
                         class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                         Record Payments
@@ -159,6 +168,24 @@ function updateSelectAllState() {
 
     selectAll.checked = checkedCount === checkboxes.length && checkboxes.length > 0;
     selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+}
+
+function applyFullPayment() {
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]:checked');
+
+    checkboxes.forEach(checkbox => {
+        // Extract record ID from checkbox name (e.g., "select_123" -> "123")
+        const recordId = checkbox.name.replace('select_', '');
+        // Find corresponding payment input
+        const paymentInput = document.querySelector(`input[name="payment_${recordId}"]`);
+        if (paymentInput) {
+            // Set value to the balance stored in data-balance attribute
+            const balance = paymentInput.getAttribute('data-balance');
+            if (balance && parseFloat(balance) > 0) {
+                paymentInput.value = balance;
+            }
+        }
+    });
 }
 
 
