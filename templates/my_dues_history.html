@@ -30,22 +30,17 @@
 
         {% if can_manage_dues %}
         <div class="mb-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <p class="text-sm text-gray-600">
-                    <strong>Privileged View:</strong> You can see all member dues. Use "Collect Dues" from the Financial menu to record payments. Regular users see only their own dues.
-                </p>
-                <div class="flex items-center gap-2">
-                    <label for="user_select" class="text-sm font-medium text-gray-700">View dues for:</label>
-                    <select id="user_select" onchange="changeUser()" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All Members</option>
-                        {% for user in all_users %}
-                        <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
-                            {{ user.last_name or '' }}, {{ user.first_name or '' }}
-                            {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
+            <div class="flex items-center gap-2">
+                <label for="user_select" class="text-sm font-medium text-gray-700">View dues for:</label>
+                <select id="user_select" onchange="changeUser()" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 w-64">
+                    <option value="">All Members</option>
+                    {% for user in all_users %}
+                    <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                        {{ user.last_name or '' }}, {{ user.first_name or '' }}
+                        {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
         {% endif %}
