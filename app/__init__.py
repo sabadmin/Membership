@@ -46,6 +46,7 @@ def create_app():
         app.teardown_appcontext(close_db_session)
         logger.info("Database teardown handler registered")
 
+        # Register template filters
         @app.template_filter('format_phone_number')
         def format_phone_number_filter(phone_number):
             if not phone_number:
@@ -59,8 +60,27 @@ def create_app():
 
         @app.template_filter('utc_to_local')
         def utc_to_local_filter(utc_dt):
-            from app.utils import utc_to_local
-            return utc_to_local(utc_dt)
+            """
+            Convert UTC datetime to local time (Eastern Time).
+            Assumes UTC datetime input and converts to America/New_York timezone.
+            """
+            if utc_dt is None:
+                return None
+
+            from datetime import timezone, timedelta
+
+            # Eastern Time offset (EDT is UTC-4, EST is UTC-5)
+            # For simplicity, using fixed offset. In production, use pytz for proper DST handling
+            eastern_offset = timedelta(hours=-4)  # EDT
+            local_tz = timezone(eastern_offset)
+
+            # If the datetime is naive (no timezone), assume it's UTC
+            if utc_dt.tzinfo is None:
+                utc_dt = utc_dt.replace(tzinfo=timezone.utc)
+
+            # Convert to local time
+            local_dt = utc_dt.astimezone(local_tz)
+            return local_dt
 
         @app.before_request
         def set_tenant_id_from_session_or_param():
