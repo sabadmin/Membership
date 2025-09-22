@@ -57,6 +57,11 @@ def create_app():
                 return f"1 ({digits[1:4]}) {digits[4:7]}-{digits[7:11]}"
             return phone_number
 
+        @app.template_filter('utc_to_local')
+        def utc_to_local_filter(utc_dt):
+            from app.utils import utc_to_local
+            return utc_to_local(utc_dt)
+
         @app.before_request
         def set_tenant_id_from_session_or_param():
             if 'tenant_id' in session and session['tenant_id'] in Config.TENANT_DATABASES:

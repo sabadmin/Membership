@@ -232,11 +232,11 @@
                             {# Date inputs for date fields #}
                             {% if row[col].__class__.__name__ == 'datetime' %}
                             <input type="datetime-local" name="{{ col }}"
-                                value="{{ row[col].strftime('%Y-%m-%dT%H:%M') }}"
+                                value="{{ utc_to_local(row[col]).strftime('%Y-%m-%dT%H:%M') if row[col] else '' }}"
                                 class="w-full border-gray-300 rounded-md text-sm resize-x">
                             {% elif row[col].__class__.__name__ == 'date' %}
                             <input type="date" name="{{ col }}"
-                                value="{{ row[col].strftime('%Y-%m-%d') }}"
+                                value="{{ row[col].strftime('%Y-%m-%d') if row[col] else '' }}"
                                 class="w-full border-gray-300 rounded-md text-sm resize-x">
                             {% else %}
                             <input type="text" name="{{ col }}" value="{{ row[col] or '' }}"
