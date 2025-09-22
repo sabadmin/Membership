@@ -62,8 +62,11 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50 sticky top-0">
                             <tr>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Select</th>
+                                <th class="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <input type="checkbox" id="selectAll" onclick="toggleAllMembers()"
+                                        class="w-4 h-4 text-blue-600 focus:ring-blue-500 border-gray-300">
+                                    <br><span class="text-xs text-gray-500">Select</span>
+                                </th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Member Name</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -93,17 +96,7 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="mt-6 flex justify-between items-center">
-                <div class="flex space-x-4">
-                    <button type="button" onclick="selectAllMembers()"
-                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                        Select All
-                    </button>
-                    <button type="button" onclick="deselectAllMembers()"
-                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                        Deselect All
-                    </button>
-                </div>
+            <div class="mt-6 flex justify-end">
                 <button type="submit"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                     Generate Dues
@@ -111,44 +104,38 @@
             </div>
         </form>
 
-        <!-- Instructions -->
-        <div class="bg-blue-50 border-l-4 border-blue-400 p-4">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                        fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-blue-800">How to Generate Dues</h3>
-                    <div class="mt-2 text-sm text-blue-700">
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Select a dues type (Annual, Quarterly, Assessment, etc.)</li>
-                            <li>Enter the amount due for each selected member</li>
-                            <li>Set the due date</li>
-                            <li>Check the boxes for members who should receive these dues</li>
-                            <li>Click "Generate Dues" to create the records</li>
-                        </ul>
-                        <p class="mt-2">If a member already has dues for the selected type and due date, the amount will be updated.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
 
 <script>
-function selectAllMembers() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to individual checkboxes to update select all state
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
-    checkboxes.forEach(checkbox => checkbox.checked = true);
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectAllState);
+    });
+
+    // Initialize select all state
+    updateSelectAllState();
+});
+
+function toggleAllMembers() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
+
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
 }
 
-function deselectAllMembers() {
+function updateSelectAllState() {
     const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
-    checkboxes.forEach(checkbox => checkbox.checked = false);
+    const selectAll = document.getElementById('selectAll');
+    const checkedCount = document.querySelectorAll('input[type="checkbox"][name^="select_"]:checked').length;
+
+    selectAll.checked = checkedCount === checkboxes.length && checkboxes.length > 0;
+    selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
 }
 </script>
 {% endblock %}

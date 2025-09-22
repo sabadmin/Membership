@@ -96,16 +96,6 @@
             <!-- Action Buttons -->
             <div class="flex justify-between items-center">
                 <div class="flex space-x-4">
-                    <button type="button" onclick="selectAllMembers()"
-                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                        Select All
-                    </button>
-                    <button type="button" onclick="deselectAllMembers()"
-                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                        Deselect All
-                    </button>
-                </div>
-                <div class="flex space-x-4">
                     <a href="{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}"
                         class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                         View History
@@ -137,35 +127,7 @@
         </div>
         {% endif %}
 
-        <!-- Instructions -->
-        {% if dues_records %}
-        <div class="bg-green-50 border-l-4 border-green-400 p-4 mt-6">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"
-                        fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                            clip-rule="evenodd"></path>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-green-800">Collecting Dues</h3>
-                    <div class="mt-2 text-sm text-green-700">
-                        <ul class="list-disc list-inside space-y-1">
-                            <li>Check the boxes for members who have made payments</li>
-                            <li>Enter the payment amount in the "Payment Amount" field for each selected member</li>
-                            <li>Use "Select All" to select all members with outstanding balances</li>
-                            <li>Click "Record Payments" to save all entered payment amounts</li>
-                            <li>Payment amounts will be added to existing payments (supports partial payments)</li>
-                            <li>Payment date will be set to today if not already set</li>
-                        </ul>
-                        <p class="mt-2">This page only shows dues with outstanding balances. Use "Dues History" to see all dues records.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
+
     </div>
 </div>
 
@@ -199,16 +161,6 @@ function updateSelectAllState() {
     selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
 }
 
-function selectAllMembers() {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
-    checkboxes.forEach(checkbox => checkbox.checked = true);
-    updateSelectAllState();
-}
 
-function deselectAllMembers() {
-    const checkboxes = document.querySelectorAll('input[type="checkbox"][name^="select_"]');
-    checkboxes.forEach(checkbox => checkbox.checked = false);
-    updateSelectAllState();
-}
 </script>
 {% endblock %}
