@@ -228,7 +228,7 @@
                                 <option value="false" {% if not row[col] %}selected{% endif %}>No</option>
                                 <option value="true" {% if row[col] %}selected{% endif %}>Yes</option>
                             </select>
-                            {% elif 'date' in col.lower() %}
+                            {% elif 'date' in col.lower() and row[col] %}
                             {# Date inputs for date fields #}
                             {% if row[col].__class__.__name__ == 'datetime' %}
                             <input type="datetime-local" name="{{ col }}"
@@ -245,7 +245,6 @@
                             {% else %}
                             <input type="text" name="{{ col }}" value="{{ row[col] or '' }}"
                                 class="w-full border-gray-300 rounded-md text-sm resize-x">
-                            {% endif %}
                         </td>
                         {% endfor %}
                         <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
