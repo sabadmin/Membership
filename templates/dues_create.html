@@ -71,6 +71,8 @@
                                     Member Name</th>
                                 <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Email</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Company</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -87,6 +89,9 @@
                                 </td>
                                 <td class="px-4 py-2 whitespace-nowrap">
                                     <div class="text-sm text-gray-500">{{ user.email }}</div>
+                                </td>
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <div class="text-sm text-gray-500">{{ user.company or '' }}</div>
                                 </td>
                             </tr>
                             {% endfor %}
