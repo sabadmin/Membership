@@ -145,7 +145,7 @@ def admin_panel(selected_tenant_id):
                 if table_name == 'user_auth_details':
                     columns = [col for col in columns if col != 'user_id'] + ['username']
                 # For attendance_record, replace IDs with readable names
-                elif table_name == 'attendance_record':
+                elif table_name in ['attendance_record', 'attendance_records']:
                     columns = [col for col in columns if col not in ['user_id', 'attendance_type_id']] + ['member_name', 'attendance_type_name']
                 # For dues_record, replace IDs with readable names
                 elif table_name == 'dues_record':
@@ -279,7 +279,7 @@ def admin_panel(selected_tenant_id):
                         data = [row.__dict__ for row in rows]
                         for row in data:
                             row.pop('_sa_instance_state', None)
-                elif table_name == 'attendance_record':
+                elif table_name in ['attendance_record', 'attendance_records']:
                     # Try to join with users and attendance_type tables, but show all records even if joins fail
                     try:
                         rows = s.query(
