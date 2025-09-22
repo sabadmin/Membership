@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{{ tenant_display_name }} - Dues History{% endblock %}
+{% block title %}
+    {{ tenant_display_name }} - Dues History
+    {% if can_manage_dues and selected_user %}
+        - {{ selected_user.first_name or '' }} {{ selected_user.last_name or '' }}
+        {% if not selected_user.first_name and not selected_user.last_name %}{{ selected_user.email }}{% endif %}
+    {% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="max-w-6xl mx-auto px-4 py-4">
@@ -24,9 +30,23 @@
 
         {% if can_manage_dues %}
         <div class="mb-4">
-            <p class="text-sm text-gray-600">
-                <strong>Privileged View:</strong> You can see all member dues. Use "Collect Dues" from the Financial menu to record payments. Regular users see only their own dues.
-            </p>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <p class="text-sm text-gray-600">
+                    <strong>Privileged View:</strong> You can see all member dues. Use "Collect Dues" from the Financial menu to record payments. Regular users see only their own dues.
+                </p>
+                <div class="flex items-center gap-2">
+                    <label for="user_select" class="text-sm font-medium text-gray-700">View dues for:</label>
+                    <select id="user_select" onchange="changeUser()" class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">All Members</option>
+                        {% for user in all_users %}
+                        <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                            {{ user.last_name or '' }}, {{ user.first_name or '' }}
+                            {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </div>
         {% endif %}
 
@@ -120,16 +140,35 @@
         </div>
         {% else %}
         <div class="text-center py-8">
-            <p class="text-gray-500">{% if can_manage_dues %}No dues records found in the system.{% else %}No dues
-                records found for your account.{% endif %}</p>
+            <p class="text-gray-500">
+                {% if can_manage_dues %}
+                    {% if selected_user %}
+                        No dues records found for {{ selected_user.first_name or '' }} {{ selected_user.last_name or '' }}
+                        {% if not selected_user.first_name and not selected_user.last_name %}{{ selected_user.email }}{% endif %}.
+                    {% else %}
+                        No dues records found in the system.
+                    {% endif %}
+                {% else %}
+                    No dues records found for your account.
+                {% endif %}
+            </p>
         </div>
         {% endif %}
 
         <!-- Summary (only if there are records) -->
         {% if my_dues %}
         <div class="mt-6 bg-gray-50 p-4 rounded-md">
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">Summary{% if can_manage_dues %} - All Members{% endif
-                %}</h3>
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">
+                Summary
+                {% if can_manage_dues %}
+                    {% if selected_user %}
+                        - {{ selected_user.first_name or '' }} {{ selected_user.last_name or '' }}
+                        {% if not selected_user.first_name and not selected_user.last_name %}{{ selected_user.email }}{% endif %}
+                    {% else %}
+                        - All Members
+                    {% endif %}
+                {% endif %}
+            </h3>
             {% set ns = namespace(total_due=0, total_paid=0) %}
             {% for dues_record in my_dues %}
             {% set ns.total_due = ns.total_due + (dues_record.dues_amount|float) %}
@@ -156,4 +195,22 @@
         {% endif %}
     </div>
 </div>
+
+{% if can_manage_dues %}
+<script>
+function changeUser() {
+    const userSelect = document.getElementById('user_select');
+    const selectedUserId = userSelect.value;
+
+    // Build the URL with the selected user parameter
+    let url = `{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}`;
+    if (selectedUserId) {
+        url += `?user_id=${selectedUserId}`;
+    }
+
+    // Redirect to the new URL
+    window.location.href = url;
+}
+</script>
+{% endif %}
 {% endblock %}

@@ -972,10 +972,29 @@ def my_dues_history(tenant_id):
             can_manage_dues = current_user.auth_details and current_user.auth_details.can_edit_dues
             logger.info(f"User permissions - can_manage_dues: {can_manage_dues}")
 
+            # Get selected user for privileged users
+            selected_user_id = request.args.get('user_id')
+            selected_user = None
+            all_users = []
+
             if can_manage_dues:
-                # Show all dues records for privileged users
-                dues_query = s.query(DuesRecord).join(DuesType).join(User).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
-                page_title = "All Dues History"
+                # Get all users for dropdown
+                all_users = s.query(User).order_by(User.last_name, User.first_name).all()
+
+                if selected_user_id:
+                    selected_user = s.query(User).filter_by(id=selected_user_id).first()
+                    if selected_user:
+                        # Show selected user's dues
+                        dues_query = s.query(DuesRecord).join(DuesType).join(User).filter(DuesRecord.member_id == selected_user_id).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
+                        page_title = f"Dues History - {selected_user.first_name or ''} {selected_user.last_name or ''}".strip() or selected_user.email
+                    else:
+                        # Invalid user selected, show all
+                        dues_query = s.query(DuesRecord).join(DuesType).join(User).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
+                        page_title = "All Dues History"
+                else:
+                    # No user selected, show all
+                    dues_query = s.query(DuesRecord).join(DuesType).join(User).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
+                    page_title = "All Dues History"
             else:
                 # Show only current user's dues
                 dues_query = s.query(DuesRecord).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
@@ -997,7 +1016,9 @@ def my_dues_history(tenant_id):
                              tenant_display_name=tenant_display_name,
                              my_dues=my_dues,
                              can_manage_dues=can_manage_dues,
-                             page_title=page_title)
+                             page_title=page_title,
+                             selected_user=selected_user,
+                             all_users=all_users)
 
     except Exception as e:
         logger.error(f"Error in my_dues_history: {str(e)}")
