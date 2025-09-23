@@ -336,9 +336,7 @@ def attendance_history(tenant_id):
                                 AttendanceRecord.user_id == current_user.id
                             ).first() is not None
                             all_users = [current_user] if current_user and has_record else []
-                    else:
-                        # No further history - stay on current date and show message
-                        flash("No further history available.", "info")
+                    # No flash message for no further history
 
                 elif navigation_action == 'prev':
                     if can_view_all:
@@ -362,9 +360,7 @@ def attendance_history(tenant_id):
                                 AttendanceRecord.user_id == current_user.id
                             ).first() is not None
                             all_users = [current_user] if current_user and has_record else []
-                    else:
-                        # No further history - stay on current date and show message
-                        flash("No further history available.", "info")
+                    # No flash message for no further history
             
             # Get attendance records for the selected date with attendance types
             # Handle case where attendance_type_id column doesn't exist yet

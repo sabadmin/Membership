@@ -260,6 +260,67 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        {% if 'history' not in message.lower() %}
+        <div class="toast-notification max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 transform transition-all duration-300 ease-in-out"
+             data-category="{{ category }}"
+             data-message="{{ message }}">
+            <div class="p-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        {% if category == 'success' %}
+                        <svg class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {% elif category == 'danger' or category == 'error' %}
+                        <svg class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        {% elif category == 'warning' %}
+                        <svg class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                        {% else %}
+                        <svg class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3 w-0 flex-1 pt-0.5">
+                        <p class="text-sm font-medium text-gray-900">
+                            {% if category == 'success' %}
+                            Success
+                            {% elif category == 'danger' or category == 'error' %}
+                            Error
+                            {% elif category == 'warning' %}
+                            Warning
+                            {% else %}
+                            Notice
+                            {% endif %}
+                        </p>
+                        <p class="mt-1 text-sm text-gray-500">{{ message }}</p>
+                    </div>
+                    <div class="ml-4 flex-shrink-0 flex">
+                        <button type="button" class="toast-close inline-flex rounded-md p-1.5 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="sr-only">Dismiss</span>
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
     <!-- Enhanced Navigation Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -319,6 +380,47 @@
                         }
                     });
                 }
+            });
+
+            // Toast Notifications
+            const toasts = document.querySelectorAll('.toast-notification');
+
+            toasts.forEach(function (toast, index) {
+                // Show toast with animation
+                setTimeout(function () {
+                    toast.classList.remove('opacity-0', 'translate-x-full');
+                    toast.classList.add('opacity-100', 'translate-x-0');
+                }, index * 100); // Stagger appearance
+
+                // Auto-dismiss after 5 seconds
+                setTimeout(function () {
+                    dismissToast(toast);
+                }, 5000 + (index * 100));
+
+                // Add click handler for close button
+                const closeButton = toast.querySelector('.toast-close');
+                if (closeButton) {
+                    closeButton.addEventListener('click', function () {
+                        dismissToast(toast);
+                    });
+                }
+            });
+
+            function dismissToast(toast) {
+                toast.classList.remove('opacity-100', 'translate-x-0');
+                toast.classList.add('opacity-0', 'translate-x-full');
+
+                // Remove from DOM after animation
+                setTimeout(function () {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }
+
+            // Add initial classes for animation
+            toasts.forEach(function (toast) {
+                toast.classList.add('opacity-0', 'translate-x-full');
             });
         });
     </script>
