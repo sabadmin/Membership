@@ -245,6 +245,7 @@
                             {% else %}
                             <input type="text" name="{{ col }}" value="{{ row[col] or '' }}"
                                 class="w-full border-gray-300 rounded-md text-sm resize-x">
+                            {% endif %}
                         </td>
                         {% endfor %}
                         <td class="px-3 py-2 whitespace-nowrap text-sm font-medium">
