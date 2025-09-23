@@ -1,5 +1,6 @@
 # app/members/routes.py
 
+import logging
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
 from config import Config
 from database import get_tenant_db_session
@@ -8,6 +9,8 @@ from app.utils import infer_tenant_from_hostname
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
 from .forms import DuesCreateForm, DuesPaymentForm, DuesUpdateForm
+
+logger = logging.getLogger(__name__)
 
 
 # Define the Blueprint
@@ -587,119 +590,125 @@ def _attendance_view(tenant_id, editable=True):
 
 @members_bp.route('/security/<tenant_id>', methods=['GET', 'POST'])
 def security(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-
-    current_user_id = session['user_id']
-    current_user_auth_details = None
-    user = None
-    selected_user = None
-    selected_user_auth_details = None
-    all_users = []
-
-    with get_tenant_db_session(tenant_id) as s:
-        user = _get_current_user(s, current_user_id)
-        if not user:
-            session.clear()
-            flash("User not found.", "danger")
+    try:
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
             return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-        current_user_auth_details = user.auth_details
+        current_user_id = session['user_id']
+        current_user_auth_details = None
+        user = None
+        selected_user = None
+        selected_user_auth_details = None
+        all_users = []
 
-        # Check if current user can manage members (allows managing other users' privileges)
-        can_manage_members = current_user_auth_details and current_user_auth_details.can_edit_members
+        with get_tenant_db_session(tenant_id) as s:
+            user = _get_current_user(s, current_user_id)
+            if not user:
+                session.clear()
+                flash("User not found.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-        # Get all users for the dropdown (only if user can manage members)
-        if can_manage_members:
-            all_users = s.query(User).options(joinedload(User.auth_details)).order_by(User.last_name, User.first_name).all()
+            current_user_auth_details = user.auth_details
 
-        # Get selected user (default to current user if no selection or not privileged)
-        selected_user_id = request.args.get('user_id', current_user_id if not can_manage_members else None)
-        if selected_user_id:
-            selected_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
-            if selected_user:
-                selected_user_auth_details = selected_user.auth_details
+            # Check if current user can manage members (allows managing other users' privileges)
+            can_manage_members = current_user_auth_details and current_user_auth_details.can_edit_members
 
-        if request.method == 'POST':
-            # Handle password change (only for current user)
-            if 'password' in request.form and not request.form.get('selected_user_id'):
-                new_password = request.form.get('password')
-                confirm_password = request.form.get('confirm_password')
+            # Get all users for the dropdown (only if user can manage members)
+            if can_manage_members:
+                all_users = s.query(User).options(joinedload(User.auth_details)).order_by(User.last_name, User.first_name).all()
 
-                if not new_password:
-                    flash("Password field cannot be empty.", "danger")
-                elif new_password != confirm_password:
-                    flash("New password and confirmation do not match.", "danger")
-                else:
-                    try:
-                        user.set_password(new_password)
-                        s.commit()
-                        flash("Your password has been updated successfully!", "success")
-                    except Exception as e:
-                        s.rollback()
-                        flash(f"Failed to update password: {str(e)}", "danger")
+            # Get selected user (default to current user if no selection or not privileged)
+            selected_user_id = request.args.get('user_id', current_user_id if not can_manage_members else None)
+            if selected_user_id:
+                selected_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
+                if selected_user:
+                    selected_user_auth_details = selected_user.auth_details
 
-            # Handle privilege and account management (for privileged users managing other users)
-            elif can_manage_members and 'manage_user' in request.form:
-                selected_user_id = request.form.get('selected_user_id')
-                if selected_user_id:
-                    target_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
-                    if target_user:
+            if request.method == 'POST':
+                # Handle password change (only for current user)
+                if 'password' in request.form and not request.form.get('selected_user_id'):
+                    new_password = request.form.get('password')
+                    confirm_password = request.form.get('confirm_password')
+
+                    if not new_password:
+                        flash("Password field cannot be empty.", "danger")
+                    elif new_password != confirm_password:
+                        flash("New password and confirmation do not match.", "danger")
+                    else:
                         try:
-                            # Ensure target user has auth details
-                            if not target_user.auth_details:
-                                from app.models import UserAuthDetails
-                                target_user.auth_details = UserAuthDetails(
-                                    user_id=target_user.id,
-                                    is_active=True
-                                )
-                                s.add(target_user.auth_details)
-
-                            # Update privileges
-                            target_user.auth_details.can_edit_dues = request.form.get('can_edit_dues') == 'on'
-                            target_user.auth_details.can_edit_security = request.form.get('can_edit_security') == 'on'
-                            target_user.auth_details.can_edit_referrals = request.form.get('can_edit_referrals') == 'on'
-                            target_user.auth_details.can_edit_members = request.form.get('can_edit_members') == 'on'
-                            target_user.auth_details.can_edit_attendance = request.form.get('can_edit_attendance') == 'on'
-
-                            # Update account status
-                            target_user.auth_details.is_active = request.form.get('is_active') == 'on'
-
+                            user.set_password(new_password)
                             s.commit()
-
-                            # If updating current user's privileges, update session
-                            if str(target_user.id) == str(current_user_id):
-                                session['user_permissions'] = {
-                                    'can_edit_dues': target_user.auth_details.can_edit_dues,
-                                    'can_edit_security': target_user.auth_details.can_edit_security,
-                                    'can_edit_referrals': target_user.auth_details.can_edit_referrals,
-                                    'can_edit_members': target_user.auth_details.can_edit_members,
-                                    'can_edit_attendance': target_user.auth_details.can_edit_attendance
-                                }
-
-                            flash(f"{target_user.first_name} {target_user.last_name}'s account has been updated successfully!", "success")
-
-                            # Refresh selected user data
-                            selected_user = target_user
-                            selected_user_auth_details = target_user.auth_details
-
+                            flash("Your password has been updated successfully!", "success")
                         except Exception as e:
                             s.rollback()
-                            flash(f"Failed to update user account: {str(e)}", "danger")
-                    else:
-                        flash("Selected user not found.", "danger")
-                else:
-                    flash("No user selected for management.", "danger")
+                            flash(f"Failed to update password: {str(e)}", "danger")
 
-        return render_template('security.html',
-                               tenant_id=tenant_id,
-                               tenant_display_name=Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize()),
-                               auth_details=current_user_auth_details,
-                               can_manage_members=can_manage_members,
-                               all_users=all_users,
-                               selected_user=selected_user,
-                               selected_user_auth_details=selected_user_auth_details)
+                # Handle privilege and account management (for privileged users managing other users)
+                elif can_manage_members and 'manage_user' in request.form:
+                    selected_user_id = request.form.get('selected_user_id')
+                    if selected_user_id:
+                        target_user = s.query(User).options(joinedload(User.auth_details)).filter_by(id=selected_user_id).first()
+                        if target_user:
+                            try:
+                                # Ensure target user has auth details
+                                if not target_user.auth_details:
+                                    from app.models import UserAuthDetails
+                                    target_user.auth_details = UserAuthDetails(
+                                        user_id=target_user.id,
+                                        is_active=True
+                                    )
+                                    s.add(target_user.auth_details)
+
+                                # Update privileges
+                                target_user.auth_details.can_edit_dues = request.form.get('can_edit_dues') == 'on'
+                                target_user.auth_details.can_edit_security = request.form.get('can_edit_security') == 'on'
+                                target_user.auth_details.can_edit_referrals = request.form.get('can_edit_referrals') == 'on'
+                                target_user.auth_details.can_edit_members = request.form.get('can_edit_members') == 'on'
+                                target_user.auth_details.can_edit_attendance = request.form.get('can_edit_attendance') == 'on'
+
+                                # Update account status
+                                target_user.auth_details.is_active = request.form.get('is_active') == 'on'
+
+                                s.commit()
+
+                                # If updating current user's privileges, update session
+                                if str(target_user.id) == str(current_user_id):
+                                    session['user_permissions'] = {
+                                        'can_edit_dues': target_user.auth_details.can_edit_dues,
+                                        'can_edit_security': target_user.auth_details.can_edit_security,
+                                        'can_edit_referrals': target_user.auth_details.can_edit_referrals,
+                                        'can_edit_members': target_user.auth_details.can_edit_members,
+                                        'can_edit_attendance': target_user.auth_details.can_edit_attendance
+                                    }
+
+                                flash(f"{target_user.first_name} {target_user.last_name}'s account has been updated successfully!", "success")
+
+                                # Refresh selected user data
+                                selected_user = target_user
+                                selected_user_auth_details = target_user.auth_details
+
+                            except Exception as e:
+                                s.rollback()
+                                flash(f"Failed to update user account: {str(e)}", "danger")
+                        else:
+                            flash("Selected user not found.", "danger")
+                    else:
+                        flash("No user selected for management.", "danger")
+
+            return render_template('security.html',
+                                   tenant_id=tenant_id,
+                                   tenant_display_name=Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize()),
+                                   auth_details=current_user_auth_details,
+                                   can_manage_members=can_manage_members,
+                                   all_users=all_users,
+                                   selected_user=selected_user,
+                                   selected_user_auth_details=selected_user_auth_details)
+    except Exception as e:
+        logger.error(f"Error in security: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        flash(f"An error occurred while accessing security settings: {str(e)}", "danger")
+        return redirect(url_for('members.my_demographics', tenant_id=tenant_id))
 
 
 
