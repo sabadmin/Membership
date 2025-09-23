@@ -118,283 +118,289 @@ def _convert_form_value(model, column_name, value):
 
 @admin_bp.route('/<selected_tenant_id>', methods=['GET', 'POST'])
 def admin_panel(selected_tenant_id):
-    if selected_tenant_id not in Config.TENANT_DATABASES:
-        flash("Invalid tenant specified.", "danger")
-        return redirect(url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID))
-    
-    tenant_id_to_manage = request.form.get('tenant_to_manage', selected_tenant_id)
-    table_name = request.form.get('table_name')
-    data = []
-    columns = []
-    users_list = []  # For foreign key dropdowns
-    
-    with get_tenant_db_session(tenant_id_to_manage) as s:
-        tables = get_all_table_names(_tenant_engines[tenant_id_to_manage])
-        
-        # Get users list for foreign key dropdowns
-        if table_name in ['attendance_records', 'referral_records', 'user_auth_details', 'dues_records']:
-            users = s.query(User).order_by(User.first_name, User.last_name).all()
-            users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
-        
-        
-        if table_name:
-            model = get_table_and_model(table_name, tenant_id_to_manage)
-            if model:
-                columns = get_column_names(model)
-                # For user_auth_details, add username column and modify columns list
-                if table_name == 'user_auth_details':
-                    columns = [col for col in columns if col != 'user_id'] + ['username']
-                # For attendance_record, replace IDs with readable names
-                elif table_name in ['attendance_record', 'attendance_records']:
-                    columns = [col for col in columns if col not in ['user_id', 'attendance_type_id']] + ['member_name', 'attendance_type_name']
-                # For dues_record, replace IDs with readable names
-                elif table_name == 'dues_record':
-                    columns = [col for col in columns if col not in ['member_id', 'dues_type_id']] + ['member_name', 'dues_type_name']
-                if request.method == 'POST':
-                    action = request.form.get('action')
-                    row_id = request.form.get('id')
-                    
-                    if action == 'add':
-                        # Skip auto-managed and system fields
-                        skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name']
-                        
-                        new_row_data = {}
-                        for key, value in request.form.items():
-                            if key not in skip_fields:
-                                if value == '':
-                                    new_row_data[key] = None
-                                else:
-                                    # Convert data types properly
-                                    converted_value = _convert_form_value(model, key, value)
-                                    logger.info(f"Converted {key}: '{value}' -> {converted_value} (type: {type(converted_value)})")
-                                    new_row_data[key] = converted_value
-                        
-                        # Handle password hashing for User model
-                        if 'password_hash' in new_row_data and new_row_data['password_hash']:
-                            temp_user = User()
-                            temp_user.set_password(new_row_data['password_hash'])
-                            new_row_data['password_hash'] = temp_user.password_hash
-                        
-                        try:
-                            logger.info(f"Adding new {table_name} record with data: {new_row_data}")
-                            new_record = model(**new_row_data)
-                            s.add(new_record)
-                            s.commit()
-                            flash("Row added successfully.", "success")
-                            logger.info(f"Successfully added {table_name} record")
-                        except Exception as e:
-                            s.rollback()
-                            error_msg = f"Error adding {table_name} row: {str(e)}"
-                            flash(error_msg, "danger")
-                            logger.error(error_msg)
+    try:
+        if selected_tenant_id not in Config.TENANT_DATABASES:
+            flash("Invalid tenant specified.", "danger")
+            return redirect(url_for('admin.admin_panel', selected_tenant_id=Config.SUPERADMIN_TENANT_ID))
 
-                    elif action == 'update' and row_id:
-                        try:
-                            logger.info(f"Updating {table_name} record ID {row_id}")
-                            row = s.query(model).filter_by(id=row_id).first()
-                            if row:
-                                logger.info(f"Found record to update: {row}")
-                                # Only skip system fields, preserve important date fields
-                                skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name', 'password_hash']
-                                
-                                for key, value in request.form.items():
-                                    if key not in skip_fields:
-                                        logger.info(f"Setting {key} = {value}")
-                                        # Convert data types based on model column types
+        tenant_id_to_manage = request.form.get('tenant_to_manage', selected_tenant_id)
+        table_name = request.form.get('table_name')
+        data = []
+        columns = []
+        users_list = []  # For foreign key dropdowns
+
+        with get_tenant_db_session(tenant_id_to_manage) as s:
+            tables = get_all_table_names(_tenant_engines[tenant_id_to_manage])
+
+            # Get users list for foreign key dropdowns
+            if table_name in ['attendance_records', 'referral_records', 'user_auth_details', 'dues_records']:
+                users = s.query(User).order_by(User.first_name, User.last_name).all()
+                users_list = [(user.id, f"{user.first_name or ''} {user.last_name or ''}".strip() or user.email) for user in users]
+
+
+            if table_name:
+                model = get_table_and_model(table_name, tenant_id_to_manage)
+                if model:
+                    columns = get_column_names(model)
+                    # For user_auth_details, add username column and modify columns list
+                    if table_name == 'user_auth_details':
+                        columns = [col for col in columns if col != 'user_id'] + ['username']
+                    # For attendance_record, replace IDs with readable names
+                    elif table_name in ['attendance_record', 'attendance_records']:
+                        columns = [col for col in columns if col not in ['user_id', 'attendance_type_id']] + ['member_name', 'attendance_type_name']
+                    # For dues_record, replace IDs with readable names
+                    elif table_name == 'dues_record':
+                        columns = [col for col in columns if col not in ['member_id', 'dues_type_id']] + ['member_name', 'dues_type_name']
+                    if request.method == 'POST':
+                        action = request.form.get('action')
+                        row_id = request.form.get('id')
+
+                        if action == 'add':
+                            # Skip auto-managed and system fields
+                            skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name']
+
+                            new_row_data = {}
+                            for key, value in request.form.items():
+                                if key not in skip_fields:
+                                    if value == '':
+                                        new_row_data[key] = None
+                                    else:
+                                        # Convert data types properly
                                         converted_value = _convert_form_value(model, key, value)
-                                        logger.info(f"Converted {key}: '{value}' -> {converted_value}")
-                                        setattr(row, key, converted_value)
-                                
-                                # Auto-update timestamp for membership types
-                                if table_name == 'membership_types':
-                                    row.updated_at = datetime.utcnow()
-                                
+                                        logger.info(f"Converted {key}: '{value}' -> {converted_value} (type: {type(converted_value)})")
+                                        new_row_data[key] = converted_value
+
+                            # Handle password hashing for User model
+                            if 'password_hash' in new_row_data and new_row_data['password_hash']:
+                                temp_user = User()
+                                temp_user.set_password(new_row_data['password_hash'])
+                                new_row_data['password_hash'] = temp_user.password_hash
+
+                            try:
+                                logger.info(f"Adding new {table_name} record with data: {new_row_data}")
+                                new_record = model(**new_row_data)
+                                s.add(new_record)
                                 s.commit()
-                                flash("Row updated successfully.", "success")
-                                logger.info(f"Successfully updated {table_name} ID {row_id}")
-                            else:
-                                flash("Row not found.", "danger")
-                                logger.warning(f"Record not found for {table_name} ID {row_id}")
-                        except Exception as e:
-                            s.rollback()
-                            error_msg = f"Error updating {table_name} record: {str(e)}"
-                            flash(error_msg, "danger")
-                            logger.error(error_msg)
-                    
-                    elif action == 'delete' and row_id:
+                                flash("Row added successfully.", "success")
+                                logger.info(f"Successfully added {table_name} record")
+                            except Exception as e:
+                                s.rollback()
+                                error_msg = f"Error adding {table_name} row: {str(e)}"
+                                flash(error_msg, "danger")
+                                logger.error(error_msg)
+
+                        elif action == 'update' and row_id:
+                            try:
+                                logger.info(f"Updating {table_name} record ID {row_id}")
+                                row = s.query(model).filter_by(id=row_id).first()
+                                if row:
+                                    logger.info(f"Found record to update: {row}")
+                                    # Only skip system fields, preserve important date fields
+                                    skip_fields = ['action', 'id', 'tenant_to_manage', 'table_name', 'password_hash']
+
+                                    for key, value in request.form.items():
+                                        if key not in skip_fields:
+                                            logger.info(f"Setting {key} = {value}")
+                                            # Convert data types based on model column types
+                                            converted_value = _convert_form_value(model, key, value)
+                                            logger.info(f"Converted {key}: '{value}' -> {converted_value}")
+                                            setattr(row, key, converted_value)
+
+                                    # Auto-update timestamp for membership types
+                                    if table_name == 'membership_types':
+                                        row.updated_at = datetime.utcnow()
+
+                                    s.commit()
+                                    flash("Row updated successfully.", "success")
+                                    logger.info(f"Successfully updated {table_name} ID {row_id}")
+                                else:
+                                    flash("Row not found.", "danger")
+                                    logger.warning(f"Record not found for {table_name} ID {row_id}")
+                            except Exception as e:
+                                s.rollback()
+                                error_msg = f"Error updating {table_name} record: {str(e)}"
+                                flash(error_msg, "danger")
+                                logger.error(error_msg)
+
+                        elif action == 'delete' and row_id:
+                            try:
+                                logger.info(f"Deleting {table_name} record ID {row_id}")
+                                row = s.query(model).filter_by(id=row_id).first()
+                                if row:
+                                    s.delete(row)
+                                    s.commit()
+                                    flash("Row deleted successfully.", "success")
+                                    logger.info(f"Successfully deleted {table_name} ID {row_id}")
+                                else:
+                                    flash("Row not found.", "danger")
+                                    logger.warning(f"Record not found for {table_name} ID {row_id}")
+                            except Exception as e:
+                                s.rollback()
+                                error_msg = f"Error deleting {table_name} record: {str(e)}"
+                                flash(error_msg, "danger")
+                                logger.error(error_msg)
+
+                        elif action == 'reset_password' and row_id:
+                            try:
+                                logger.info(f"Resetting password for user ID {row_id}")
+                                user = s.query(User).filter_by(id=row_id).first()
+                                if user:
+                                    user.set_password("Member")  # Reset to default password
+                                    s.commit()
+                                    flash(f"Password reset to 'Member' for user: {user.first_name or ''} {user.last_name or ''} ({user.email})", "success")
+                                    logger.info(f"Successfully reset password for user ID {row_id}")
+                                else:
+                                    flash("User not found.", "danger")
+                                    logger.warning(f"User not found for ID {row_id}")
+                            except Exception as e:
+                                s.rollback()
+                                error_msg = f"Error resetting password: {str(e)}"
+                                flash(error_msg, "danger")
+                                logger.error(error_msg)
+
+                    if table_name == 'user_auth_details':
+                        # Try to join with users table, but show all records even if joins fail
                         try:
-                            logger.info(f"Deleting {table_name} record ID {row_id}")
-                            row = s.query(model).filter_by(id=row_id).first()
-                            if row:
-                                s.delete(row)
-                                s.commit()
-                                flash("Row deleted successfully.", "success")
-                                logger.info(f"Successfully deleted {table_name} ID {row_id}")
-                            else:
-                                flash("Row not found.", "danger")
-                                logger.warning(f"Record not found for {table_name} ID {row_id}")
+                            rows = s.query(model, User.email, User.first_name, User.last_name).outerjoin(User, model.user_id == User.id).all()
+                            data = []
+                            for auth_detail, email, first_name, last_name in rows:
+                                row_data = auth_detail.__dict__.copy()
+                                row_data.pop('_sa_instance_state', None)
+                                # Replace user_id with readable user info
+                                if first_name or last_name or email:
+                                    username = f"{first_name or ''} {last_name or ''}".strip() or email
+                                else:
+                                    username = f"User ID: {auth_detail.user_id} (not found)"
+                                row_data['username'] = username
+                                data.append(row_data)
                         except Exception as e:
-                            s.rollback()
-                            error_msg = f"Error deleting {table_name} record: {str(e)}"
-                            flash(error_msg, "danger")
-                            logger.error(error_msg)
-                    
-                    elif action == 'reset_password' and row_id:
+                            # If joins fail, show raw data
+                            logger.warning(f"Failed to join user_auth_details: {e}, showing raw data")
+                            rows = s.query(model).all()
+                            data = [row.__dict__ for row in rows]
+                            for row in data:
+                                row.pop('_sa_instance_state', None)
+                    elif table_name in ['attendance_record', 'attendance_records']:
+                        # Try to join with users and attendance_type tables, but show all records even if joins fail
                         try:
-                            logger.info(f"Resetting password for user ID {row_id}")
-                            user = s.query(User).filter_by(id=row_id).first()
-                            if user:
-                                user.set_password("Member")  # Reset to default password
-                                s.commit()
-                                flash(f"Password reset to 'Member' for user: {user.first_name or ''} {user.last_name or ''} ({user.email})", "success")
-                                logger.info(f"Successfully reset password for user ID {row_id}")
-                            else:
-                                flash("User not found.", "danger")
-                                logger.warning(f"User not found for ID {row_id}")
+                            rows = s.query(
+                                AttendanceRecord,
+                                User.email,
+                                User.first_name,
+                                User.last_name,
+                                AttendanceType.type,
+                                AttendanceType.description
+                            ).outerjoin(User, AttendanceRecord.user_id == User.id)\
+                             .outerjoin(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
+
+                            data = []
+                            for record, email, first_name, last_name, att_type, att_description in rows:
+                                row_data = record.__dict__.copy()
+                                row_data.pop('_sa_instance_state', None)
+                                # Replace IDs with readable names
+                                if first_name or last_name or email:
+                                    member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                                else:
+                                    member_name = f"User ID: {record.user_id} (not found)"
+                                row_data['member_name'] = member_name
+                                if att_type:
+                                    row_data['attendance_type_name'] = f"{att_type} - {att_description}"
+                                else:
+                                    row_data['attendance_type_name'] = f"Type ID: {record.attendance_type_id or 'None'}"
+                                data.append(row_data)
                         except Exception as e:
-                            s.rollback()
-                            error_msg = f"Error resetting password: {str(e)}"
-                            flash(error_msg, "danger")
-                            logger.error(error_msg)
-                
-                if table_name == 'user_auth_details':
-                    # Try to join with users table, but show all records even if joins fail
-                    try:
-                        rows = s.query(model, User.email, User.first_name, User.last_name).outerjoin(User, model.user_id == User.id).all()
-                        data = []
-                        for auth_detail, email, first_name, last_name in rows:
-                            row_data = auth_detail.__dict__.copy()
-                            row_data.pop('_sa_instance_state', None)
-                            # Replace user_id with readable user info
-                            if first_name or last_name or email:
-                                username = f"{first_name or ''} {last_name or ''}".strip() or email
-                            else:
-                                username = f"User ID: {auth_detail.user_id} (not found)"
-                            row_data['username'] = username
-                            data.append(row_data)
-                    except Exception as e:
-                        # If joins fail, show raw data
-                        logger.warning(f"Failed to join user_auth_details: {e}, showing raw data")
+                            # If joins fail, show raw data
+                            logger.warning(f"Failed to join attendance records: {e}, showing raw data")
+                            rows = s.query(AttendanceRecord).all()
+                            data = [row.__dict__ for row in rows]
+                            for row in data:
+                                row.pop('_sa_instance_state', None)
+                    elif table_name == 'referral_records':
+                        # Try to join with users table, but show all records even if joins fail
+                        try:
+                            rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).outerjoin(User, ReferralRecord.referrer_id == User.id).all()
+
+                            data = []
+                            for record, email, first_name, last_name in rows:
+                                row_data = record.__dict__.copy()
+                                row_data.pop('_sa_instance_state', None)
+                                # Add member name
+                                if first_name or last_name or email:
+                                    member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                                else:
+                                    member_name = f"User ID: {record.referrer_id} (not found)"
+                                row_data['member_name'] = member_name
+                                data.append(row_data)
+                        except Exception as e:
+                            # If joins fail, show raw data
+                            logger.warning(f"Failed to join referral records: {e}, showing raw data")
+                            rows = s.query(ReferralRecord).all()
+                            data = [row.__dict__ for row in rows]
+                            for row in data:
+                                row.pop('_sa_instance_state', None)
+                    elif table_name == 'dues_record':
+                        # Try to join with users and dues_type tables, but show all records even if joins fail
+                        try:
+                            rows = s.query(
+                                DuesRecord,
+                                User.email,
+                                User.first_name,
+                                User.last_name,
+                                DuesType.dues_type,
+                                DuesType.description
+                            ).outerjoin(User, DuesRecord.member_id == User.id)\
+                             .outerjoin(DuesType, DuesRecord.dues_type_id == DuesType.id).all()
+
+                            data = []
+                            for record, email, first_name, last_name, dues_type_name, dues_description in rows:
+                                row_data = record.__dict__.copy()
+                                row_data.pop('_sa_instance_state', None)
+                                # Replace IDs with readable names
+                                if first_name or last_name or email:
+                                    member_name = f"{first_name or ''} {last_name or ''}".strip() or email
+                                else:
+                                    member_name = f"User ID: {record.member_id} (not found)"
+                                row_data['member_name'] = member_name
+                                if dues_type_name:
+                                    row_data['dues_type_name'] = f"{dues_type_name} - {dues_description}"
+                                else:
+                                    row_data['dues_type_name'] = f"Type ID: {record.dues_type_id or 'None'}"
+                                data.append(row_data)
+                        except Exception as e:
+                            # If joins fail, show raw data
+                            logger.warning(f"Failed to join dues records: {e}, showing raw data")
+                            rows = s.query(DuesRecord).all()
+                            data = [row.__dict__ for row in rows]
+                            for row in data:
+                                row.pop('_sa_instance_state', None)
+                    else:
                         rows = s.query(model).all()
                         data = [row.__dict__ for row in rows]
                         for row in data:
                             row.pop('_sa_instance_state', None)
-                elif table_name in ['attendance_record', 'attendance_records']:
-                    # Try to join with users and attendance_type tables, but show all records even if joins fail
-                    try:
-                        rows = s.query(
-                            AttendanceRecord,
-                            User.email,
-                            User.first_name,
-                            User.last_name,
-                            AttendanceType.type,
-                            AttendanceType.description
-                        ).outerjoin(User, AttendanceRecord.user_id == User.id)\
-                         .outerjoin(AttendanceType, AttendanceRecord.attendance_type_id == AttendanceType.id).all()
 
-                        data = []
-                        for record, email, first_name, last_name, att_type, att_description in rows:
-                            row_data = record.__dict__.copy()
-                            row_data.pop('_sa_instance_state', None)
-                            # Replace IDs with readable names
-                            if first_name or last_name or email:
-                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                            else:
-                                member_name = f"User ID: {record.user_id} (not found)"
-                            row_data['member_name'] = member_name
-                            if att_type:
-                                row_data['attendance_type_name'] = f"{att_type} - {att_description}"
-                            else:
-                                row_data['attendance_type_name'] = f"Type ID: {record.attendance_type_id or 'None'}"
-                            data.append(row_data)
-                    except Exception as e:
-                        # If joins fail, show raw data
-                        logger.warning(f"Failed to join attendance records: {e}, showing raw data")
-                        rows = s.query(AttendanceRecord).all()
-                        data = [row.__dict__ for row in rows]
-                        for row in data:
-                            row.pop('_sa_instance_state', None)
-                elif table_name == 'referral_records':
-                    # Try to join with users table, but show all records even if joins fail
-                    try:
-                        rows = s.query(ReferralRecord, User.email, User.first_name, User.last_name).outerjoin(User, ReferralRecord.referrer_id == User.id).all()
+            # Get dues types list for foreign key dropdowns
+            dues_types_list = []
+            if table_name == 'dues_records':
+                dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.dues_type).all()
+                dues_types_list = [(dt.id, f"{dt.dues_type} - {dt.description}") for dt in dues_types]
 
-                        data = []
-                        for record, email, first_name, last_name in rows:
-                            row_data = record.__dict__.copy()
-                            row_data.pop('_sa_instance_state', None)
-                            # Add member name
-                            if first_name or last_name or email:
-                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                            else:
-                                member_name = f"User ID: {record.referrer_id} (not found)"
-                            row_data['member_name'] = member_name
-                            data.append(row_data)
-                    except Exception as e:
-                        # If joins fail, show raw data
-                        logger.warning(f"Failed to join referral records: {e}, showing raw data")
-                        rows = s.query(ReferralRecord).all()
-                        data = [row.__dict__ for row in rows]
-                        for row in data:
-                            row.pop('_sa_instance_state', None)
-                elif table_name == 'dues_record':
-                    # Try to join with users and dues_type tables, but show all records even if joins fail
-                    try:
-                        rows = s.query(
-                            DuesRecord,
-                            User.email,
-                            User.first_name,
-                            User.last_name,
-                            DuesType.dues_type,
-                            DuesType.description
-                        ).outerjoin(User, DuesRecord.member_id == User.id)\
-                         .outerjoin(DuesType, DuesRecord.dues_type_id == DuesType.id).all()
-
-                        data = []
-                        for record, email, first_name, last_name, dues_type_name, dues_description in rows:
-                            row_data = record.__dict__.copy()
-                            row_data.pop('_sa_instance_state', None)
-                            # Replace IDs with readable names
-                            if first_name or last_name or email:
-                                member_name = f"{first_name or ''} {last_name or ''}".strip() or email
-                            else:
-                                member_name = f"User ID: {record.member_id} (not found)"
-                            row_data['member_name'] = member_name
-                            if dues_type_name:
-                                row_data['dues_type_name'] = f"{dues_type_name} - {dues_description}"
-                            else:
-                                row_data['dues_type_name'] = f"Type ID: {record.dues_type_id or 'None'}"
-                            data.append(row_data)
-                    except Exception as e:
-                        # If joins fail, show raw data
-                        logger.warning(f"Failed to join dues records: {e}, showing raw data")
-                        rows = s.query(DuesRecord).all()
-                        data = [row.__dict__ for row in rows]
-                        for row in data:
-                            row.pop('_sa_instance_state', None)
-                else:
-                    rows = s.query(model).all()
-                    data = [row.__dict__ for row in rows]
-                    for row in data:
-                        row.pop('_sa_instance_state', None)
-
-        # Get dues types list for foreign key dropdowns
-        dues_types_list = []
-        if table_name == 'dues_records':
-            dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.dues_type).all()
-            dues_types_list = [(dt.id, f"{dt.dues_type} - {dt.description}") for dt in dues_types]
-
-    return render_template('admin_panel.html',
-                           tables=tables,
-                           selected_tenant_id=tenant_id_to_manage,
-                           selected_table=table_name,  # Template expects this name
-                           all_tenant_ids=list(Config.TENANT_DATABASES.keys()),  # For dropdown
-                           columns=columns,
-                           data=data,
-                           users_list=users_list,  # For foreign key dropdowns
-                           dues_types_list=dues_types_list,  # For dues type dropdowns
-                           tenant_display_names=Config.TENANT_DISPLAY_NAMES,
-                           Config=Config)
+        return render_template('admin_panel.html',
+                               tables=tables,
+                               selected_tenant_id=tenant_id_to_manage,
+                               selected_table=table_name,  # Template expects this name
+                               all_tenant_ids=list(Config.TENANT_DATABASES.keys()),  # For dropdown
+                               columns=columns,
+                               data=data,
+                               users_list=users_list,  # For foreign key dropdowns
+                               dues_types_list=dues_types_list,  # For dues type dropdowns
+                               tenant_display_names=Config.TENANT_DISPLAY_NAMES,
+                               Config=Config)
+    except Exception as e:
+        logger.error(f"Error in admin_panel: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        flash(f"An error occurred: {str(e)}", "danger")
+        return redirect(url_for('auth.index'))
 
 @admin_bp.route('/fix-scripts', methods=['GET', 'POST'])
 def fix_scripts():
