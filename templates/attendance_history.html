@@ -59,7 +59,7 @@
                     <input type="hidden" name="selected_date" value="{{ selected_date }}">
                     <input type="hidden" name="navigation_action" value="prev">
                     <button type="submit"
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                        class="{% if has_prev_records %}bg-gray-500 hover:bg-gray-600{% else %}bg-red-500 hover:bg-red-600{% endif %} text-white px-3 py-1 rounded flex items-center text-sm transition duration-200">
                         <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
                             </path>
@@ -76,7 +76,7 @@
                     <input type="hidden" name="selected_date" value="{{ selected_date }}">
                     <input type="hidden" name="navigation_action" value="next">
                     <button type="submit"
-                        class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded flex items-center text-sm">
+                        class="{% if has_next_records %}bg-gray-500 hover:bg-gray-600{% else %}bg-red-500 hover:bg-red-600{% endif %} text-white px-3 py-1 rounded flex items-center text-sm transition duration-200">
                         Next Records
                         <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
