@@ -144,19 +144,19 @@
                         {% if auth_details.last_login_1 %}
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium text-gray-600">Most Recent:</span>
-                            <span class="text-sm text-gray-800">{{ utc_to_local(auth_details.last_login_1).strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_1 else 'Never' }}</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_1.strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_1 else 'Never' }}</span>
                         </div>
                         {% endif %}
                         {% if auth_details.last_login_2 %}
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium text-gray-600">2nd Recent:</span>
-                            <span class="text-sm text-gray-800">{{ utc_to_local(auth_details.last_login_2).strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_2 else 'Never' }}</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_2.strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_2 else 'Never' }}</span>
                         </div>
                         {% endif %}
                         {% if auth_details.last_login_3 %}
                         <div class="flex justify-between items-center">
                             <span class="text-sm font-medium text-gray-600">3rd Recent:</span>
-                            <span class="text-sm text-gray-800">{{ utc_to_local(auth_details.last_login_3).strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_3 else 'Never' }}</span>
+                            <span class="text-sm text-gray-800">{{ auth_details.last_login_3.strftime('%m/%d/%Y %I:%M %p') if auth_details.last_login_3 else 'Never' }}</span>
                         </div>
                         {% endif %}
                         {% if not auth_details.last_login_1 %}
