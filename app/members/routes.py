@@ -315,6 +315,32 @@ def attendance_history(tenant_id):
                             if not has_record:
                                 all_users = []
             
+            # Check for available navigation dates before handling navigation actions
+            has_prev_records = False
+            has_next_records = False
+
+            if can_view_all:
+                # Privileged users: Check for any attendance records before/after current date
+                prev_check = s.query(AttendanceRecord.event_date).filter(
+                    AttendanceRecord.event_date < selected_date
+                ).first()
+                next_check = s.query(AttendanceRecord.event_date).filter(
+                    AttendanceRecord.event_date > selected_date
+                ).first()
+            else:
+                # Non-privileged users: Check for attendance records for current user only
+                prev_check = s.query(AttendanceRecord.event_date).filter(
+                    AttendanceRecord.event_date < selected_date,
+                    AttendanceRecord.user_id == current_user.id
+                ).first()
+                next_check = s.query(AttendanceRecord.event_date).filter(
+                    AttendanceRecord.event_date > selected_date,
+                    AttendanceRecord.user_id == current_user.id
+                ).first()
+
+            has_prev_records = prev_check is not None
+            has_next_records = next_check is not None
+
             # Handle navigation actions (next/prev day)
             if navigation_action:
                 if navigation_action == 'next':
@@ -339,6 +365,18 @@ def attendance_history(tenant_id):
                                 AttendanceRecord.user_id == current_user.id
                             ).first() is not None
                             all_users = [current_user] if current_user and has_record else []
+                        # Re-check navigation availability after moving
+                        has_prev_records = True  # We just moved from a previous date
+                        if can_view_all:
+                            next_check = s.query(AttendanceRecord.event_date).filter(
+                                AttendanceRecord.event_date > selected_date
+                            ).first()
+                        else:
+                            next_check = s.query(AttendanceRecord.event_date).filter(
+                                AttendanceRecord.event_date > selected_date,
+                                AttendanceRecord.user_id == current_user.id
+                            ).first()
+                        has_next_records = next_check is not None
                     # No flash message for no further history
 
                 elif navigation_action == 'prev':
@@ -363,6 +401,18 @@ def attendance_history(tenant_id):
                                 AttendanceRecord.user_id == current_user.id
                             ).first() is not None
                             all_users = [current_user] if current_user and has_record else []
+                        # Re-check navigation availability after moving
+                        has_next_records = True  # We just moved from a next date
+                        if can_view_all:
+                            prev_check = s.query(AttendanceRecord.event_date).filter(
+                                AttendanceRecord.event_date < selected_date
+                            ).first()
+                        else:
+                            prev_check = s.query(AttendanceRecord.event_date).filter(
+                                AttendanceRecord.event_date < selected_date,
+                                AttendanceRecord.user_id == current_user.id
+                            ).first()
+                        has_prev_records = prev_check is not None
                     # No flash message for no further history
             
             # Get attendance records for the selected date with attendance types
@@ -435,7 +485,9 @@ def attendance_history(tenant_id):
                              attendance_types_dict=attendance_types_dict,  # Individual attendance types per user
                              attendance_dates=attendance_dates_list,  # For calendar highlighting
                              can_view_all=can_view_all,
-                             page_title=page_title)
+                             page_title=page_title,
+                             has_prev_records=has_prev_records,
+                             has_next_records=has_next_records)
                               
     except Exception as e:
         logger.error(f"Error in attendance_history: {str(e)}")
