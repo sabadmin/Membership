@@ -85,14 +85,14 @@
                             <div
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
                                 {% if session.get('user_permissions', {}).get('can_edit_attendance', False) %}
-                                <a href="{{ url_for('members.attendance_create', tenant_id=g.tenant_id) }}"
+                                <a href="{{ url_for('attendance.attendance_create', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Create
                                     Attendance</a>
                                 {% else %}
                                 <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Create
                                     Attendance</span>
                                 {% endif %}
-                                <a href="{{ url_for('members.attendance_history', tenant_id=g.tenant_id) }}"
+                                <a href="{{ url_for('attendance.attendance_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Attendance
                                     History</a>
                             </div>
@@ -223,7 +223,7 @@
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Demographics
                 </a>
-                <a href="{{ url_for('members.attendance_history', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('attendance.attendance_history', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Attendance History
                 </a>

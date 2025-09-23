@@ -109,10 +109,12 @@ def create_app():
             from app.auth.routes import auth_bp
             from app.members.routes import members_bp
             from app.admin.routes import admin_bp
-            
+            from app.attendance import attendance_bp
+
             app.register_blueprint(auth_bp)
             app.register_blueprint(members_bp)
             app.register_blueprint(admin_bp)
+            app.register_blueprint(attendance_bp)
             logger.info("All blueprints registered successfully")
         except Exception as e:
             logger.error(f"Failed to register blueprints: {str(e)}")
