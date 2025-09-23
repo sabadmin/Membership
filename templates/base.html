@@ -266,7 +266,7 @@
         {% if messages %}
         {% for category, message in messages %}
         {% if 'history' not in message.lower() and category != 'warning' %}
-        <div class="toast-notification max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 transform transition-all duration-300 ease-in-out"
+        <div class="toast-notification max-w-lg w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 transform transition-all duration-300 ease-in-out"
              data-category="{{ category }}"
              data-message="{{ message }}">
             <div class="p-4">

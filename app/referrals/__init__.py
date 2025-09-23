@@ -1,5 +1,6 @@
-from flask import Blueprint
+from flask import Blueprint # type: ignore
 
 referrals_bp = Blueprint('referrals', __name__, url_prefix='/referrals', template_folder='../../templates/referrals')
 
 from . import routes
+
