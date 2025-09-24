@@ -27,8 +27,16 @@ def migrate_referral_schema():
 
             try:
                 # Get a raw database connection for schema changes
-                from database import get_tenant_db_engine
-                engine = get_tenant_db_engine(tenant_id)
+                from database import _tenant_engines, get_tenant_db_url
+                from sqlalchemy import create_engine
+
+                # Get or create the engine for the tenant
+                if tenant_id not in _tenant_engines:
+                    db_url = get_tenant_db_url(tenant_id)
+                    engine = create_engine(db_url)
+                    _tenant_engines[tenant_id] = engine
+                else:
+                    engine = _tenant_engines[tenant_id]
 
                 with engine.connect() as conn:
                     # Start a transaction
