@@ -209,7 +209,7 @@ def add_referral(tenant_id):
                 s.commit()
 
                 flash("Referral added successfully!", "success")
-                return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
             except Exception as e:
                 s.rollback()
