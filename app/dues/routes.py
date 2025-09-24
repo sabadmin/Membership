@@ -190,13 +190,39 @@ def dues_collection(tenant_id):
 
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
+    # Get date range parameters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    # Parse dates if provided
+    start_date = None
+    end_date = None
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = None
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = None
+
     with get_tenant_db_session(tenant_id) as s:
         if request.method == 'POST':
             try:
                 # Process bulk payment updates for selected members
-                dues_records = s.query(DuesRecord).join(User).join(DuesType).filter(
+                # Apply date filter to the records being processed
+                query = s.query(DuesRecord).join(User).join(DuesType).filter(
                     DuesRecord.amount_paid < DuesRecord.dues_amount
-                ).all()
+                )
+
+                if start_date:
+                    query = query.filter(DuesRecord.due_date >= start_date)
+                if end_date:
+                    query = query.filter(DuesRecord.due_date <= end_date)
+
+                dues_records = query.all()
                 payments_processed = 0
 
                 for record in dues_records:
@@ -224,13 +250,27 @@ def dues_collection(tenant_id):
                 s.rollback()
                 flash(f"Failed to process payments: {str(e)}", "danger")
 
-            return redirect(url_for('dues.dues_collection', tenant_id=tenant_id))
+            # Preserve date range in redirect
+            redirect_url = url_for('dues.dues_collection', tenant_id=tenant_id)
+            if start_date_str:
+                redirect_url += f'?start_date={start_date_str}'
+                if end_date_str:
+                    redirect_url += f'&end_date={end_date_str}'
+            return redirect(redirect_url)
 
         # GET request - show outstanding dues for collection
         # Get dues records with outstanding balances, ordered by: open balance first, then due date, then user name
-        dues_records = s.query(DuesRecord).join(User).join(DuesType).filter(
+        query = s.query(DuesRecord).join(User).join(DuesType).filter(
             DuesRecord.amount_paid < DuesRecord.dues_amount
-        ).order_by(
+        )
+
+        # Apply date range filter
+        if start_date:
+            query = query.filter(DuesRecord.due_date >= start_date)
+        if end_date:
+            query = query.filter(DuesRecord.due_date <= end_date)
+
+        dues_records = query.order_by(
             DuesRecord.amount_paid < DuesRecord.dues_amount,  # Open dues first
             DuesRecord.due_date,
             User.last_name,
@@ -240,7 +280,9 @@ def dues_collection(tenant_id):
         return render_template('dues_collection.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
-                             dues_records=dues_records)
+                             dues_records=dues_records,
+                             start_date=start_date_str,
+                             end_date=end_date_str)
 
 
 @dues_bp.route('/<tenant_id>/history')
@@ -258,6 +300,24 @@ def my_dues_history(tenant_id):
 
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
         current_user_id = session['user_id']
+
+        # Get date range parameters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                start_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                end_date = None
 
         with get_tenant_db_session(tenant_id) as s:
             logger.info("Database session opened successfully")
@@ -301,6 +361,12 @@ def my_dues_history(tenant_id):
                 dues_query = s.query(DuesRecord).join(DuesType).join(User).filter(DuesRecord.member_id == current_user_id).options(joinedload(DuesRecord.dues_type), joinedload(DuesRecord.member))
                 page_title = "My Dues History"
 
+            # Apply date range filter
+            if start_date:
+                dues_query = dues_query.filter(DuesRecord.due_date >= start_date)
+            if end_date:
+                dues_query = dues_query.filter(DuesRecord.due_date <= end_date)
+
             # Order by: unpaid dues first (by due date), then paid dues (by due date), then by name
             my_dues = dues_query.order_by(
                 DuesRecord.amount_paid >= DuesRecord.dues_amount,  # Unpaid first, paid last
@@ -319,7 +385,9 @@ def my_dues_history(tenant_id):
                              can_manage_dues=can_manage_dues,
                              page_title=page_title,
                              selected_user=selected_user,
-                             all_users=all_users)
+                             all_users=all_users,
+                             start_date=start_date_str,
+                             end_date=end_date_str)
 
     except Exception as e:
         logger.error(f"Error in my_dues_history: {str(e)}")
