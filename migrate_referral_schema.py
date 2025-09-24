@@ -43,14 +43,16 @@ def migrate_referral_schema():
                     trans = conn.begin()
 
                     try:
+                        from sqlalchemy import text
+
                         # Check if referral_type table exists
-                        result = conn.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'referral_type')")
+                        result = conn.execute(text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'referral_type')"))
                         referral_type_exists = result.fetchone()[0]
 
                         if not referral_type_exists:
                             print(f"  Creating referral_type table for {tenant_id}")
                             # Create referral_type table
-                            conn.execute("""
+                            conn.execute(text("""
                                 CREATE TABLE referral_type (
                                     id SERIAL PRIMARY KEY,
                                     type_name VARCHAR(64) NOT NULL UNIQUE,
@@ -61,59 +63,59 @@ def migrate_referral_schema():
                                     is_active BOOLEAN DEFAULT TRUE,
                                     sort_order INTEGER DEFAULT 0
                                 )
-                            """)
+                            """))
 
                             # Insert default referral types
-                            conn.execute("""
+                            conn.execute(text("""
                                 INSERT INTO referral_type (type_name, description, requires_member_selection, requires_contact_info, allows_closed_date, sort_order) VALUES
                                 ('In Group', 'Referral to an existing member of the organization', TRUE, FALSE, TRUE, 1),
                                 ('Out of Group', 'Referral to someone outside the organization', FALSE, TRUE, TRUE, 2),
                                 ('Subscription', 'Referral for a subscription service', FALSE, TRUE, FALSE, 3),
                                 ('Business Partnership', 'Referral for potential business partnership', FALSE, TRUE, TRUE, 4),
                                 ('Networking Event', 'Referral made at a networking event', FALSE, TRUE, TRUE, 5)
-                            """)
+                            """))
 
                         # Check if referral_record table has the new columns
-                        result = conn.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'referral_record' AND column_name = 'referral_type_id'")
+                        result = conn.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name = 'referral_record' AND column_name = 'referral_type_id'"))
                         has_referral_type_id = result.fetchone() is not None
 
                         if not has_referral_type_id:
                             print(f"  Adding new columns to referral_record table for {tenant_id}")
 
                             # Add new columns to referral_record table
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_type_id INTEGER REFERENCES referral_type(id)")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_level INTEGER")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_value FLOAT")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS date_referred TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS closed_date TIMESTAMP")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES \"user\"(id)")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS verified_date TIMESTAMP")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referred_name VARCHAR(128)")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS contact_email VARCHAR(120)")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(15)")
-                            conn.execute("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS notes TEXT")
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_type_id INTEGER REFERENCES referral_type(id)"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_level INTEGER"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referral_value FLOAT"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS date_referred TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS closed_date TIMESTAMP"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES \"user\"(id)"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS verified_date TIMESTAMP"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS referred_name VARCHAR(128)"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS contact_email VARCHAR(120)"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(15)"))
+                            conn.execute(text("ALTER TABLE referral_record ADD COLUMN IF NOT EXISTS notes TEXT"))
 
                             # Update existing records to have default values
                             # Set default referral type to "In Group" for existing records that have referred_id
-                            conn.execute("""
+                            conn.execute(text("""
                                 UPDATE referral_record
                                 SET referral_type_id = (SELECT id FROM referral_type WHERE type_name = 'In Group' LIMIT 1)
                                 WHERE referral_type_id IS NULL AND referred_id IS NOT NULL
-                            """)
+                            """))
 
                             # Set default referral type to "Out of Group" for existing records without referred_id
-                            conn.execute("""
+                            conn.execute(text("""
                                 UPDATE referral_record
                                 SET referral_type_id = (SELECT id FROM referral_type WHERE type_name = 'Out of Group' LIMIT 1)
                                 WHERE referral_type_id IS NULL AND referred_id IS NULL
-                            """)
+                            """))
 
                             # Set default referral level
-                            conn.execute("UPDATE referral_record SET referral_level = 1 WHERE referral_level IS NULL")
+                            conn.execute(text("UPDATE referral_record SET referral_level = 1 WHERE referral_level IS NULL"))
 
                             # Set is_verified to FALSE for existing records
-                            conn.execute("UPDATE referral_record SET is_verified = FALSE WHERE is_verified IS NULL")
+                            conn.execute(text("UPDATE referral_record SET is_verified = FALSE WHERE is_verified IS NULL"))
 
                         # Commit the transaction
                         trans.commit()
