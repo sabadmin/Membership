@@ -24,9 +24,9 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('referrals.add_referral', tenant_id=tenant_id) }}" id="referralForm">
-            <!-- Compact Matrix Layout -->
+            <!-- Single Line Layout -->
             <div class="bg-gray-50 p-4 rounded-md mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
                     <!-- Referral Type -->
                     <div>
                         <label for="referral_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
@@ -34,74 +34,16 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
                             <option value="">-- Select --</option>
                             {% for type in referral_types %}
-                            <option value="{{ type.id }}" data-requires-member="{{ type.requires_member_selection|lower }}" data-requires-contact="{{ type.requires_contact_info|lower }}" data-allows-closed="{{ type.allows_closed_date|lower }}" data-type-name="{{ type.type_name }}">
+                            <option value="{{ type.id }}" data-type-name="{{ type.type_name }}">
                                 {{ type.type_name }}
                             </option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <!-- Subscription Referral Selection (conditional) -->
-                    <div id="subscriptionField" style="display: none;">
-                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Existing Referral:</label>
-                        <select id="prior_referral_id" name="prior_referral_id"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
-                            <option value="">-- Select --</option>
-                            {% for referral in prior_referrals %}
-                            <option value="{{ referral.id }}">
-                                {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Referral Level (conditional) -->
-                    <div id="levelField">
-                        <label for="referral_level" class="block text-gray-700 text-sm font-bold mb-2">Level:</label>
-                        <select id="referral_level" name="referral_level"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
-                            <option value="">-- Select --</option>
-                            <option value="1">1</option>
-                            <option value="2">2</option>
-                            <option value="3">3</option>
-                            <option value="4">4</option>
-                            <option value="5">5</option>
-                        </select>
-                    </div>
-
-                    <!-- Referral Value -->
-                    <div>
-                        <label for="referral_value" class="block text-gray-700 text-sm font-bold mb-2">Value:</label>
-                        <input type="number" id="referral_value" name="referral_value" step="0.01" min="0"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-                            placeholder="0.00">
-                    </div>
-                </div>
-
-                <!-- Second Row for Date and Notes -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <!-- Referral Date -->
-                    <div>
-                        <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
-                        <input type="date" id="date_referred" name="date_referred" required
-                            value="{{ today.strftime('%Y-%m-%d') }}"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
-                    </div>
-
-                    <!-- Notes -->
-                    <div>
-                        <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
-                        <textarea id="notes" name="notes" rows="2"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-                            placeholder="Additional notes..."></textarea>
-                    </div>
-                </div>
-
-                <!-- Dynamic Fields Row -->
-                <div id="dynamicFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4" style="display: none;">
-                    <!-- In Group - Member Selection -->
-                    <div id="inGroupFields" style="display: none;">
-                        <label for="referred_id" class="block text-blue-700 text-sm font-bold mb-2">Select Member:</label>
+                    <!-- Field 1: Member/Contact Name/Prior Referral -->
+                    <div id="field1" style="display: none;">
+                        <label id="field1Label" class="block text-gray-700 text-sm font-bold mb-2">Member:</label>
                         <select id="referred_id" name="referred_id"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
                             <option value="">-- Select Member --</option>
@@ -112,22 +54,77 @@
                             </option>
                             {% endfor %}
                         </select>
-                    </div>
-
-                    <!-- Out of Group - Contact Info -->
-                    <div id="outGroupFields" style="display: none;">
-                        <label for="referred_name" class="block text-green-700 text-sm font-bold mb-2">Contact Name:</label>
-                        <input type="text" id="referred_name" name="referred_name"
+                        <input type="text" id="referred_name" name="referred_name" style="display: none;"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-                            placeholder="Full name">
+                            placeholder="Contact Name">
+                        <select id="prior_referral_id" name="prior_referral_id" style="display: none;"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select Prior Referral --</option>
+                            {% for referral in prior_referrals %}
+                            <option value="{{ referral.id }}">
+                                {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
+                            </option>
+                            {% endfor %}
+                        </select>
                     </div>
 
-                    <div id="outGroupEmailFields" style="display: none;">
-                        <label for="contact_email" class="block text-green-700 text-sm font-bold mb-2">Contact Email:</label>
+                    <!-- Field 2: Email/Value -->
+                    <div id="field2" style="display: none;">
+                        <label id="field2Label" class="block text-gray-700 text-sm font-bold mb-2">Email:</label>
                         <input type="email" id="contact_email" name="contact_email"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="email@example.com">
+                        <input type="number" id="referral_value" name="referral_value" step="0.01" min="0" style="display: none;"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="0.00">
                     </div>
+
+                    <!-- Field 3: Phone/Level -->
+                    <div id="field3" style="display: none;">
+                        <label id="field3Label" class="block text-gray-700 text-sm font-bold mb-2">Phone:</label>
+                        <input type="tel" id="contact_phone" name="contact_phone"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="(555) 123-4567">
+                        <select id="referral_level" name="referral_level" style="display: none;"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Level --</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+
+                    <!-- Field 4: Level (for Out of Group) -->
+                    <div id="field4" style="display: none;">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Level:</label>
+                        <select id="referral_level_2" name="referral_level_2"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select --</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+
+                    <!-- Date -->
+                    <div id="dateField" style="display: none;">
+                        <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
+                        <input type="date" id="date_referred" name="date_referred" required
+                            value="{{ today.strftime('%Y-%m-%d') }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div id="notesField" style="display: none;">
+                    <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
+                    <textarea id="notes" name="notes" rows="2"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                        placeholder="Additional notes..."></textarea>
                 </div>
             </div>
 
@@ -149,82 +146,85 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const referralTypeSelect = document.getElementById('referral_type_id');
-    const subscriptionField = document.getElementById('subscriptionField');
-    const levelField = document.getElementById('levelField');
-    const referralLevelSelect = document.getElementById('referral_level');
-    const dynamicFields = document.getElementById('dynamicFields');
-    const inGroupFields = document.getElementById('inGroupFields');
-    const outGroupFields = document.getElementById('outGroupFields');
-    const outGroupEmailFields = document.getElementById('outGroupEmailFields');
-    const subscriptionFields = document.getElementById('subscriptionFields');
-    const referredIdSelect = document.getElementById('referred_id');
-    const referredNameInput = document.getElementById('referred_name');
-    const contactEmailInput = document.getElementById('contact_email');
-    const priorReferralSelect = document.getElementById('prior_referral_id');
+    const allFields = ['field1', 'field2', 'field3', 'field4', 'dateField', 'notesField'];
 
-    // Initially hide all conditional fields
-    subscriptionField.style.display = 'none';
-    levelField.style.display = 'block';
-    dynamicFields.style.display = 'none';
-    inGroupFields.style.display = 'none';
-    outGroupFields.style.display = 'none';
-    outGroupEmailFields.style.display = 'none';
-    subscriptionFields.style.display = 'none';
+    // Initially hide all fields except type
+    allFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) field.style.display = 'none';
+    });
 
     referralTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const typeName = selectedOption.getAttribute('data-type-name');
-        const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
-        const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
-        // Handle subscription type - show subscription field in main grid, hide level
-        if (typeName === 'Subscription') {
-            subscriptionField.style.display = 'block';
-            levelField.style.display = 'none';
-            referralLevelSelect.required = false;
-            referralLevelSelect.value = '';
-        } else {
-            subscriptionField.style.display = 'none';
-            levelField.style.display = 'block';
-            referralLevelSelect.required = true;
-        }
+        // Hide all fields first
+        allFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) field.style.display = 'none';
+        });
 
-        // Show/hide dynamic fields (only for non-subscription types)
-        if (typeName === 'Subscription') {
-            dynamicFields.style.display = 'none';
-        } else {
-            dynamicFields.style.display = 'grid';
-        }
+        // Hide all inputs
+        const allInputs = ['referred_id', 'referred_name', 'prior_referral_id', 'contact_email', 'contact_phone', 'referral_level', 'referral_level_2', 'referral_value', 'date_referred', 'notes'];
+        allInputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.style.display = 'none';
+                input.required = false;
+            }
+        });
 
-        // Show appropriate field group for non-subscription types
-        inGroupFields.style.display = (requiresMember && typeName !== 'Subscription') ? 'block' : 'none';
-        outGroupFields.style.display = (requiresContact && typeName !== 'Subscription') ? 'block' : 'none';
-        outGroupEmailFields.style.display = (requiresContact && typeName !== 'Subscription') ? 'block' : 'none';
-        subscriptionFields.style.display = 'none'; // Always hide the old subscription field
+        if (typeName === 'In Group') {
+            // In Group: Group member dropdown, Level, Date, Notes
+            document.getElementById('field1').style.display = 'block';
+            document.getElementById('field1Label').textContent = 'Member:';
+            document.getElementById('referred_id').style.display = 'block';
+            document.getElementById('referred_id').required = true;
 
-        // Clear and reset required attributes
-        if (requiresMember && typeName !== 'Subscription') {
-            referredIdSelect.required = true;
-            referredIdSelect.value = '';
-        } else {
-            referredIdSelect.required = false;
-        }
+            document.getElementById('field3').style.display = 'block';
+            document.getElementById('field3Label').textContent = 'Level:';
+            document.getElementById('referral_level').style.display = 'block';
+            document.getElementById('referral_level').required = true;
 
-        if (requiresContact && typeName !== 'Subscription') {
-            referredNameInput.required = true;
-            contactEmailInput.required = true;
-            referredNameInput.value = '';
-            contactEmailInput.value = '';
-        } else {
-            referredNameInput.required = false;
-            contactEmailInput.required = false;
-        }
+            document.getElementById('dateField').style.display = 'block';
+            document.getElementById('notesField').style.display = 'block';
 
-        if (typeName === 'Subscription') {
-            priorReferralSelect.required = true;
-            priorReferralSelect.value = '';
-        } else {
-            priorReferralSelect.required = false;
+        } else if (typeName === 'Out of Group') {
+            // Out of Group: Contact Name, email, Phone, Level, date, notes
+            document.getElementById('field1').style.display = 'block';
+            document.getElementById('field1Label').textContent = 'Name:';
+            document.getElementById('referred_name').style.display = 'block';
+            document.getElementById('referred_name').required = true;
+
+            document.getElementById('field2').style.display = 'block';
+            document.getElementById('field2Label').textContent = 'Email:';
+            document.getElementById('contact_email').style.display = 'block';
+            document.getElementById('contact_email').required = true;
+
+            document.getElementById('field3').style.display = 'block';
+            document.getElementById('field3Label').textContent = 'Phone:';
+            document.getElementById('contact_phone').style.display = 'block';
+
+            document.getElementById('field4').style.display = 'block';
+            document.getElementById('referral_level_2').style.display = 'block';
+            document.getElementById('referral_level_2').required = true;
+
+            document.getElementById('dateField').style.display = 'block';
+            document.getElementById('notesField').style.display = 'block';
+
+        } else if (typeName === 'Subscription') {
+            // Subscription: Prior Referral dropdown, value, date, notes
+            document.getElementById('field1').style.display = 'block';
+            document.getElementById('field1Label').textContent = 'Prior Referral:';
+            document.getElementById('prior_referral_id').style.display = 'block';
+            document.getElementById('prior_referral_id').required = true;
+
+            document.getElementById('field2').style.display = 'block';
+            document.getElementById('field2Label').textContent = 'Value:';
+            document.getElementById('referral_value').style.display = 'block';
+
+            document.getElementById('dateField').style.display = 'block';
+            document.getElementById('notesField').style.display = 'block';
         }
     });
 
@@ -232,25 +232,40 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('referralForm').addEventListener('submit', function(e) {
         const selectedOption = referralTypeSelect.options[referralTypeSelect.selectedIndex];
         const typeName = selectedOption.getAttribute('data-type-name');
-        const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
-        const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
-        if (requiresMember && typeName !== 'Subscription' && !referredIdSelect.value) {
-            e.preventDefault();
-            alert('Please select a member for this referral type.');
-            return false;
-        }
-
-        if (requiresContact && typeName !== 'Subscription' && (!referredNameInput.value || !contactEmailInput.value)) {
-            e.preventDefault();
-            alert('Name and email are required for out-of-group referrals.');
-            return false;
-        }
-
-        if (typeName === 'Subscription' && !priorReferralSelect.value) {
-            e.preventDefault();
-            alert('Please select an existing referral for subscription type.');
-            return false;
+        if (typeName === 'In Group') {
+            if (!document.getElementById('referred_id').value) {
+                e.preventDefault();
+                alert('Please select a member.');
+                return false;
+            }
+            if (!document.getElementById('referral_level').value) {
+                e.preventDefault();
+                alert('Please select a level.');
+                return false;
+            }
+        } else if (typeName === 'Out of Group') {
+            if (!document.getElementById('referred_name').value) {
+                e.preventDefault();
+                alert('Please enter contact name.');
+                return false;
+            }
+            if (!document.getElementById('contact_email').value) {
+                e.preventDefault();
+                alert('Please enter contact email.');
+                return false;
+            }
+            if (!document.getElementById('referral_level_2').value) {
+                e.preventDefault();
+                alert('Please select a level.');
+                return false;
+            }
+        } else if (typeName === 'Subscription') {
+            if (!document.getElementById('prior_referral_id').value) {
+                e.preventDefault();
+                alert('Please select a prior referral.');
+                return false;
+            }
         }
     });
 });

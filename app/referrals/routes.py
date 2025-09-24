@@ -65,7 +65,7 @@ def add_referral(tenant_id):
             try:
                 # Get form data
                 referral_type_id = request.form.get('referral_type_id')
-                referral_level = request.form.get('referral_level')
+                referral_level = request.form.get('referral_level') or request.form.get('referral_level_2')
                 referral_value = request.form.get('referral_value')
                 notes = request.form.get('notes')
 
