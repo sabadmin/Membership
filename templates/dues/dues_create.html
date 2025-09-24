@@ -24,7 +24,7 @@
         {% endwith %}
 
         <!-- Dues Generation Form -->
-        <form method="POST" action="{{ url_for('members.generate_dues', tenant_id=tenant_id) }}">
+        <form method="POST" action="{{ url_for('dues.generate_dues', tenant_id=tenant_id) }}">
             <!-- Dues Details -->
             <div class="bg-gray-50 p-4 rounded-md mb-6">
                 <h2 class="text-lg font-semibold text-gray-700 mb-4">Dues Details</h2>

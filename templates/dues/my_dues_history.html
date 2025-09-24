@@ -187,7 +187,7 @@ function changeUser() {
     const selectedUserId = userSelect.value;
 
     // Build the URL with the selected user parameter
-    let url = `{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}`;
+    let url = `{{ url_for('dues.my_dues_history', tenant_id=tenant_id) }}`;
     if (selectedUserId) {
         url += `?user_id=${selectedUserId}`;
     }

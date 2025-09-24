@@ -14,7 +14,7 @@
 
         {% if dues_records %}
         <!-- Member Selection Form -->
-        <form method="POST" action="{{ url_for('members.dues_collection', tenant_id=tenant_id) }}">
+        <form method="POST" action="{{ url_for('dues.dues_collection', tenant_id=tenant_id) }}">
             <div class="mb-4">
                 <h3 class="text-md font-semibold text-gray-700 mb-3">Record Payments for Outstanding Dues:</h3>
                 <div class="overflow-x-auto">
@@ -88,7 +88,7 @@
             <!-- Action Buttons -->
             <div class="flex justify-between items-center">
                 <div class="flex space-x-4">
-                    <a href="{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}"
+                    <a href="{{ url_for('dues.my_dues_history', tenant_id=tenant_id) }}"
                         class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                         View History
                     </a>
@@ -115,7 +115,7 @@
             <h3 class="mt-2 text-sm font-medium text-gray-900">All caught up!</h3>
             <p class="mt-1 text-sm text-gray-500">There are no outstanding dues to collect.</p>
             <div class="mt-6">
-                <a href="{{ url_for('members.my_dues_history', tenant_id=tenant_id) }}"
+                <a href="{{ url_for('dues.my_dues_history', tenant_id=tenant_id) }}"
                     class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                     View Dues History
                 </a>
