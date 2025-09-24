@@ -160,14 +160,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedOption = this.options[this.selectedIndex];
         const typeName = selectedOption.getAttribute('data-type-name');
 
-        // Hide all fields first
-        allFields.forEach(fieldId => {
+        // Hide dynamic fields only, keep date and notes visible
+        ['field1', 'field2', 'field3', 'field4'].forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) field.style.display = 'none';
         });
 
-        // Hide all inputs
-        const allInputs = ['referred_id', 'referred_name', 'prior_referral_id', 'contact_email', 'contact_phone', 'referral_level', 'referral_level_2', 'referral_value', 'date_referred', 'notes'];
+        // Hide all inputs except date and notes
+        const allInputs = ['referred_id', 'referred_name', 'prior_referral_id', 'contact_email', 'contact_phone', 'referral_level', 'referral_level_2', 'referral_value'];
         allInputs.forEach(inputId => {
             const input = document.getElementById(inputId);
             if (input) {
@@ -175,6 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 input.required = false;
             }
         });
+        // Always keep date and notes visible
+        document.getElementById('date_referred').style.display = 'block';
+        document.getElementById('date_referred').required = true;
+        document.getElementById('notes').style.display = 'block';
 
         if (typeName === 'In Group') {
             // In Group: Group member dropdown, Level, Date, Notes
