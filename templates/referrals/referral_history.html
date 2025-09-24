@@ -180,9 +180,6 @@
                         </td>
                         <td class="border border-gray-300 px-4 py-2">
                             <div class="font-medium text-gray-900">{{ referral.referral_type.type_name }}</div>
-                            {% if referral.referral_type.description %}
-                            <div class="text-sm text-gray-600">{{ referral.referral_type.description }}</div>
-                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2">
                             {% if referral.referral_type.type_name == "In Group" %}

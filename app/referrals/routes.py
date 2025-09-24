@@ -192,7 +192,7 @@ def verify_referral(tenant_id, referral_id):
 
     try:
         with get_tenant_db_session(tenant_id) as s:
-            referral = s.query(ReferralRecord).filter_by(id=referral_id).first()
+            referral = s.query(ReferralRecord).options(joinedload(ReferralRecord.referral_type)).filter_by(id=referral_id).first()
 
             if not referral:
                 return jsonify({'success': False, 'message': 'Referral not found'})
