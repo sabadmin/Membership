@@ -24,6 +24,9 @@ class Config:
         'lieg': 'L.I.E.G',
     }
 
+    # NEW: Define the tenant ID for the superadmin/main website
+    SUPERADMIN_TENANT_ID = 'tenant1'
+
     DEBUG = os.environ.get('FLASK_DEBUG') == '1'
     if DEBUG:
         print("DEBUG mode is ON. Do NOT use in production.")

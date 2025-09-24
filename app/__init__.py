@@ -88,7 +88,7 @@ def create_app():
                 g.tenant_id = session['tenant_id']
             else:
                 current_hostname = request.host.split(':')[0]
-                inferred_tenant_from_host = 'website'
+                inferred_tenant_from_host = 'tenant1'
                 for tenant_key in Config.TENANT_DATABASES.keys():
                     if f"{tenant_key}.unfc.it" == current_hostname:
                         inferred_tenant_from_host = tenant_key
