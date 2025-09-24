@@ -83,6 +83,16 @@ def add_referral(tenant_id):
                     flash("Referral level must be between 1 and 5.", "danger")
                     return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
+                # Get date_referred from form
+                date_referred_str = request.form.get('date_referred')
+                if date_referred_str:
+                    try:
+                        date_referred = datetime.strptime(date_referred_str, '%Y-%m-%d')
+                    except ValueError:
+                        date_referred = datetime.utcnow()
+                else:
+                    date_referred = datetime.utcnow()
+
                 # Handle different referral types
                 referral_data = {
                     'referrer_id': session['user_id'],
@@ -90,7 +100,7 @@ def add_referral(tenant_id):
                     'referral_level': referral_level,
                     'referral_value': float(referral_value) if referral_value else None,
                     'notes': notes,
-                    'date_referred': datetime.utcnow(),
+                    'date_referred': date_referred,
                     'is_verified': False
                 }
 
@@ -166,7 +176,8 @@ def add_referral(tenant_id):
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              referral_types=referral_types,
-                             all_users=all_users)
+                             all_users=all_users,
+                             today=date.today())
 
 
 @referrals_bp.route('/<tenant_id>/verify/<int:referral_id>', methods=['POST'])
@@ -211,6 +222,55 @@ def verify_referral(tenant_id, referral_id):
     except Exception as e:
         logger.error(f"Error verifying referral: {str(e)}")
         return jsonify({'success': False, 'message': 'Failed to update referral status'})
+
+
+@referrals_bp.route('/<tenant_id>/close/<int:referral_id>', methods=['POST'])
+def close_referral(tenant_id, referral_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        return jsonify({'success': False, 'message': 'Not logged in'})
+
+    try:
+        # Get the close value from form data
+        close_value = request.form.get('close_value')
+        if close_value:
+            close_value = float(close_value)
+        else:
+            close_value = None
+
+        with get_tenant_db_session(tenant_id) as s:
+            referral = s.query(ReferralRecord).options(joinedload(ReferralRecord.referral_type)).filter_by(id=referral_id).first()
+
+            if not referral:
+                return jsonify({'success': False, 'message': 'Referral not found'})
+
+            # Check if user can close this referral (owner or privileged user)
+            user_permissions = session.get('user_permissions', {})
+            can_manage_referrals = user_permissions.get('can_edit_referrals', False)
+
+            if referral.referrer_id != session['user_id'] and not can_manage_referrals:
+                return jsonify({'success': False, 'message': 'No permission to close this referral'})
+
+            # Only allow closing if referral type allows closed date (not subscription)
+            if not referral.referral_type.allows_closed_date:
+                return jsonify({'success': False, 'message': 'This referral type cannot be closed'})
+
+            # Set closed date and value
+            referral.closed_date = datetime.utcnow()
+            if close_value is not None:
+                referral.referral_value = close_value
+
+            s.commit()
+
+            return jsonify({
+                'success': True,
+                'message': 'Referral closed successfully',
+                'closed_date': referral.closed_date.strftime('%Y-%m-%d') if referral.closed_date else None,
+                'referral_value': referral.referral_value
+            })
+
+    except Exception as e:
+        logger.error(f"Error closing referral: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to close referral'})
 
 
 @referrals_bp.route('/<tenant_id>/history')

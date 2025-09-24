@@ -34,7 +34,7 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                             <option value="">-- Select Type --</option>
                             {% for type in referral_types %}
-                            <option value="{{ type.id }}" data-requires-member="{{ type.requires_member_selection|lower }}" data-requires-contact="{{ type.requires_contact_info|lower }}" data-allows-closed="{{ type.allows_closed_date|lower }}">
+                            <option value="{{ type.id }}" data-requires-member="{{ type.requires_member_selection|lower }}" data-requires-contact="{{ type.requires_contact_info|lower }}" data-allows-closed="{{ type.allows_closed_date|lower }}" data-type-name="{{ type.type_name }}">
                                 {{ type.type_name }}
                                 {% if type.description %} - {{ type.description }}{% endif %}
                             </option>
@@ -59,6 +59,12 @@
                     <input type="number" id="referral_value" name="referral_value" step="0.01" min="0"
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                         placeholder="Monetary value if applicable">
+                </div>
+                <div class="mt-4">
+                    <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Referral Date:</label>
+                    <input type="date" id="date_referred" name="date_referred" required
+                        value="{{ (date_referred or today)|strftime('%Y-%m-%d') }}"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
                 </div>
             </div>
 
