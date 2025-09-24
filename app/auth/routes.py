@@ -21,14 +21,14 @@ def index():
     
     inferred_tenant = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
-    
-    # For member.unfc.it, show as admin portal but still use tenant1 tenant
-    if current_hostname == 'member.unfc.it':
-        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
-        show_tenant_dropdown_on_index = True
+
+    # For admin contexts, show admin portal
+    if current_hostname == 'member.unfc.it' or inferred_tenant == Config.SUPERADMIN_TENANT_ID:
+        inferred_tenant_display_name = 'Admin Portal' if current_hostname == 'member.unfc.it' else Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
+        show_tenant_dropdown_on_index = False  # Admin doesn't need tenant selection on index
     else:
         inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant, inferred_tenant.capitalize())
-        show_tenant_dropdown_on_index = (inferred_tenant == 'tenant1')
+        show_tenant_dropdown_on_index = True  # Regular users can select tenant
     
     return render_template('index.html', inferred_tenant=inferred_tenant, inferred_tenant_display_name=inferred_tenant_display_name, show_tenant_dropdown=show_tenant_dropdown_on_index)
 
@@ -41,14 +41,14 @@ def register():
         logger.info("Starting register route")
         inferred_tenant_id = infer_tenant_from_hostname()
         current_hostname = request.host.split(':')[0]
-        
-        # For member.unfc.it, show as admin portal but use tenant1 tenant
-        if current_hostname == 'member.unfc.it':
-            inferred_tenant_display_name = 'Admin Portal'
-            show_tenant_dropdown = True
+
+        # For admin contexts, don't show tenant dropdown for registration
+        if current_hostname == 'member.unfc.it' or inferred_tenant_id == Config.SUPERADMIN_TENANT_ID:
+            inferred_tenant_display_name = 'Admin Portal' if current_hostname == 'member.unfc.it' else Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+            show_tenant_dropdown = False  # Admin registration doesn't need tenant selection
         else:
             inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-            show_tenant_dropdown = (inferred_tenant_id == 'tenant1')
+            show_tenant_dropdown = True  # Regular users can select tenant for registration
         logger.info(f"Inferred tenant: {inferred_tenant_id}")
 
         if request.method == 'POST':
@@ -136,14 +136,14 @@ def register():
 def login():
     inferred_tenant_id = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
-    
-    # For member.unfc.it, show as admin portal but use tenant1 tenant - no tenant dropdown needed
-    if current_hostname == 'member.unfc.it':
-        inferred_tenant_display_name = 'Admin Portal'
-        show_tenant_dropdown = False  # Admin panel doesn't need tenant selection on login
+
+    # For admin contexts (member.unfc.it or when inferred tenant is admin tenant), don't show tenant dropdown
+    if current_hostname == 'member.unfc.it' or inferred_tenant_id == Config.SUPERADMIN_TENANT_ID:
+        inferred_tenant_display_name = 'Admin Portal' if current_hostname == 'member.unfc.it' else Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+        show_tenant_dropdown = False  # Admin doesn't need tenant selection on login
     else:
         inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-        show_tenant_dropdown = (inferred_tenant_id == 'tenant1')
+        show_tenant_dropdown = True  # Regular users can select tenant
 
     if request.method == 'POST':
         data = request.form
