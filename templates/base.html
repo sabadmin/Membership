@@ -111,18 +111,18 @@
                             <div
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
-                                <a href="{{ url_for('members.generate_dues', tenant_id=g.tenant_id) }}"
+                                <a href="{{ url_for('dues.generate_dues', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Generate Dues</a>
                                 {% else %}
                                 <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Generate Dues</span>
                                 {% endif %}
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
-                                <a href="{{ url_for('members.dues_collection', tenant_id=g.tenant_id) }}"
+                                <a href="{{ url_for('dues.dues_collection', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Collect Dues</a>
                                 {% else %}
                                 <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Collect Dues</span>
                                 {% endif %}
-                                <a href="{{ url_for('members.my_dues_history', tenant_id=g.tenant_id) }}"
+                                <a href="{{ url_for('dues.my_dues_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues History</a>
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
                                 <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Financial
@@ -145,16 +145,20 @@
                             </button>
                             <div
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                                <a href="{{ url_for('referrals.my_referrals', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
                                     Referrals</a>
                                 {% if session.get('user_permissions', {}).get('can_edit_referrals', False) %}
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Add
+                                <a href="{{ url_for('referrals.add_referral', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Add
                                     Referral</a>
                                 {% else %}
                                 <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Add Referral</span>
                                 {% endif %}
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Referral
+                                {% if session.get('user_permissions', {}).get('can_edit_referrals', False) %}
+                                <a href="{{ url_for('referrals.referral_history', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Referral
                                     History</a>
+                                {% else %}
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Referral History</span>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -228,12 +232,12 @@
                     Attendance History
                 </a>
                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
-                <a href="{{ url_for('members.generate_dues', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('dues.generate_dues', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Generate Dues
                 </a>
                 {% endif %}
-                <a href="{{ url_for('members.my_dues_history', tenant_id=g.tenant_id) }}"
+                <a href="{{ url_for('dues.my_dues_history', tenant_id=g.tenant_id) }}"
                     class="text-blue-100 hover:text-white block px-3 py-2 rounded-md text-base font-medium">
                     Dues History
                 </a>
