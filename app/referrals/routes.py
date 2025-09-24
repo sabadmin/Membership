@@ -56,6 +56,11 @@ def add_referral(tenant_id):
         # Get all active users for member selection (for "In Group" referrals)
         all_users = s.query(User).filter_by(is_active=True).order_by(User.first_name, User.last_name).all()
 
+        # Get prior referrals for subscription type dropdown
+        prior_referrals = s.query(ReferralRecord).options(
+            joinedload(ReferralRecord.referred_member)
+        ).filter_by(referrer_id=session['user_id']).order_by(ReferralRecord.date_referred.desc()).all()
+
         if request.method == 'POST':
             try:
                 # Get form data
@@ -64,8 +69,8 @@ def add_referral(tenant_id):
                 referral_value = request.form.get('referral_value')
                 notes = request.form.get('notes')
 
-                if not referral_type_id or not referral_level:
-                    flash("Referral type and level are required.", "danger")
+                if not referral_type_id:
+                    flash("Referral type is required.", "danger")
                     return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
                 # Get the referral type to determine required fields
@@ -74,14 +79,21 @@ def add_referral(tenant_id):
                     flash("Invalid referral type.", "danger")
                     return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
-                # Validate referral level (1-5)
-                try:
-                    referral_level = int(referral_level)
-                    if not 1 <= referral_level <= 5:
-                        raise ValueError()
-                except ValueError:
-                    flash("Referral level must be between 1 and 5.", "danger")
-                    return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+                # Validate referral level (1-5) - not required for subscription type
+                if referral_type.type_name != "Subscription":
+                    if not referral_level:
+                        flash("Referral level is required for this referral type.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+                    try:
+                        referral_level = int(referral_level)
+                        if not 1 <= referral_level <= 5:
+                            raise ValueError()
+                    except ValueError:
+                        flash("Referral level must be between 1 and 5.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+                else:
+                    # For subscription type, level is not required
+                    referral_level = None
 
                 # Get date_referred from form
                 date_referred_str = request.form.get('date_referred')
@@ -151,6 +163,39 @@ def add_referral(tenant_id):
                         'contact_phone': contact_phone
                     })
 
+                elif referral_type.type_name == "Subscription":
+                    # "Subscription" referral - uses prior referral selection
+                    prior_referral_id = request.form.get('prior_referral_id')
+                    if not prior_referral_id:
+                        flash("Please select a prior referral for subscription type.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Get the prior referral to copy contact info
+                    prior_referral = s.query(ReferralRecord).filter_by(id=prior_referral_id, referrer_id=session['user_id']).first()
+                    if not prior_referral:
+                        flash("Invalid prior referral selected.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Check if subscription already exists for this prior referral
+                    existing_subscription = s.query(ReferralRecord).filter_by(
+                        referrer_id=session['user_id'],
+                        referred_id=prior_referral.referred_id if prior_referral.referred_id else None,
+                        contact_email=prior_referral.contact_email,
+                        referral_type_id=referral_type_id
+                    ).first()
+
+                    if existing_subscription:
+                        flash("You have already made a subscription referral for this contact.", "warning")
+                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+
+                    # Copy contact info from prior referral
+                    referral_data.update({
+                        'referred_id': prior_referral.referred_id,
+                        'referred_name': prior_referral.referred_name,
+                        'contact_email': prior_referral.contact_email,
+                        'contact_phone': prior_referral.contact_phone
+                    })
+
                 # Set closed_date based on referral type
                 if not referral_type.allows_closed_date:
                     referral_data['closed_date'] = None
@@ -177,6 +222,7 @@ def add_referral(tenant_id):
                              tenant_display_name=tenant_display_name,
                              referral_types=referral_types,
                              all_users=all_users,
+                             prior_referrals=prior_referrals,
                              today=date.today())
 
 

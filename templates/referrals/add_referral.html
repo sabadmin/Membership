@@ -3,7 +3,7 @@
 {% block title %}{{ tenant_display_name }} - Add Referral{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto px-4 py-4">
+<div class="max-w-6xl mx-auto px-4 py-4">
     <div class="bg-white p-6 rounded-lg shadow-md">
         <div class="mb-4">
             <h1 class="text-2xl font-bold text-gray-800">Add New Referral</h1>
@@ -24,28 +24,29 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('referrals.add_referral', tenant_id=tenant_id) }}" id="referralForm">
-            <!-- Referral Type Selection -->
+            <!-- Compact Matrix Layout -->
             <div class="bg-gray-50 p-4 rounded-md mb-6">
-                <h2 class="text-lg font-semibold text-gray-700 mb-4">Referral Type</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                    <!-- Referral Type -->
                     <div>
-                        <label for="referral_type_id" class="block text-gray-700 text-sm font-bold mb-2">Referral Type:</label>
+                        <label for="referral_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
                         <select id="referral_type_id" name="referral_type_id" required
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                            <option value="">-- Select Type --</option>
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select --</option>
                             {% for type in referral_types %}
                             <option value="{{ type.id }}" data-requires-member="{{ type.requires_member_selection|lower }}" data-requires-contact="{{ type.requires_contact_info|lower }}" data-allows-closed="{{ type.allows_closed_date|lower }}" data-type-name="{{ type.type_name }}">
                                 {{ type.type_name }}
-                                {% if type.description %} - {{ type.description }}{% endif %}
                             </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div>
-                        <label for="referral_level" class="block text-gray-700 text-sm font-bold mb-2">Referral Level (1-5):</label>
-                        <select id="referral_level" name="referral_level" required
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                            <option value="">-- Select Level --</option>
+
+                    <!-- Referral Level (conditional) -->
+                    <div id="levelField">
+                        <label for="referral_level" class="block text-gray-700 text-sm font-bold mb-2">Level:</label>
+                        <select id="referral_level" name="referral_level"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select --</option>
                             <option value="1">1</option>
                             <option value="2">2</option>
                             <option value="3">3</option>
@@ -53,78 +54,83 @@
                             <option value="5">5</option>
                         </select>
                     </div>
-                </div>
-                <div class="mt-4">
-                    <label for="referral_value" class="block text-gray-700 text-sm font-bold mb-2">Referral Value (Optional):</label>
-                    <input type="number" id="referral_value" name="referral_value" step="0.01" min="0"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        placeholder="Monetary value if applicable">
-                </div>
-                <div class="mt-4">
-                    <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Referral Date:</label>
-                    <input type="date" id="date_referred" name="date_referred" required
-                        value="{{ today.strftime('%Y-%m-%d') }}"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                </div>
-            </div>
 
-            <!-- In Group Referral Fields -->
-            <div id="inGroupFields" class="bg-blue-50 p-4 rounded-md mb-6" style="display: none;">
-                <h2 class="text-lg font-semibold text-blue-700 mb-4">In-Group Referral Details</h2>
-                <div>
-                    <label for="referred_id" class="block text-blue-700 text-sm font-bold mb-2">Select Member:</label>
-                    <select id="referred_id" name="referred_id"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="">-- Select Member --</option>
-                        {% for user in all_users %}
-                        <option value="{{ user.id }}">
-                            {{ user.last_name or '' }}, {{ user.first_name or '' }}
-                            {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
-                            {% if user.company %} - {{ user.company }}{% endif %}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-
-            <!-- Out of Group Referral Fields -->
-            <div id="outGroupFields" class="bg-green-50 p-4 rounded-md mb-6" style="display: none;">
-                <h2 class="text-lg font-semibold text-green-700 mb-4">Out-of-Group Referral Details</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Referral Value -->
                     <div>
+                        <label for="referral_value" class="block text-gray-700 text-sm font-bold mb-2">Value:</label>
+                        <input type="number" id="referral_value" name="referral_value" step="0.01" min="0"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="0.00">
+                    </div>
+
+                    <!-- Referral Date -->
+                    <div>
+                        <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
+                        <input type="date" id="date_referred" name="date_referred" required
+                            value="{{ today.strftime('%Y-%m-%d') }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                    </div>
+                </div>
+
+                <!-- Dynamic Fields Row -->
+                <div id="dynamicFields" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4" style="display: none;">
+                    <!-- In Group - Member Selection -->
+                    <div id="inGroupFields" style="display: none;">
+                        <label for="referred_id" class="block text-blue-700 text-sm font-bold mb-2">Select Member:</label>
+                        <select id="referred_id" name="referred_id"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select Member --</option>
+                            {% for user in all_users %}
+                            <option value="{{ user.id }}">
+                                {{ user.last_name or '' }}, {{ user.first_name or '' }}
+                                {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Out of Group - Contact Info -->
+                    <div id="outGroupFields" style="display: none;">
                         <label for="referred_name" class="block text-green-700 text-sm font-bold mb-2">Contact Name:</label>
                         <input type="text" id="referred_name" name="referred_name"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="Full name">
                     </div>
-                    <div>
+
+                    <div id="outGroupEmailFields" style="display: none;">
                         <label for="contact_email" class="block text-green-700 text-sm font-bold mb-2">Contact Email:</label>
                         <input type="email" id="contact_email" name="contact_email"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="email@example.com">
                     </div>
-                </div>
-                <div class="mt-4">
-                    <label for="contact_phone" class="block text-green-700 text-sm font-bold mb-2">Contact Phone (Optional):</label>
-                    <input type="tel" id="contact_phone" name="contact_phone"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        placeholder="(555) 123-4567">
-                </div>
-            </div>
 
-            <!-- Notes -->
-            <div class="bg-gray-50 p-4 rounded-md mb-6">
-                <h2 class="text-lg font-semibold text-gray-700 mb-4">Additional Notes</h2>
+                    <!-- Subscription - Prior Referral Selection -->
+                    <div id="subscriptionFields" style="display: none;">
+                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Select Prior Referral:</label>
+                        <select id="prior_referral_id" name="prior_referral_id"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select Prior Referral --</option>
+                            {% for referral in prior_referrals %}
+                            <option value="{{ referral.id }}">
+                                {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
+                                ({{ referral.date_referred.strftime('%m/%d/%Y') }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Notes -->
                 <div>
-                    <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes (Optional):</label>
-                    <textarea id="notes" name="notes" rows="4"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                        placeholder="Any additional notes about this referral..."></textarea>
+                    <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
+                    <textarea id="notes" name="notes" rows="2"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                        placeholder="Additional notes..."></textarea>
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex justify-between items-center">
+            <div class="flex justify-end space-x-4">
                 <a href="{{ url_for('referrals.my_referrals', tenant_id=tenant_id) }}"
                     class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
                     Cancel
@@ -141,25 +147,50 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const referralTypeSelect = document.getElementById('referral_type_id');
+    const levelField = document.getElementById('levelField');
+    const referralLevelSelect = document.getElementById('referral_level');
+    const dynamicFields = document.getElementById('dynamicFields');
     const inGroupFields = document.getElementById('inGroupFields');
     const outGroupFields = document.getElementById('outGroupFields');
+    const outGroupEmailFields = document.getElementById('outGroupEmailFields');
+    const subscriptionFields = document.getElementById('subscriptionFields');
     const referredIdSelect = document.getElementById('referred_id');
     const referredNameInput = document.getElementById('referred_name');
     const contactEmailInput = document.getElementById('contact_email');
-    const contactPhoneInput = document.getElementById('contact_phone');
+    const priorReferralSelect = document.getElementById('prior_referral_id');
 
     // Initially hide all conditional fields
+    levelField.style.display = 'block';
+    dynamicFields.style.display = 'none';
     inGroupFields.style.display = 'none';
     outGroupFields.style.display = 'none';
+    outGroupEmailFields.style.display = 'none';
+    subscriptionFields.style.display = 'none';
 
     referralTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
+        const typeName = selectedOption.getAttribute('data-type-name');
         const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
         const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
-        // Show/hide field groups
+        // Show/hide level field based on type
+        if (typeName === 'Subscription') {
+            levelField.style.display = 'none';
+            referralLevelSelect.required = false;
+            referralLevelSelect.value = '';
+        } else {
+            levelField.style.display = 'block';
+            referralLevelSelect.required = true;
+        }
+
+        // Show/hide dynamic fields
+        dynamicFields.style.display = 'grid';
+
+        // Show appropriate field group
         inGroupFields.style.display = requiresMember ? 'block' : 'none';
         outGroupFields.style.display = requiresContact ? 'block' : 'none';
+        outGroupEmailFields.style.display = requiresContact ? 'block' : 'none';
+        subscriptionFields.style.display = (typeName === 'Subscription') ? 'block' : 'none';
 
         // Clear and reset required attributes
         if (requiresMember) {
@@ -174,16 +205,23 @@ document.addEventListener('DOMContentLoaded', function() {
             contactEmailInput.required = true;
             referredNameInput.value = '';
             contactEmailInput.value = '';
-            contactPhoneInput.value = '';
         } else {
             referredNameInput.required = false;
             contactEmailInput.required = false;
+        }
+
+        if (typeName === 'Subscription') {
+            priorReferralSelect.required = true;
+            priorReferralSelect.value = '';
+        } else {
+            priorReferralSelect.required = false;
         }
     });
 
     // Form validation
     document.getElementById('referralForm').addEventListener('submit', function(e) {
         const selectedOption = referralTypeSelect.options[referralTypeSelect.selectedIndex];
+        const typeName = selectedOption.getAttribute('data-type-name');
         const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
         const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
@@ -196,6 +234,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (requiresContact && (!referredNameInput.value || !contactEmailInput.value)) {
             e.preventDefault();
             alert('Name and email are required for out-of-group referrals.');
+            return false;
+        }
+
+        if (typeName === 'Subscription' && !priorReferralSelect.value) {
+            e.preventDefault();
+            alert('Please select a prior referral for subscription type.');
             return false;
         }
     });
