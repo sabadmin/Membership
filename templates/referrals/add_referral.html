@@ -111,7 +111,7 @@
                     </div>
 
                     <!-- Date -->
-                    <div id="dateField" style="display: none;">
+                    <div id="dateField" style="display: block;">
                         <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
                         <input type="date" id="date_referred" name="date_referred" required
                             value="{{ today.strftime('%Y-%m-%d') }}"
@@ -120,7 +120,7 @@
                 </div>
 
                 <!-- Notes -->
-                <div id="notesField" style="display: none;">
+                <div id="notesField" style="display: block;">
                     <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
                     <textarea id="notes" name="notes" rows="2"
                         class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
@@ -148,11 +148,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const referralTypeSelect = document.getElementById('referral_type_id');
     const allFields = ['field1', 'field2', 'field3', 'field4', 'dateField', 'notesField'];
 
-    // Initially hide all fields except type
-    allFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) field.style.display = 'none';
-    });
+    // Initially show date and notes, hide others
+    document.getElementById('dateField').style.display = 'block';
+    document.getElementById('notesField').style.display = 'block';
+    document.getElementById('field1').style.display = 'none';
+    document.getElementById('field2').style.display = 'none';
+    document.getElementById('field3').style.display = 'none';
+    document.getElementById('field4').style.display = 'none';
 
     referralTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
