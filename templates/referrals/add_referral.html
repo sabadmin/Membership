@@ -41,6 +41,20 @@
                         </select>
                     </div>
 
+                    <!-- Subscription Referral Selection (conditional) -->
+                    <div id="subscriptionField" style="display: none;">
+                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Existing Referral:</label>
+                        <select id="prior_referral_id" name="prior_referral_id"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                            <option value="">-- Select --</option>
+                            {% for referral in prior_referrals %}
+                            <option value="{{ referral.id }}">
+                                {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
                     <!-- Referral Level (conditional) -->
                     <div id="levelField">
                         <label for="referral_level" class="block text-gray-700 text-sm font-bold mb-2">Level:</label>
@@ -62,13 +76,24 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="0.00">
                     </div>
+                </div>
 
+                <!-- Second Row for Date and Notes -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <!-- Referral Date -->
                     <div>
                         <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
                         <input type="date" id="date_referred" name="date_referred" required
                             value="{{ today.strftime('%Y-%m-%d') }}"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
+                        <textarea id="notes" name="notes" rows="2"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="Additional notes..."></textarea>
                     </div>
                 </div>
 
@@ -103,30 +128,6 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="email@example.com">
                     </div>
-
-                    <!-- Subscription - Prior Referral Selection -->
-                    <div id="subscriptionFields" style="display: none;">
-                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Select Existing Referral (for recurring billing):</label>
-                        <select id="prior_referral_id" name="prior_referral_id"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
-                            <option value="">-- Select Existing Referral --</option>
-                            {% for referral in prior_referrals %}
-                            <option value="{{ referral.id }}">
-                                {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
-                                ({{ referral.date_referred.strftime('%m/%d/%Y') }})
-                            </option>
-                            {% endfor %}
-                        </select>
-                        <p class="text-xs text-purple-600 mt-1">Subscription = recurring billing for the same referral contact</p>
-                    </div>
-                </div>
-
-                <!-- Notes -->
-                <div>
-                    <label for="notes" class="block text-gray-700 text-sm font-bold mb-2">Notes:</label>
-                    <textarea id="notes" name="notes" rows="2"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-                        placeholder="Additional notes..."></textarea>
                 </div>
             </div>
 
@@ -148,6 +149,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const referralTypeSelect = document.getElementById('referral_type_id');
+    const subscriptionField = document.getElementById('subscriptionField');
     const levelField = document.getElementById('levelField');
     const referralLevelSelect = document.getElementById('referral_level');
     const dynamicFields = document.getElementById('dynamicFields');
@@ -161,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const priorReferralSelect = document.getElementById('prior_referral_id');
 
     // Initially hide all conditional fields
+    subscriptionField.style.display = 'none';
     levelField.style.display = 'block';
     dynamicFields.style.display = 'none';
     inGroupFields.style.display = 'none';
@@ -174,34 +177,40 @@ document.addEventListener('DOMContentLoaded', function() {
         const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
         const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
-        // Show/hide level field based on type
+        // Handle subscription type - show subscription field in main grid, hide level
         if (typeName === 'Subscription') {
+            subscriptionField.style.display = 'block';
             levelField.style.display = 'none';
             referralLevelSelect.required = false;
             referralLevelSelect.value = '';
         } else {
+            subscriptionField.style.display = 'none';
             levelField.style.display = 'block';
             referralLevelSelect.required = true;
         }
 
-        // Show/hide dynamic fields
-        dynamicFields.style.display = 'grid';
+        // Show/hide dynamic fields (only for non-subscription types)
+        if (typeName === 'Subscription') {
+            dynamicFields.style.display = 'none';
+        } else {
+            dynamicFields.style.display = 'grid';
+        }
 
-        // Show appropriate field group
-        inGroupFields.style.display = requiresMember ? 'block' : 'none';
-        outGroupFields.style.display = requiresContact ? 'block' : 'none';
-        outGroupEmailFields.style.display = requiresContact ? 'block' : 'none';
-        subscriptionFields.style.display = (typeName === 'Subscription') ? 'block' : 'none';
+        // Show appropriate field group for non-subscription types
+        inGroupFields.style.display = (requiresMember && typeName !== 'Subscription') ? 'block' : 'none';
+        outGroupFields.style.display = (requiresContact && typeName !== 'Subscription') ? 'block' : 'none';
+        outGroupEmailFields.style.display = (requiresContact && typeName !== 'Subscription') ? 'block' : 'none';
+        subscriptionFields.style.display = 'none'; // Always hide the old subscription field
 
         // Clear and reset required attributes
-        if (requiresMember) {
+        if (requiresMember && typeName !== 'Subscription') {
             referredIdSelect.required = true;
             referredIdSelect.value = '';
         } else {
             referredIdSelect.required = false;
         }
 
-        if (requiresContact) {
+        if (requiresContact && typeName !== 'Subscription') {
             referredNameInput.required = true;
             contactEmailInput.required = true;
             referredNameInput.value = '';
@@ -226,13 +235,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const requiresMember = selectedOption.getAttribute('data-requires-member') === 'true';
         const requiresContact = selectedOption.getAttribute('data-requires-contact') === 'true';
 
-        if (requiresMember && !referredIdSelect.value) {
+        if (requiresMember && typeName !== 'Subscription' && !referredIdSelect.value) {
             e.preventDefault();
             alert('Please select a member for this referral type.');
             return false;
         }
 
-        if (requiresContact && (!referredNameInput.value || !contactEmailInput.value)) {
+        if (requiresContact && typeName !== 'Subscription' && (!referredNameInput.value || !contactEmailInput.value)) {
             e.preventDefault();
             alert('Name and email are required for out-of-group referrals.');
             return false;
@@ -240,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (typeName === 'Subscription' && !priorReferralSelect.value) {
             e.preventDefault();
-            alert('Please select a prior referral for subscription type.');
+            alert('Please select an existing referral for subscription type.');
             return false;
         }
     });
