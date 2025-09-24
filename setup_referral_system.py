@@ -38,7 +38,7 @@ def setup_referral_system():
                     referral_types = [
                         ReferralType(
                             type_name="In Group",
-                            description="Referral to an existing member of the organization",
+                            description="",
                             requires_member_selection=True,
                             requires_contact_info=False,
                             allows_closed_date=True,
@@ -46,7 +46,7 @@ def setup_referral_system():
                         ),
                         ReferralType(
                             type_name="Out of Group",
-                            description="Referral to someone outside the organization",
+                            description="",
                             requires_member_selection=False,
                             requires_contact_info=True,
                             allows_closed_date=True,
@@ -54,27 +54,11 @@ def setup_referral_system():
                         ),
                         ReferralType(
                             type_name="Subscription",
-                            description="Referral for a subscription service",
+                            description="",
                             requires_member_selection=False,
-                            requires_contact_info=True,
+                            requires_contact_info=False,
                             allows_closed_date=False,  # No closed date for subscriptions
                             sort_order=3
-                        ),
-                        ReferralType(
-                            type_name="Business Partnership",
-                            description="Referral for potential business partnership",
-                            requires_member_selection=False,
-                            requires_contact_info=True,
-                            allows_closed_date=True,
-                            sort_order=4
-                        ),
-                        ReferralType(
-                            type_name="Networking Event",
-                            description="Referral made at a networking event",
-                            requires_member_selection=False,
-                            requires_contact_info=True,
-                            allows_closed_date=True,
-                            sort_order=5
                         )
                     ]
 

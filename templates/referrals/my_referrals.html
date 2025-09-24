@@ -67,14 +67,14 @@
             </a>
         </div>
 
-        <!-- My Referrals Table -->
+        <!-- My Referrals Matrix -->
         {% if my_referrals %}
         <div class="overflow-x-auto">
             <table class="min-w-full border-collapse border border-gray-300">
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Type</th>
-                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Referred</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Referred To</th>
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Level</th>
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Value</th>
                         <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Date</th>
@@ -87,23 +87,46 @@
                     <tr class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %}">
                         <td class="border border-gray-300 px-4 py-2">
                             <div class="font-medium text-gray-900">{{ referral.referral_type.type_name }}</div>
-                            {% if referral.referral_type.description %}
-                            <div class="text-sm text-gray-600">{{ referral.referral_type.description }}</div>
-                            {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2">
-                            {% if referral.referred_member %}
-                            <div class="font-medium text-gray-900">
-                                {{ referral.referred_member.last_name or '' }}, {{ referral.referred_member.first_name or '' }}
-                                {% if not referral.referred_member.first_name and not referral.referred_member.last_name %}
-                                {{ referral.referred_member.email }}
+                            {% if referral.referral_type.type_name == "In Group" %}
+                                {% if referral.referred_member %}
+                                <div class="font-medium text-gray-900">
+                                    {{ referral.referred_member.last_name or '' }}, {{ referral.referred_member.first_name or '' }}
+                                    {% if not referral.referred_member.first_name and not referral.referred_member.last_name %}
+                                    {{ referral.referred_member.email }}
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-gray-500">Not specified</span>
                                 {% endif %}
-                            </div>
+                            {% elif referral.referral_type.type_name == "Out of Group" %}
+                                <div class="font-medium text-gray-900">{{ referral.referred_name or 'Not specified' }}</div>
+                                {% if referral.contact_email %}
+                                <div class="text-sm text-gray-600">{{ referral.contact_email }}</div>
+                                {% endif %}
+                                {% if referral.contact_phone %}
+                                <div class="text-sm text-gray-600">{{ referral.contact_phone }}</div>
+                                {% endif %}
+                            {% elif referral.referral_type.type_name == "Subscription" %}
+                                <div class="font-medium text-gray-900">{{ referral.referred_name or 'Not specified' }}</div>
+                                {% if referral.referral_value %}
+                                <div class="text-sm text-gray-600">${{ "%.2f"|format(referral.referral_value) }}</div>
+                                {% endif %}
                             {% else %}
-                            <div class="font-medium text-gray-900">{{ referral.referred_name }}</div>
-                            {% if referral.contact_email %}
-                            <div class="text-sm text-gray-600">{{ referral.contact_email }}</div>
-                            {% endif %}
+                                {% if referral.referred_member %}
+                                <div class="font-medium text-gray-900">
+                                    {{ referral.referred_member.last_name or '' }}, {{ referral.referred_member.first_name or '' }}
+                                    {% if not referral.referred_member.first_name and not referral.referred_member.last_name %}
+                                    {{ referral.referred_member.email }}
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div class="font-medium text-gray-900">{{ referral.referred_name or 'Not specified' }}</div>
+                                {% if referral.contact_email %}
+                                <div class="text-sm text-gray-600">{{ referral.contact_email }}</div>
+                                {% endif %}
+                                {% endif %}
                             {% endif %}
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center">

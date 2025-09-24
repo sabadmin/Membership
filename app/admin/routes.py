@@ -6,7 +6,7 @@ import subprocess
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, g, flash
 from config import Config
 from database import get_tenant_db_session, _tenant_engines # Corrected import
-from app.models import User, UserAuthDetails, AttendanceRecord, AttendanceType, ReferralRecord, MembershipType, DuesRecord, DuesType
+from app.models import User, UserAuthDetails, AttendanceRecord, AttendanceType, ReferralRecord, ReferralType, MembershipType, DuesRecord, DuesType
 from sqlalchemy import MetaData, Table, inspect, text
 from sqlalchemy.orm import relationship, joinedload
 from datetime import datetime
@@ -26,19 +26,20 @@ def check_admin_access():
 def get_all_table_names(engine):
     inspector = inspect(engine)
     all_tables = inspector.get_table_names()
-    
+
     # Remove duplicate tables (keep singular versions, remove plurals)
     # Priority: keep the table name that matches our model naming convention
     preferred_tables = []
     table_mapping = {
         'users': 'user',
-        'attendance_records': 'attendance_record', 
+        'attendance_records': 'attendance_record',
         'referral_records': 'referral_record',
+        'referral_types': 'referral_type',
         'dues_records': 'dues_record',
         'membership_types': 'membership_type',
         'dues_types': 'dues_type'
     }
-    
+
     # Add tables, preferring singular versions
     for table in all_tables:
         if table in table_mapping.values():
@@ -48,7 +49,7 @@ def get_all_table_names(engine):
             # This table doesn't have a duplicate, include it
             preferred_tables.append(table)
         # Skip plural versions that have singular equivalents
-    
+
     return sorted(preferred_tables)
 
 def get_table_and_model(table_name, tenant_id):
@@ -63,6 +64,8 @@ def get_table_and_model(table_name, tenant_id):
         'attendance_types': AttendanceType,
         'referral_record': ReferralRecord,
         'referral_records': ReferralRecord,
+        'referral_type': ReferralType,
+        'referral_types': ReferralType,
         'membership_type': MembershipType,
         'membership_types': MembershipType,
         'dues_record': DuesRecord,
@@ -70,7 +73,7 @@ def get_table_and_model(table_name, tenant_id):
         'dues_type': DuesType,
         'dues_types': DuesType
     }
-    
+
     return table_model_mapping.get(table_name)
 
 def get_column_names(model):
@@ -384,6 +387,12 @@ def admin_panel(selected_tenant_id):
             if table_name == 'dues_records':
                 dues_types = s.query(DuesType).filter_by(is_active=True).order_by(DuesType.dues_type).all()
                 dues_types_list = [(dt.id, f"{dt.dues_type} - {dt.description}") for dt in dues_types]
+
+            # Get referral types list for foreign key dropdowns
+            referral_types_list = []
+            if table_name == 'referral_records':
+                referral_types = s.query(ReferralType).filter_by(is_active=True).order_by(ReferralType.sort_order).all()
+                referral_types_list = [(rt.id, f"{rt.type_name} - {rt.description}") for rt in referral_types]
 
         return render_template('admin_panel.html',
                                tables=tables,
