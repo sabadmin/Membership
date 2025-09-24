@@ -137,11 +137,56 @@ class DuesRecord(db.Model):
     payment_received_date = db.Column(db.Date)
 
 
-class ReferralRecord(db.Model):
+class ReferralType(db.Model):
+    __tablename__ = 'referral_type'
     id = db.Column(db.Integer, primary_key=True)
-    # Add other relevant fields here
-    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    referred_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    type_name = db.Column(db.String(64), nullable=False, unique=True)
+    description = db.Column(db.Text)
+    requires_member_selection = db.Column(db.Boolean, default=False)  # For "In Group" type
+    requires_contact_info = db.Column(db.Boolean, default=False)  # For "Out of Group" type
+    allows_closed_date = db.Column(db.Boolean, default=True)  # False for "Subscription" type
+    is_active = db.Column(db.Boolean, default=True)
+    sort_order = db.Column(db.Integer, default=0)
+    referral_records = db.relationship('ReferralRecord', backref='referral_type', lazy=True)
+
+    def __repr__(self):
+        return f'<ReferralType {self.type_name}>'
 
 
-    member = db.relationship('User', backref='referral_records', foreign_keys=[referred_id])
+class ReferralRecord(db.Model):
+    __tablename__ = 'referral_record'
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Referrer and referred relationships
+    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    referred_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Null for out-of-group referrals
+
+    # Referral details
+    referral_type_id = db.Column(db.Integer, db.ForeignKey('referral_type.id'), nullable=False)
+    referral_level = db.Column(db.Integer, nullable=False)  # 1-5 scale
+    referral_value = db.Column(db.Float, nullable=True)  # Monetary value if applicable
+
+    # Dates
+    date_referred = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    closed_date = db.Column(db.DateTime, nullable=True)  # Null for subscription types
+
+    # Status and verification
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    verified_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    verified_date = db.Column(db.DateTime, nullable=True)
+
+    # Contact info for out-of-group referrals
+    referred_name = db.Column(db.String(128), nullable=True)  # For out-of-group referrals
+    contact_email = db.Column(db.String(120), nullable=True)  # For out-of-group referrals
+    contact_phone = db.Column(db.String(15), nullable=True)  # For out-of-group referrals
+
+    # Notes and additional info
+    notes = db.Column(db.Text, nullable=True)
+
+    # Relationships
+    referrer = db.relationship('User', foreign_keys=[referrer_id], backref='referrals_made')
+    referred_member = db.relationship('User', foreign_keys=[referred_id], backref='referrals_received')
+    verified_by = db.relationship('User', foreign_keys=[verified_by_id], backref='referrals_verified')
+
+    def __repr__(self):
+        return f'<ReferralRecord {self.id} - {self.referrer_id} -> {self.referred_id or self.referred_name}>'

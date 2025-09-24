@@ -1,9 +1,10 @@
 import logging
-from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g
+from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g, jsonify
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, ReferralRecord
+from app.models import User, ReferralRecord, ReferralType
 from datetime import date, datetime
+from sqlalchemy.orm import joinedload
 from . import referrals_bp
 
 logger = logging.getLogger(__name__)
@@ -19,20 +20,24 @@ def my_referrals(tenant_id):
     current_user_id = session['user_id']
 
     with get_tenant_db_session(tenant_id) as s:
-        # Get current user's referrals
-        my_referrals = s.query(ReferralRecord).filter_by(referrer_id=current_user_id).order_by(ReferralRecord.date_referred.desc()).all()
+        # Get current user's referrals with related data
+        my_referrals = s.query(ReferralRecord).options(
+            joinedload(ReferralRecord.referral_type),
+            joinedload(ReferralRecord.referred_member),
+            joinedload(ReferralRecord.verified_by)
+        ).filter_by(referrer_id=current_user_id).order_by(ReferralRecord.date_referred.desc()).all()
 
         # Calculate referral statistics
         total_referrals = len(my_referrals)
-        successful_referrals = len([r for r in my_referrals if r.membership_status == 'active'])
-        pending_referrals = len([r for r in my_referrals if r.membership_status == 'pending'])
+        verified_referrals = len([r for r in my_referrals if r.is_verified])
+        pending_referrals = len([r for r in my_referrals if not r.is_verified])
 
         return render_template('my_referrals.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              my_referrals=my_referrals,
                              total_referrals=total_referrals,
-                             successful_referrals=successful_referrals,
+                             verified_referrals=verified_referrals,
                              pending_referrals=pending_referrals)
 
 
@@ -42,65 +47,170 @@ def add_referral(tenant_id):
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-    # Check if user has permission to add referrals
-    user_permissions = session.get('user_permissions', {})
-    if not user_permissions.get('can_edit_referrals', False):
-        flash("You do not have permission to add referrals.", "danger")
-        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
-
     tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
-    if request.method == 'POST':
-        try:
-            # Get form data
-            first_name = request.form.get('first_name')
-            last_name = request.form.get('last_name')
-            email = request.form.get('email')
-            phone = request.form.get('phone')
-            company = request.form.get('company')
-            notes = request.form.get('notes')
+    with get_tenant_db_session(tenant_id) as s:
+        # Get all active referral types
+        referral_types = s.query(ReferralType).filter_by(is_active=True).order_by(ReferralType.sort_order).all()
 
-            if not first_name or not last_name or not email:
-                flash("First name, last name, and email are required.", "danger")
-                return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+        # Get all active users for member selection (for "In Group" referrals)
+        all_users = s.query(User).filter_by(is_active=True).order_by(User.first_name, User.last_name).all()
 
-            with get_tenant_db_session(tenant_id) as s:
-                # Check if referral already exists for this email
-                existing_referral = s.query(ReferralRecord).filter_by(
-                    email=email,
-                    referrer_id=session['user_id']
-                ).first()
+        if request.method == 'POST':
+            try:
+                # Get form data
+                referral_type_id = request.form.get('referral_type_id')
+                referral_level = request.form.get('referral_level')
+                referral_value = request.form.get('referral_value')
+                notes = request.form.get('notes')
 
-                if existing_referral:
-                    flash("You have already referred this person.", "warning")
-                    return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                if not referral_type_id or not referral_level:
+                    flash("Referral type and level are required.", "danger")
+                    return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                # Get the referral type to determine required fields
+                referral_type = s.query(ReferralType).filter_by(id=referral_type_id).first()
+                if not referral_type:
+                    flash("Invalid referral type.", "danger")
+                    return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                # Validate referral level (1-5)
+                try:
+                    referral_level = int(referral_level)
+                    if not 1 <= referral_level <= 5:
+                        raise ValueError()
+                except ValueError:
+                    flash("Referral level must be between 1 and 5.", "danger")
+                    return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                # Handle different referral types
+                referral_data = {
+                    'referrer_id': session['user_id'],
+                    'referral_type_id': referral_type_id,
+                    'referral_level': referral_level,
+                    'referral_value': float(referral_value) if referral_value else None,
+                    'notes': notes,
+                    'date_referred': datetime.utcnow(),
+                    'is_verified': False
+                }
+
+                if referral_type.requires_member_selection:
+                    # "In Group" referral - requires member selection
+                    referred_id = request.form.get('referred_id')
+                    if not referred_id:
+                        flash("Please select a member for this referral type.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Check if referral already exists for this member
+                    existing_referral = s.query(ReferralRecord).filter_by(
+                        referrer_id=session['user_id'],
+                        referred_id=referred_id,
+                        referral_type_id=referral_type_id
+                    ).first()
+
+                    if existing_referral:
+                        flash("You have already made this type of referral for this member.", "warning")
+                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+
+                    referral_data['referred_id'] = referred_id
+
+                elif referral_type.requires_contact_info:
+                    # "Out of Group" referral - requires contact info
+                    referred_name = request.form.get('referred_name')
+                    contact_email = request.form.get('contact_email')
+                    contact_phone = request.form.get('contact_phone')
+
+                    if not referred_name or not contact_email:
+                        flash("Name and email are required for out-of-group referrals.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Check if referral already exists for this contact
+                    existing_referral = s.query(ReferralRecord).filter_by(
+                        referrer_id=session['user_id'],
+                        contact_email=contact_email,
+                        referral_type_id=referral_type_id
+                    ).first()
+
+                    if existing_referral:
+                        flash("You have already made this type of referral for this contact.", "warning")
+                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+
+                    referral_data.update({
+                        'referred_name': referred_name,
+                        'contact_email': contact_email,
+                        'contact_phone': contact_phone
+                    })
+
+                # Set closed_date based on referral type
+                if not referral_type.allows_closed_date:
+                    referral_data['closed_date'] = None
+                else:
+                    # For types that allow closed date, it will be set later when verified
+                    pass
 
                 # Create new referral
-                new_referral = ReferralRecord(
-                    referrer_id=session['user_id'],
-                    first_name=first_name,
-                    last_name=last_name,
-                    email=email,
-                    phone=phone,
-                    company=company,
-                    notes=notes,
-                    date_referred=date.today(),
-                    membership_status='pending'
-                )
-
+                new_referral = ReferralRecord(**referral_data)
                 s.add(new_referral)
                 s.commit()
 
                 flash("Referral added successfully!", "success")
                 return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
 
-        except Exception as e:
-            flash(f"Failed to add referral: {str(e)}", "danger")
-            return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+            except Exception as e:
+                s.rollback()
+                logger.error(f"Error adding referral: {str(e)}")
+                flash(f"Failed to add referral: {str(e)}", "danger")
+                return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
-    return render_template('add_referral.html',
-                         tenant_id=tenant_id,
-                         tenant_display_name=tenant_display_name)
+        return render_template('add_referral.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             referral_types=referral_types,
+                             all_users=all_users)
+
+
+@referrals_bp.route('/<tenant_id>/verify/<int:referral_id>', methods=['POST'])
+def verify_referral(tenant_id, referral_id):
+    if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        return jsonify({'success': False, 'message': 'Not logged in'})
+
+    # Check if user has permission to verify referrals
+    user_permissions = session.get('user_permissions', {})
+    if not user_permissions.get('can_edit_referrals', False):
+        return jsonify({'success': False, 'message': 'No permission to verify referrals'})
+
+    try:
+        with get_tenant_db_session(tenant_id) as s:
+            referral = s.query(ReferralRecord).filter_by(id=referral_id).first()
+
+            if not referral:
+                return jsonify({'success': False, 'message': 'Referral not found'})
+
+            # Toggle verification status
+            referral.is_verified = not referral.is_verified
+            if referral.is_verified:
+                referral.verified_by_id = session['user_id']
+                referral.verified_date = datetime.utcnow()
+                # Set closed date if the referral type allows it
+                if referral.referral_type.allows_closed_date:
+                    referral.closed_date = datetime.utcnow()
+            else:
+                referral.verified_by_id = None
+                referral.verified_date = None
+                if referral.referral_type.allows_closed_date:
+                    referral.closed_date = None
+
+            s.commit()
+
+            return jsonify({
+                'success': True,
+                'message': f'Referral {"verified" if referral.is_verified else "unverified"} successfully',
+                'is_verified': referral.is_verified
+            })
+
+    except Exception as e:
+        logger.error(f"Error verifying referral: {str(e)}")
+        return jsonify({'success': False, 'message': 'Failed to update referral status'})
 
 
 @referrals_bp.route('/<tenant_id>/history')
@@ -109,69 +219,110 @@ def referral_history(tenant_id):
         flash("You must be logged in to view this page.", "danger")
         return redirect(url_for('auth.login', tenant_id=tenant_id))
 
+    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    current_user_id = session['user_id']
+
+    # Get date range parameters
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    # Parse dates if provided
+    start_date = None
+    end_date = None
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            start_date = None
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            end_date = None
+
     # Check if user has permission to view all referrals
     user_permissions = session.get('user_permissions', {})
-    if not user_permissions.get('can_edit_referrals', False):
-        flash("You do not have permission to view referral history.", "danger")
-        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
-
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+    can_manage_referrals = user_permissions.get('can_edit_referrals', False)
 
     with get_tenant_db_session(tenant_id) as s:
-        # Get all referrals with referrer information
-        all_referrals = s.query(ReferralRecord).join(
-            User, ReferralRecord.referrer_id == User.id
-        ).order_by(ReferralRecord.date_referred.desc()).all()
+        # Get selected user for privileged users
+        selected_user_id = request.args.get('user_id')
+        selected_user = None
+        all_users = []
 
-        # Calculate overall statistics
+        if can_manage_referrals:
+            # Get all users for dropdown
+            all_users = s.query(User).order_by(User.last_name, User.first_name).all()
+
+            if selected_user_id:
+                selected_user = s.query(User).filter_by(id=selected_user_id).first()
+
+        # Build query based on permissions
+        query = s.query(ReferralRecord).options(
+            joinedload(ReferralRecord.referral_type),
+            joinedload(ReferralRecord.referrer),
+            joinedload(ReferralRecord.referred_member),
+            joinedload(ReferralRecord.verified_by)
+        )
+
+        if not can_manage_referrals:
+            # Non-privileged users can only see their own referrals
+            query = query.filter_by(referrer_id=current_user_id)
+        elif selected_user_id:
+            # Privileged users can filter by specific referrer
+            query = query.filter_by(referrer_id=selected_user_id)
+
+        # Apply date range filter
+        if start_date:
+            query = query.filter(ReferralRecord.date_referred >= datetime.combine(start_date, datetime.min.time()))
+        if end_date:
+            query = query.filter(ReferralRecord.date_referred <= datetime.combine(end_date, datetime.max.time()))
+
+        # Get referrals
+        all_referrals = query.order_by(ReferralRecord.date_referred.desc()).all()
+
+        # Calculate statistics
         total_referrals = len(all_referrals)
-        successful_referrals = len([r for r in all_referrals if r.membership_status == 'active'])
-        pending_referrals = len([r for r in all_referrals if r.membership_status == 'pending'])
+        verified_referrals = len([r for r in all_referrals if r.is_verified])
+        pending_referrals = len([r for r in all_referrals if not r.is_verified])
 
         return render_template('referral_history.html',
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              all_referrals=all_referrals,
                              total_referrals=total_referrals,
-                             successful_referrals=successful_referrals,
-                             pending_referrals=pending_referrals)
+                             verified_referrals=verified_referrals,
+                             pending_referrals=pending_referrals,
+                             can_manage_referrals=can_manage_referrals,
+                             selected_user=selected_user,
+                             all_users=all_users,
+                             start_date=start_date_str,
+                             end_date=end_date_str)
 
 
-@referrals_bp.route('/<tenant_id>/update/<int:referral_id>', methods=['POST'])
-def update_referral_status(tenant_id, referral_id):
+@referrals_bp.route('/<tenant_id>/get_referral_types')
+def get_referral_types(tenant_id):
+    """AJAX endpoint to get referral type details"""
     if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-
-    # Check if user has permission to update referrals
-    user_permissions = session.get('user_permissions', {})
-    if not user_permissions.get('can_edit_referrals', False):
-        flash("You do not have permission to update referral status.", "danger")
-        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+        return jsonify({'error': 'Not logged in'})
 
     try:
-        new_status = request.form.get('status')
-
-        if new_status not in ['pending', 'active', 'inactive']:
-            flash("Invalid status.", "danger")
-            return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
-
         with get_tenant_db_session(tenant_id) as s:
-            referral = s.query(ReferralRecord).filter_by(id=referral_id).first()
+            referral_types = s.query(ReferralType).filter_by(is_active=True).order_by(ReferralType.sort_order).all()
 
-            if not referral:
-                flash("Referral not found.", "danger")
-                return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
+            types_data = []
+            for rt in referral_types:
+                types_data.append({
+                    'id': rt.id,
+                    'type_name': rt.type_name,
+                    'description': rt.description,
+                    'requires_member_selection': rt.requires_member_selection,
+                    'requires_contact_info': rt.requires_contact_info,
+                    'allows_closed_date': rt.allows_closed_date
+                })
 
-            referral.membership_status = new_status
-            if new_status == 'active':
-                referral.membership_date = date.today()
-
-            s.commit()
-
-            flash("Referral status updated successfully!", "success")
+            return jsonify({'referral_types': types_data})
 
     except Exception as e:
-        flash(f"Failed to update referral status: {str(e)}", "danger")
-
-    return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
+        logger.error(f"Error getting referral types: {str(e)}")
+        return jsonify({'error': 'Failed to load referral types'})

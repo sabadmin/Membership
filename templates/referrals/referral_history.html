@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - Referral History{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">Referral History</h1>
+            <p class="text-gray-600 mt-2">View and manage all referral records.</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-600">Total Referrals</div>
+                        <div class="text-2xl font-bold text-blue-600">{{ total_referrals }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-600">Verified</div>
+                        <div class="text-2xl font-bold text-green-600">{{ verified_referrals }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 p-4 rounded-lg">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-600">Pending</div>
+                        <div class="text-2xl font-bold text-yellow-600">{{ pending_referrals }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if can_manage_referrals %}
+        <!-- Filters for privileged users -->
+        <div class="bg-gray-50 p-4 rounded-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Filters</h2>
+            <form method="GET" action="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}" class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label for="user_select" class="block text-gray-700 text-sm font-bold mb-2">Referrer:</label>
+                    <select id="user_select" name="user_id" onchange="this.form.submit()"
+                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500 w-48">
+                        <option value="">All Referrers</option>
+                        {% for user in all_users %}
+                        <option value="{{ user.id }}" {% if selected_user and selected_user.id == user.id %}selected{% endif %}>
+                            {{ user.last_name or '' }}, {{ user.first_name or '' }}
+                            {% if not user.first_name and not user.last_name %}{{ user.email }}{% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}"
+                        onchange="this.form.submit()"
+                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="end_date" class="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}"
+                        onchange="this.form.submit()"
+                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <a href="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Clear Filters
+                    </a>
+                </div>
+            </form>
+            {% if start_date or end_date or selected_user %}
+            <div class="mt-2 text-sm text-gray-600">
+                <strong>Current Filters:</strong>
+                {% if selected_user %}Referrer: {{ selected_user.first_name or '' }} {{ selected_user.last_name or '' }}{% if not selected_user.first_name and not selected_user.last_name %}{{ selected_user.email }}{% endif %}{% endif %}
+                {% if selected_user and (start_date or end_date) %} | {% endif %}
+                {% if start_date %}From {{ start_date }}{% endif %}
+                {% if start_date and end_date %} to {% endif %}
+                {% if end_date %}{{ end_date }}{% endif %}
+                <span class="text-gray-500">({{ all_referrals|length }} records found)</span>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <!-- Date filters for non-privileged users -->
+        <div class="bg-gray-50 p-4 rounded-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Date Range Filter</h2>
+            <form method="GET" action="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}" class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label for="start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}"
+                        onchange="this.form.submit()"
+                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="end_date" class="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}"
+                        onchange="this.form.submit()"
+                        class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <a href="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Clear Filters
+                    </a>
+                </div>
+            </form>
+            {% if start_date or end_date %}
+            <div class="mt-2 text-sm text-gray-600">
+                <strong>Current Filter:</strong>
+                {% if start_date %}From {{ start_date }}{% endif %}
+                {% if start_date and end_date %} to {% endif %}
+                {% if end_date %}{{ end_date }}{% endif %}
+                <span class="text-gray-500">({{ all_referrals|length }} records found)</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="mb-6">
+            <a href="{{ url_for('referrals.my_referrals', tenant_id=tenant_id) }}"
+                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                ← Back to My Referrals
+            </a>
+        </div>
+
+        <!-- Referrals Table -->
+        {% if all_referrals %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full border-collapse border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Referrer</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Type</th>
+                        <th class="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Referred</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Level</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Value</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Date</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Status</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Verified</th>
+                        {% if can_manage_referrals %}
+                        <th class="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for referral in all_referrals %}
+                    <tr class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %}">
+                        <td class="border border-gray-300 px-4 py-2">
+                            <div class="font-medium text-gray-900">
+                                {{ referral.referrer.last_name or '' }}, {{ referral.referrer.first_name or '' }}
+                                {% if not referral.referrer.first_name and not referral.referrer.last_name %}
+                                {{ referral.referrer.email }}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2">
+                            <div class="font-medium text-gray-900">{{ referral.referral_type.type_name }}</div>
+                            {% if referral.referral_type.description %}
+                            <div class="text-sm text-gray-600">{{ referral.referral_type.description }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2">
+                            {% if referral.referred_member %}
+                            <div class="font-medium text-gray-900">
+                                {{ referral.referred_member.last_name or '' }}, {{ referral.referred_member.first_name or '' }}
+                                {% if not referral.referred_member.first_name and not referral.referred_member.last_name %}
+                                {{ referral.referred_member.email }}
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="font-medium text-gray-900">{{ referral.referred_name }}</div>
+                            {% if referral.contact_email %}
+                            <div class="text-sm text-gray-600">{{ referral.contact_email }}</div>
+                            {% endif %}
+                            {% endif %}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if referral.referral_level == 1 %}bg-gray-100 text-gray-800
+                                {% elif referral.referral_level == 2 %}bg-blue-100 text-blue-800
+                                {% elif referral.referral_level == 3 %}bg-green-100 text-green-800
+                                {% elif referral.referral_level == 4 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ referral.referral_level }}
+                            </span>
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                            {% if referral.referral_value %}
+                            ${{ "%.2f"|format(referral.referral_value) }}
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
+                            {{ referral.date_referred.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            {% if referral.closed_date %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Closed
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Open
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            {% if referral.is_verified %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                                </svg>
+                                Verified
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                Pending
+                            </span>
+                            {% endif %}
+                        </td>
+                        {% if can_manage_referrals %}
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            <button onclick="toggleVerification({{ referral.id }}, {{ referral.is_verified|lower }})"
+                                class="bg-blue-500 hover:bg-blue-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150">
+                                {{ 'Unverify' if referral.is_verified else 'Verify' }}
+                            </button>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% if referral.notes %}
+                    <tr class="{% if loop.index % 2 == 0 %}bg-gray-50{% endif %}">
+                        <td colspan="{% if can_manage_referrals %}9{% else %}8{% endif %}" class="border border-gray-300 px-4 py-2 text-sm text-gray-600">
+                            <strong>Notes:</strong> {{ referral.notes }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No referrals found</h3>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if start_date or end_date or selected_user %}
+                No referrals match your current filters.
+                {% else %}
+                No referrals have been recorded yet.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if can_manage_referrals %}
+<script>
+function toggleVerification(referralId, currentlyVerified) {
+    if (confirm(`Are you sure you want to ${currentlyVerified ? 'unverify' : 'verify'} this referral?`)) {
+        fetch(`{{ url_for('referrals.verify_referral', tenant_id=tenant_id, referral_id=0) }}`.replace('0', referralId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=toggle'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload the page to show updated status
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the referral status.');
+        });
+    }
+}
+</script>
+{% endif %}
+{% endblock %}
