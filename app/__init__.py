@@ -84,6 +84,31 @@ def create_app():
 
         @app.before_request
         def set_tenant_id_from_session_or_param():
+            # Skip tenant validation for auth routes (index, login, register)
+            if request.endpoint and request.endpoint.startswith('auth.'):
+                # For auth routes, still try to infer tenant but don't enforce validation
+                if 'tenant_id' in session and session['tenant_id'] in Config.TENANT_DATABASES:
+                    g.tenant_id = session['tenant_id']
+                else:
+                    current_hostname = request.host.split(':')[0]
+                    inferred_tenant_from_host = 'tenant1'
+                    for tenant_key in Config.TENANT_DATABASES.keys():
+                        if f"{tenant_key}.unfc.it" == current_hostname:
+                            inferred_tenant_from_host = tenant_key
+                            break
+                    g.tenant_id = request.headers.get('X-Tenant-ID', request.args.get('tenant_id', inferred_tenant_from_host))
+
+                # For auth routes, allow any valid tenant or default to tenant1
+                if g.tenant_id not in Config.TENANT_DATABASES:
+                    g.tenant_id = 'tenant1'
+
+                if g.tenant_id in Config.TENANT_DATABASES:
+                    session['tenant_name'] = Config.TENANT_DISPLAY_NAMES.get(g.tenant_id, g.tenant_id.capitalize())
+                else:
+                    session.pop('tenant_name', None)
+                return
+
+            # For all other routes, enforce tenant validation
             if 'tenant_id' in session and session['tenant_id'] in Config.TENANT_DATABASES:
                 g.tenant_id = session['tenant_id']
             else:
