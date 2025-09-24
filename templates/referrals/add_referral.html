@@ -106,10 +106,10 @@
 
                     <!-- Subscription - Prior Referral Selection -->
                     <div id="subscriptionFields" style="display: none;">
-                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Select Prior Referral:</label>
+                        <label for="prior_referral_id" class="block text-purple-700 text-sm font-bold mb-2">Select Existing Referral (for recurring billing):</label>
                         <select id="prior_referral_id" name="prior_referral_id"
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
-                            <option value="">-- Select Prior Referral --</option>
+                            <option value="">-- Select Existing Referral --</option>
                             {% for referral in prior_referrals %}
                             <option value="{{ referral.id }}">
                                 {{ referral.referred_name or (referral.referred_member.first_name + ' ' + referral.referred_member.last_name if referral.referred_member else 'Unknown') }}
@@ -117,6 +117,7 @@
                             </option>
                             {% endfor %}
                         </select>
+                        <p class="text-xs text-purple-600 mt-1">Subscription = recurring billing for the same referral contact</p>
                     </div>
                 </div>
 
