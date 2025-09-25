@@ -156,8 +156,11 @@ def create_app():
 
         logger.info("Flask app creation completed successfully")
         return app
-        
+
     except Exception as e:
         logger.error(f"Failed to create Flask app: {str(e)}")
         logger.error(f"Error type: {type(e).__name__}")
         raise
+
+# Create the app instance for gunicorn
+app = create_app()

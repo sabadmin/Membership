@@ -367,12 +367,10 @@ def referral_history(tenant_id):
             joinedload(ReferralRecord.verified_by)
         )
 
-        if not can_manage_referrals:
-            # Non-privileged users can only see their own referrals
-            query = query.filter_by(referrer_id=current_user_id)
-        elif selected_user_id:
+        if can_manage_referrals and selected_user_id:
             # Privileged users can filter by specific referrer
             query = query.filter_by(referrer_id=selected_user_id)
+        # Non-privileged users can see ALL referrals (to allow them to modify any referral)
 
         # Apply date range filter
         if start_date:
