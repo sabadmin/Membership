@@ -42,13 +42,9 @@ def register():
         inferred_tenant_id = infer_tenant_from_hostname()
         current_hostname = request.host.split(':')[0]
 
-        # For admin contexts, don't show tenant dropdown for registration
-        if current_hostname == 'member.unfc.it' or inferred_tenant_id == Config.SUPERADMIN_TENANT_ID:
-            inferred_tenant_display_name = 'Admin Portal' if current_hostname == 'member.unfc.it' else Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-            show_tenant_dropdown = False  # Admin registration doesn't need tenant selection
-        else:
-            inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-            show_tenant_dropdown = True  # Regular users can select tenant for registration
+        # Tenant is always inferred from hostname/subdomain - no dropdown shown
+        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+        show_tenant_dropdown = False  # Never show tenant dropdown - tenant is inferred from hostname
         logger.info(f"Inferred tenant: {inferred_tenant_id}")
 
         if request.method == 'POST':
@@ -137,13 +133,9 @@ def login():
     inferred_tenant_id = infer_tenant_from_hostname()
     current_hostname = request.host.split(':')[0]
 
-    # For admin contexts (member.unfc.it or when inferred tenant is admin tenant), don't show tenant dropdown
-    if current_hostname == 'member.unfc.it' or inferred_tenant_id == Config.SUPERADMIN_TENANT_ID:
-        inferred_tenant_display_name = 'Admin Portal' if current_hostname == 'member.unfc.it' else Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-        show_tenant_dropdown = False  # Admin doesn't need tenant selection on login
-    else:
-        inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
-        show_tenant_dropdown = True  # Regular users can select tenant
+    # Tenant is always inferred from hostname/subdomain - no dropdown shown
+    inferred_tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(inferred_tenant_id, inferred_tenant_id.capitalize())
+    show_tenant_dropdown = False  # Never show tenant dropdown - tenant is inferred from hostname
 
     if request.method == 'POST':
         data = request.form
