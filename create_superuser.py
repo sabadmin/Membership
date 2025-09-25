@@ -10,7 +10,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import Config
-from database import get_tenant_db_session
+from database import get_tenant_db_session, init_db_for_tenant
 from app.models import User, UserAuthDetails
 from datetime import datetime, timezone
 
@@ -24,76 +24,87 @@ def create_superuser():
     print(f"Password: {superuser_password} (will be hashed)")
     print()
 
-    for tenant_id in Config.TENANT_DATABASES.keys():
-        print(f"Processing tenant: {tenant_id}")
+    # Initialize Flask app to set up database engines
+    from app import create_app
+    app = create_app()
 
-        try:
-            with get_tenant_db_session(tenant_id) as session:
-                # Check if user already exists
-                existing_user = session.query(User).filter_by(email=superuser_email).first()
+    with app.app_context():
+        for tenant_id in Config.TENANT_DATABASES.keys():
+            print(f"Processing tenant: {tenant_id}")
 
-                if existing_user:
-                    print(f"  ✓ User already exists in {tenant_id}, updating permissions...")
-                    # Update existing user to ensure all permissions are set
-                    if not existing_user.auth_details:
-                        existing_user.auth_details = UserAuthDetails(
-                            user_id=existing_user.id,
-                            is_active=True,
-                            last_login_1=datetime.now(timezone.utc)
+            try:
+                # Initialize database for this tenant if not already done
+                init_db_for_tenant(app, tenant_id)
+
+                with get_tenant_db_session(tenant_id) as session:
+                    # Check if user already exists
+                    existing_user = session.query(User).filter_by(email=superuser_email).first()
+
+                    if existing_user:
+                        print(f"  ✓ User already exists in {tenant_id}, updating permissions...")
+                        # Update existing user to ensure all permissions are set
+                        if not existing_user.auth_details:
+                            existing_user.auth_details = UserAuthDetails(
+                                user_id=existing_user.id,
+                                is_active=True,
+                                last_login_1=datetime.now(timezone.utc)
+                            )
+                            session.add(existing_user.auth_details)
+                            session.flush()
+
+                        # Set all permissions to True for superuser
+                        existing_user.auth_details.can_edit_dues = True
+                        existing_user.auth_details.can_edit_security = True
+                        existing_user.auth_details.can_edit_referrals = True
+                        existing_user.auth_details.can_edit_members = True
+                        existing_user.auth_details.can_edit_attendance = True
+                        existing_user.auth_details.is_active = True
+
+                        # Update user info
+                        existing_user.first_name = "Super"
+                        existing_user.last_name = "User"
+                        existing_user.is_active = True
+
+                    else:
+                        print(f"  + Creating new user in {tenant_id}...")
+
+                        # Create new superuser
+                        superuser = User(
+                            email=superuser_email,
+                            first_name="Super",
+                            last_name="User",
+                            is_active=True
                         )
-                        session.add(existing_user.auth_details)
-                        session.flush()
 
-                    # Set all permissions to True for superuser
-                    existing_user.auth_details.can_edit_dues = True
-                    existing_user.auth_details.can_edit_security = True
-                    existing_user.auth_details.can_edit_referrals = True
-                    existing_user.auth_details.can_edit_members = True
-                    existing_user.auth_details.can_edit_attendance = True
-                    existing_user.auth_details.is_active = True
+                        session.add(superuser)
+                        session.flush()  # Get the user ID
 
-                    # Update user info
-                    existing_user.first_name = "Super"
-                    existing_user.last_name = "User"
-                    existing_user.is_active = True
+                        # Create auth details with all permissions
+                        superuser.auth_details = UserAuthDetails(
+                            user_id=superuser.id,
+                            is_active=True,
+                            last_login_1=datetime.now(timezone.utc),
+                            can_edit_dues=True,
+                            can_edit_security=True,
+                            can_edit_referrals=True,
+                            can_edit_members=True,
+                            can_edit_attendance=True
+                        )
 
-                else:
-                    print(f"  + Creating new user in {tenant_id}...")
+                        # Set password (this creates the password hash)
+                        superuser.set_password(superuser_password)
 
-                    # Create new superuser
-                    superuser = User(
-                        email=superuser_email,
-                        first_name="Super",
-                        last_name="User",
-                        is_active=True
-                    )
+                        session.add(superuser.auth_details)
 
-                    session.add(superuser)
-                    session.flush()  # Get the user ID
+                    session.commit()
+                    print(f"  ✓ Successfully processed {tenant_id}")
 
-                    # Create auth details with all permissions
-                    superuser.auth_details = UserAuthDetails(
-                        user_id=superuser.id,
-                        is_active=True,
-                        last_login_1=datetime.now(timezone.utc),
-                        can_edit_dues=True,
-                        can_edit_security=True,
-                        can_edit_referrals=True,
-                        can_edit_members=True,
-                        can_edit_attendance=True
-                    )
-
-                    # Set password (this creates the password hash)
-                    superuser.set_password(superuser_password)
-
-                    session.add(superuser.auth_details)
-
-                session.commit()
-                print(f"  ✓ Successfully processed {tenant_id}")
-
-        except Exception as e:
-            print(f"  ✗ Error processing {tenant_id}: {str(e)}")
-            session.rollback()
+            except Exception as e:
+                print(f"  ✗ Error processing {tenant_id}: {str(e)}")
+                try:
+                    session.rollback()
+                except:
+                    pass
 
     print()
     print("Superuser creation completed!")
