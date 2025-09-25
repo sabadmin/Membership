@@ -3,8 +3,8 @@
 {% block title %}{{ tenant_display_name }} - Add Referral{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-4 py-4">
-    <div class="bg-white p-6 rounded-lg shadow-md">
+<div class="w-full mx-auto px-4 py-4">
+    <div class="bg-white p-4 rounded-lg shadow-md">
         <div class="mb-4">
             <h1 class="text-2xl font-bold text-gray-800">Add New Referral</h1>
             <p class="text-gray-600 mt-2">Create a referral record for tracking your networking activities.</p>
@@ -14,10 +14,12 @@
         {% if messages %}
         <div class="mb-4">
             {% for category, message in messages %}
+            {% if category != 'success' %}
             <div
-                class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                class="p-3 rounded-md {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'warning' %}bg-yellow-100 text-yellow-700{% else %}bg-blue-100 text-blue-700{% endif %}">
                 {{ message }}
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         {% endif %}
