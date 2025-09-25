@@ -10,6 +10,8 @@ The membership system had several issues that have been fixed:
 2. **Import Errors**: Removed unused `Base` imports from all files
 3. **Database Schema Issues**: Fixed table creation to use Flask-SQLAlchemy properly
 4. **Missing Database Columns**: Added missing `password_hash` column to `user_auth_details` table
+5. **502 Bad Gateway Errors**: Fixed nginx configuration to properly proxy to gunicorn Unix socket
+6. **Service Restart Issues**: Created automated restart script for reliable service management
 
 ## Files Changed
 
@@ -27,6 +29,7 @@ The membership system had several issues that have been fixed:
 ### New Testing Files
 - `fix_database_schema.py` - **NEW** - Fixes database schema issues
 - `test_application.py` - **NEW** - Tests application functionality
+- `restart_services.sh` - **NEW** - Automated service restart script
 - `README_TESTING.md` - **NEW** - This testing guide
 
 ## Deployment Instructions
@@ -117,12 +120,93 @@ sudo systemctl start gunicorn
 gunicorn --bind 127.0.0.1:5000 'app:create_app()'
 ```
 
-### Step 7: Verify Web Functionality
+### Step 7: Use the Automated Restart Script (Recommended)
+
+For reliable service management, use the new automated restart script:
+
+```bash
+sudo ./restart_services.sh
+```
+
+This script will:
+- Stop services in the correct order
+- Ensure socket directory exists with proper permissions
+- Reload systemd daemon
+- Start services in the correct order
+- Test all tenant domains automatically
+
+Expected output:
+```
+MEMBERSHIP SYSTEM RESTART
+✅ Starting service restart process...
+
+Step 1: Stopping services...
+Stopping nginx...
+✅ Nginx stopped
+Stopping gunicorn...
+✅ Gunicorn stopped
+
+Step 2: Ensuring socket directory...
+✅ Socket directory permissions set
+
+Step 3: Reloading systemd daemon...
+✅ Systemd daemon reloaded
+
+Step 4: Starting services...
+Starting gunicorn...
+✅ Gunicorn started successfully
+Starting nginx...
+✅ Nginx started successfully
+
+Step 5: Testing tenant domains...
+Testing liconnects.unfc.it... ✅ 200
+Testing lieg.unfc.it... ✅ 200
+Testing closers.unfc.it... ✅ 200
+Testing member.unfc.it... ✅ 200
+
+RESTART SUMMARY
+✅ All services restarted successfully!
+✅ All tenant domains are responding
+
+The membership system is ready at:
+  • https://liconnects.unfc.it
+  • https://lieg.unfc.it
+  • https://closers.unfc.it
+  • https://member.unfc.it
+
+✅ Restart process completed!
+```
+
+### Step 8: Verify Web Functionality
 
 1. Open your browser and navigate to your application
 2. Try to access the login page
 3. Try to register a new user
 4. Verify that the registration process works without the "password_hash column does not exist" error
+
+## 502 Bad Gateway Error Fixes
+
+The 502 errors were caused by nginx configuration issues where nginx was trying to proxy to `http://127.0.0.1:5000` but gunicorn was binding to a Unix socket.
+
+### What was fixed:
+
+1. **Nginx Configuration**: Updated all tenant nginx configs to proxy to Unix socket:
+   ```nginx
+   proxy_pass http://unix:/var/www/member/tmp/gunicorn.sock;
+   ```
+
+2. **Socket Directory**: Ensured `/var/www/member/tmp` exists with correct permissions (`myappuser:myappgroup`)
+
+3. **Service Configuration**: Gunicorn systemd service binds to the socket:
+   ```ini
+   ExecStart=/var/www/member/venv/bin/gunicorn --workers 3 --bind unix:/var/www/member/tmp/gunicorn.sock app:app
+   ```
+
+### Affected domains:
+- `liconnects.unfc.it` ✅ Fixed
+- `lieg.unfc.it` ✅ Fixed
+- `closers.unfc.it` ✅ Fixed
+- `member.unfc.it` ✅ Fixed
 
 ## Troubleshooting
 
@@ -174,6 +258,20 @@ gunicorn --bind 127.0.0.1:5000 'app:create_app()'
 
 ### Issue: Application starts but pages show errors
 **Solution**: Run the test script to identify specific issues with database connectivity or model relationships.
+
+### Issue: 502 Bad Gateway errors after server restart
+**Solution**: Use the automated restart script which ensures proper service startup order and socket configuration:
+```bash
+sudo ./restart_services.sh
+```
+This script handles the nginx-gunicorn socket connection properly and tests all domains automatically.
+
+### Issue: Services fail to start after server reboot
+**Solution**: Run the restart script which ensures all prerequisites are met:
+```bash
+sudo ./restart_services.sh
+```
+The script creates the socket directory, sets permissions, and starts services in the correct order.
 
 ## Support
 
