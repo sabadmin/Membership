@@ -291,8 +291,11 @@ def close_referral(tenant_id, referral_id):
             if not referral:
                 return jsonify({'success': False, 'message': 'Referral not found'})
 
-            # Check if the referral belongs to the current user
-            if referral.referrer_id != session['user_id']:
+            # Check if user has permission to edit referrals or if the referral belongs to the current user
+            user_permissions = session.get('user_permissions', {})
+            can_edit_referrals = user_permissions.get('can_edit_referrals', False)
+
+            if not can_edit_referrals and referral.referrer_id != session['user_id']:
                 return jsonify({'success': False, 'message': 'You can only close your own referrals'})
 
             # Only allow closing if referral type allows closed date (not subscription)
