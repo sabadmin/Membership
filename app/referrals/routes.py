@@ -87,7 +87,40 @@ def add_referral(tenant_id):
                     'is_verified': False
                 }
 
-                if referral_type.requires_member_selection:
+                if referral_type.type_name == "Subscription":
+                    # "Subscription" referral - uses prior referral selection
+                    prior_referral_id = request.form.get('prior_referral_id')
+                    if not prior_referral_id:
+                        flash("Please select a prior referral for subscription type.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Get the prior referral to copy contact info
+                    prior_referral = s.query(ReferralRecord).filter_by(id=prior_referral_id, referrer_id=session['user_id']).first()
+                    if not prior_referral:
+                        flash("Invalid prior referral selected.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Check if subscription already exists for this prior referral
+                    existing_subscription = s.query(ReferralRecord).filter_by(
+                        referrer_id=session['user_id'],
+                        referred_id=prior_referral.referred_id if prior_referral.referred_id else None,
+                        contact_email=prior_referral.contact_email,
+                        referral_type_id=referral_type_id
+                    ).first()
+
+                    if existing_subscription:
+                        flash("You have already made a subscription referral for this contact.", "warning")
+                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
+
+                    # Copy contact info from prior referral
+                    referral_data.update({
+                        'referred_id': prior_referral.referred_id,
+                        'referred_name': prior_referral.referred_name,
+                        'contact_email': prior_referral.contact_email,
+                        'contact_phone': prior_referral.contact_phone
+                    })
+
+                elif referral_type.requires_member_selection:
                     # "In Group" referral - requires member selection
                     referred_id = request.form.get('referred_id')
                     if not referred_id:
@@ -132,39 +165,6 @@ def add_referral(tenant_id):
                         'referred_name': referred_name,
                         'contact_email': contact_email,
                         'contact_phone': contact_phone
-                    })
-
-                elif referral_type.type_name == "Subscription":
-                    # "Subscription" referral - uses prior referral selection
-                    prior_referral_id = request.form.get('prior_referral_id')
-                    if not prior_referral_id:
-                        flash("Please select a prior referral for subscription type.", "danger")
-                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
-
-                    # Get the prior referral to copy contact info
-                    prior_referral = s.query(ReferralRecord).filter_by(id=prior_referral_id, referrer_id=session['user_id']).first()
-                    if not prior_referral:
-                        flash("Invalid prior referral selected.", "danger")
-                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
-
-                    # Check if subscription already exists for this prior referral
-                    existing_subscription = s.query(ReferralRecord).filter_by(
-                        referrer_id=session['user_id'],
-                        referred_id=prior_referral.referred_id if prior_referral.referred_id else None,
-                        contact_email=prior_referral.contact_email,
-                        referral_type_id=referral_type_id
-                    ).first()
-
-                    if existing_subscription:
-                        flash("You have already made a subscription referral for this contact.", "warning")
-                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
-
-                    # Copy contact info from prior referral
-                    referral_data.update({
-                        'referred_id': prior_referral.referred_id,
-                        'referred_name': prior_referral.referred_name,
-                        'contact_email': prior_referral.contact_email,
-                        'contact_phone': prior_referral.contact_phone
                     })
 
                 elif referral_type.requires_location_topic:
