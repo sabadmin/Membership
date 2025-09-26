@@ -107,16 +107,15 @@
         {% else %}
         <!-- Date filters for non-privileged users -->
         <div class="bg-gray-50 p-4 rounded-md mb-6">
-            <h2 class="text-lg font-semibold text-gray-700 mb-4">Date Range Filter</h2>
-            <form method="GET" action="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}" class="flex flex-wrap gap-4 items-end">
-                <div>
-                    <label for="start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+            <form method="GET" action="{{ url_for('referrals.referral_history', tenant_id=tenant_id) }}" class="flex flex-wrap gap-4 items-center">
+                <div class="flex items-center gap-2">
+                    <label for="start_date" class="text-gray-700 text-sm font-bold">Start Date:</label>
                     <input type="date" id="start_date" name="start_date" value="{{ start_date or '' }}"
                         onchange="this.form.submit()"
                         class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
                 </div>
-                <div>
-                    <label for="end_date" class="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                <div class="flex items-center gap-2">
+                    <label for="end_date" class="text-gray-700 text-sm font-bold">End Date:</label>
                     <input type="date" id="end_date" name="end_date" value="{{ end_date or '' }}"
                         onchange="this.form.submit()"
                         class="border border-gray-300 rounded-md px-3 py-1 text-sm focus:ring-blue-500 focus:border-blue-500">
@@ -231,11 +230,13 @@
                             </span>
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
-                            {% if referral.referral_value %}
-                            ${{ "%.2f"|format(referral.referral_value) }}
-                            {% else %}
-                            -
-                            {% endif %}
+                            <span onclick="editValue({{ referral.id }}, {{ referral.referral_value or 0 }})" class="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded">
+                                {% if referral.referral_value %}
+                                ${{ "%.2f"|format(referral.referral_value) }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </span>
                         </td>
                         <td class="border border-gray-300 px-4 py-2 text-center text-sm text-gray-600">
                             {{ referral.date_referred.strftime('%Y-%m-%d') }}
@@ -246,7 +247,7 @@
                                 Closed
                             </span>
                             {% else %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <span onclick="closeReferral({{ referral.id }})" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200">
                                 Open
                             </span>
                             {% endif %}
