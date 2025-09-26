@@ -371,7 +371,12 @@ def referral_history(tenant_id):
         if can_manage_referrals and selected_user_id:
             # Privileged users can filter by specific referrer
             query = query.filter_by(referrer_id=selected_user_id)
-        # Non-privileged users can see ALL referrals (to allow them to modify any referral)
+        elif can_manage_referrals:
+            # Privileged users can see all referrals
+            pass
+        else:
+            # Non-privileged users see only their own referrals
+            query = query.filter_by(referrer_id=current_user_id)
 
         # Apply date range filter
         if start_date:
