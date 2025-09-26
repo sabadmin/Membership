@@ -145,12 +145,10 @@
                             </button>
                             <div
                                 class="dropdown-menu absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50 hidden">
-                                {% if session.get('user_permissions', {}).get('can_edit_referrals', False) %}
-                                <a href="{{ url_for('referrals.add_referral', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Add
+                                <a href="{{ url_for('referrals.add_referral', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Create
                                     Referral</a>
-                                {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Add Referral</span>
-                                {% endif %}
+                                <a href="{{ url_for('referrals.my_referrals', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">My
+                                    Referrals</a>
                                 {% if session.get('user_permissions', {}).get('can_edit_referrals', False) %}
                                 <a href="{{ url_for('referrals.referral_history', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Referral
                                     History</a>
