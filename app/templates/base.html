@@ -14,7 +14,8 @@
             <li>
                 <a href="#">Financial</a>
                 <ul>
-                    <li><a href="{{ url_for('members.dues', tenant_id=g.tenant_id) }}">Dues</a></li>
+                    <li><a href="{{ url_for('dues.dues', tenant_id=g.tenant_id) }}">Dues Management</a></li>
+                    <li><a href="{{ url_for('dues.dues_paid_report', tenant_id=g.tenant_id) }}">Dues Paid Report</a></li>
                     <!-- Add other financial links here -->
                 </ul>
             </li>
