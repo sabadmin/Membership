@@ -196,6 +196,23 @@
                                 {% if referral.referral_value %}
                                 <div class="text-sm text-gray-600">${{ "%.2f"|format(referral.referral_value) }}</div>
                                 {% endif %}
+                            {% elif referral.referral_type.type_name == "One to One" %}
+                                {% if referral.referred_member %}
+                                <div class="font-medium text-gray-900">
+                                    {{ referral.referred_member.last_name or '' }}, {{ referral.referred_member.first_name or '' }}
+                                    {% if not referral.referred_member.first_name and not referral.referred_member.last_name %}
+                                    {{ referral.referred_member.email }}
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <span class="text-gray-500">Not specified</span>
+                                {% endif %}
+                                {% if referral.location %}
+                                <div class="text-sm text-gray-600">Location: {{ referral.location }}</div>
+                                {% endif %}
+                                {% if referral.topic %}
+                                <div class="text-sm text-gray-600">Topic: {{ referral.topic }}</div>
+                                {% endif %}
                             {% else %}
                                 {% if referral.referred_member %}
                                 <div class="font-medium text-gray-900">

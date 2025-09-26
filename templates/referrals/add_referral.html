@@ -112,13 +112,30 @@
                         </select>
                     </div>
 
-                    <!-- Date -->
-                    <div id="dateField" style="display: block;">
-                        <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
-                        <input type="date" id="date_referred" name="date_referred" required
-                            value="{{ today.strftime('%Y-%m-%d') }}"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                    <!-- Field 5: Location (for One to One) -->
+                    <div id="field5" style="display: none;">
+                        <label for="location" class="block text-gray-700 text-sm font-bold mb-2">Location:</label>
+                        <input type="text" id="location" name="location"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="Meeting location">
                     </div>
+
+                    <!-- Field 6: Topic (for One to One) -->
+                    <div id="field6" style="display: none;">
+                        <label for="topic" class="block text-gray-700 text-sm font-bold mb-2">Topic:</label>
+                        <input type="text" id="topic" name="topic"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                            placeholder="Discussion topic">
+                    </div>
+                </div>
+
+                <!-- Date -->
+                <div id="dateField" style="display: block;">
+                    <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
+                    <input type="date" id="date_referred" name="date_referred" required
+                        value="{{ today.strftime('%Y-%m-%d') }}"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
+                </div>
                 </div>
 
                 <!-- Notes -->
@@ -157,19 +174,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('field2').style.display = 'none';
     document.getElementById('field3').style.display = 'none';
     document.getElementById('field4').style.display = 'none';
+    document.getElementById('field5').style.display = 'none';
+    document.getElementById('field6').style.display = 'none';
 
     referralTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const typeName = selectedOption.getAttribute('data-type-name');
 
         // Hide dynamic fields only, keep date and notes visible
-        ['field1', 'field2', 'field3', 'field4'].forEach(fieldId => {
+        ['field1', 'field2', 'field3', 'field4', 'field5', 'field6'].forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (field) field.style.display = 'none';
         });
 
         // Hide all inputs except date and notes
-        const allInputs = ['referred_id', 'referred_name', 'prior_referral_id', 'contact_email', 'contact_phone', 'referral_level', 'referral_level_2', 'referral_value'];
+        const allInputs = ['referred_id', 'referred_name', 'prior_referral_id', 'contact_email', 'contact_phone', 'referral_level', 'referral_level_2', 'referral_value', 'location', 'topic'];
         allInputs.forEach(inputId => {
             const input = document.getElementById(inputId);
             if (input) {
@@ -233,6 +252,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('dateField').style.display = 'block';
             document.getElementById('notesField').style.display = 'block';
+        } else if (typeName === 'One to One') {
+            // One to One: Member selection, Location, Topic, Date, Notes
+            document.getElementById('field1').style.display = 'block';
+            document.getElementById('field1Label').textContent = 'Member:';
+            document.getElementById('referred_id').style.display = 'block';
+            document.getElementById('referred_id').required = true;
+
+            document.getElementById('field5').style.display = 'block';
+            document.getElementById('location').style.display = 'block';
+            document.getElementById('location').required = true;
+
+            document.getElementById('field6').style.display = 'block';
+            document.getElementById('topic').style.display = 'block';
+            document.getElementById('topic').required = true;
+
+            document.getElementById('dateField').style.display = 'block';
+            document.getElementById('notesField').style.display = 'block';
         }
     });
 
@@ -272,6 +308,22 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!document.getElementById('prior_referral_id').value) {
                 e.preventDefault();
                 alert('Please select a prior referral.');
+                return false;
+            }
+        } else if (typeName === 'One to One') {
+            if (!document.getElementById('referred_id').value) {
+                e.preventDefault();
+                alert('Please select a member.');
+                return false;
+            }
+            if (!document.getElementById('location').value) {
+                e.preventDefault();
+                alert('Please enter a location.');
+                return false;
+            }
+            if (!document.getElementById('topic').value) {
+                e.preventDefault();
+                alert('Please enter a topic.');
                 return false;
             }
         }

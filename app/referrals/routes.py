@@ -196,6 +196,37 @@ def add_referral(tenant_id):
                         'contact_phone': prior_referral.contact_phone
                     })
 
+                elif referral_type.requires_location_topic:
+                    # "One to One" referral - requires member selection, location, and topic
+                    referred_id = request.form.get('referred_id')
+                    location = request.form.get('location')
+                    topic = request.form.get('topic')
+
+                    if not referred_id:
+                        flash("Please select a member for this referral type.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    if not location or not topic:
+                        flash("Location and topic are required for One to One referrals.", "danger")
+                        return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
+
+                    # Check if referral already exists for this member
+                    existing_referral = s.query(ReferralRecord).filter_by(
+                        referrer_id=session['user_id'],
+                        referred_id=referred_id,
+                        referral_type_id=referral_type_id
+                    ).first()
+
+                    if existing_referral:
+                        flash("You have already made this type of referral for this member.", "warning")
+                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+
+                    referral_data.update({
+                        'referred_id': referred_id,
+                        'location': location,
+                        'topic': topic
+                    })
+
                 # Set closed_date based on referral type
                 if not referral_type.allows_closed_date:
                     referral_data['closed_date'] = None
@@ -424,6 +455,7 @@ def get_referral_types(tenant_id):
                     'description': rt.description,
                     'requires_member_selection': rt.requires_member_selection,
                     'requires_contact_info': rt.requires_contact_info,
+                    'requires_location_topic': rt.requires_location_topic,
                     'allows_closed_date': rt.allows_closed_date
                 })
 

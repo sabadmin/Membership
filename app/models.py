@@ -142,8 +142,9 @@ class ReferralType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type_name = db.Column(db.String(64), nullable=False, unique=True)
     description = db.Column(db.Text)
-    requires_member_selection = db.Column(db.Boolean, default=False)  # For "In Group" type
+    requires_member_selection = db.Column(db.Boolean, default=False)  # For "In Group" and "One to One" types
     requires_contact_info = db.Column(db.Boolean, default=False)  # For "Out of Group" type
+    requires_location_topic = db.Column(db.Boolean, default=False)  # For "One to One" type
     allows_closed_date = db.Column(db.Boolean, default=True)  # False for "Subscription" type
     is_active = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=0)
@@ -182,6 +183,10 @@ class ReferralRecord(db.Model):
 
     # Notes and additional info
     notes = db.Column(db.Text, nullable=True)
+
+    # One to One specific fields
+    location = db.Column(db.String(255), nullable=True)
+    topic = db.Column(db.String(255), nullable=True)
 
     # Relationships
     referrer = db.relationship('User', foreign_keys=[referrer_id], backref='referrals_made')
