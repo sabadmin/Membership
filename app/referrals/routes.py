@@ -10,35 +10,6 @@ from . import referrals_bp
 logger = logging.getLogger(__name__)
 
 
-@referrals_bp.route('/<tenant_id>/my')
-def my_referrals(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
-
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-    current_user_id = session['user_id']
-
-    with get_tenant_db_session(tenant_id) as s:
-        # Get current user's referrals with related data
-        my_referrals = s.query(ReferralRecord).options(
-            joinedload(ReferralRecord.referral_type),
-            joinedload(ReferralRecord.referred_member),
-            joinedload(ReferralRecord.verified_by)
-        ).filter_by(referrer_id=current_user_id).order_by(ReferralRecord.date_referred.desc()).all()
-
-        # Calculate referral statistics
-        total_referrals = len(my_referrals)
-        verified_referrals = len([r for r in my_referrals if r.is_verified])
-        pending_referrals = len([r for r in my_referrals if not r.is_verified])
-
-        return render_template('my_referrals.html',
-                             tenant_id=tenant_id,
-                             tenant_display_name=tenant_display_name,
-                             my_referrals=my_referrals,
-                             total_referrals=total_referrals,
-                             verified_referrals=verified_referrals,
-                             pending_referrals=pending_referrals)
 
 
 @referrals_bp.route('/<tenant_id>/add', methods=['GET', 'POST'])
@@ -79,8 +50,8 @@ def add_referral(tenant_id):
                     flash("Invalid referral type.", "danger")
                     return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
 
-                # Validate referral level (1-5) - not required for subscription type
-                if referral_type.type_name != "Subscription":
+                # Validate referral level (1-5) - not required for subscription or one to one types
+                if referral_type.type_name not in ["Subscription", "One to One"]:
                     if not referral_level:
                         flash("Referral level is required for this referral type.", "danger")
                         return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
@@ -92,7 +63,7 @@ def add_referral(tenant_id):
                         flash("Referral level must be between 1 and 5.", "danger")
                         return redirect(url_for('referrals.add_referral', tenant_id=tenant_id))
                 else:
-                    # For subscription type, level is not required
+                    # For subscription and one to one types, level is not required
                     referral_level = None
 
                 # Get date_referred from form
@@ -132,7 +103,7 @@ def add_referral(tenant_id):
 
                     if existing_referral:
                         flash("You have already made this type of referral for this member.", "warning")
-                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
 
                     referral_data['referred_id'] = referred_id
 
@@ -155,7 +126,7 @@ def add_referral(tenant_id):
 
                     if existing_referral:
                         flash("You have already made this type of referral for this contact.", "warning")
-                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
 
                     referral_data.update({
                         'referred_name': referred_name,
@@ -186,7 +157,7 @@ def add_referral(tenant_id):
 
                     if existing_subscription:
                         flash("You have already made a subscription referral for this contact.", "warning")
-                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
 
                     # Copy contact info from prior referral
                     referral_data.update({
@@ -219,7 +190,7 @@ def add_referral(tenant_id):
 
                     if existing_referral:
                         flash("You have already made this type of referral for this member.", "warning")
-                        return redirect(url_for('referrals.my_referrals', tenant_id=tenant_id))
+                        return redirect(url_for('referrals.referral_history', tenant_id=tenant_id))
 
                     referral_data.update({
                         'referred_id': referred_id,
