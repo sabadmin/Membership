@@ -380,10 +380,10 @@
                     toast.classList.add('opacity-100', 'scale-100');
                 }, index * 100); // Stagger appearance
 
-                // Auto-dismiss after 10 seconds (twice as long)
+                // Auto-dismiss after 5 seconds (half the time since it's now centered)
                 setTimeout(function () {
                     dismissToast(toast);
-                }, 10000 + (index * 100));
+                }, 5000 + (index * 100));
 
                 // Add click handler for close button
                 const closeButton = toast.querySelector('.toast-close');
