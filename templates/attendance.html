@@ -162,7 +162,7 @@
 
         if (checkedUsers < totalUsers) {
             e.preventDefault();
-            alert('Please mark attendance for all ' + totalUsers + ' members. Currently ' + checkedUsers + ' marked.');
+            showToast('Please mark attendance for all ' + totalUsers + ' members. Currently ' + checkedUsers + ' marked.', 'warning');
             return false;
         }
     });

@@ -280,50 +280,50 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeName === 'In Group') {
             if (!document.getElementById('referred_id').value) {
                 e.preventDefault();
-                alert('Please select a member.');
+                showToast('Please select a member.', 'error');
                 return false;
             }
             if (!document.getElementById('referral_level').value) {
                 e.preventDefault();
-                alert('Please select a level.');
+                showToast('Please select a level.', 'error');
                 return false;
             }
         } else if (typeName === 'Out of Group') {
             if (!document.getElementById('referred_name').value) {
                 e.preventDefault();
-                alert('Please enter contact name.');
+                showToast('Please enter contact name.', 'error');
                 return false;
             }
             if (!document.getElementById('contact_email').value) {
                 e.preventDefault();
-                alert('Please enter contact email.');
+                showToast('Please enter contact email.', 'error');
                 return false;
             }
             if (!document.getElementById('referral_level_2').value) {
                 e.preventDefault();
-                alert('Please select a level.');
+                showToast('Please select a level.', 'error');
                 return false;
             }
         } else if (typeName === 'Subscription') {
             if (!document.getElementById('prior_referral_id').value) {
                 e.preventDefault();
-                alert('Please select a prior referral.');
+                showToast('Please select a prior referral.', 'error');
                 return false;
             }
         } else if (typeName === 'One to One') {
             if (!document.getElementById('referred_id').value) {
                 e.preventDefault();
-                alert('Please select a member.');
+                showToast('Please select a member.', 'error');
                 return false;
             }
             if (!document.getElementById('location').value) {
                 e.preventDefault();
-                alert('Please enter a location.');
+                showToast('Please enter a location.', 'error');
                 return false;
             }
             if (!document.getElementById('topic').value) {
                 e.preventDefault();
-                alert('Please enter a topic.');
+                showToast('Please enter a topic.', 'error');
                 return false;
             }
         }

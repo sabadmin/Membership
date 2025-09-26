@@ -259,13 +259,13 @@
 
         if (selectedMembers === 0) {
             e.preventDefault();
-            alert('Please select at least one member for attendance.');
+            showToast('Please select at least one member for attendance.', 'error');
             return false;
         }
 
         if (checkedUsers < selectedMembers) {
             e.preventDefault();
-            alert('Please mark attendance for all ' + selectedMembers + ' selected members. Currently ' + checkedUsers + ' marked.');
+            showToast('Please mark attendance for all ' + selectedMembers + ' selected members. Currently ' + checkedUsers + ' marked.', 'warning');
             return false;
         }
     });

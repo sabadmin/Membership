@@ -327,12 +327,12 @@ function toggleVerification(referralId) {
             // Reload the page to show updated status
             window.location.reload();
         } else {
-            alert('Error: ' + data.message);
+            showToast('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the referral status.');
+        showToast('An error occurred while updating the referral status.', 'error');
     });
 }
 {% endif %}
@@ -347,7 +347,7 @@ function saveValue(referralId) {
     const input = document.getElementById(`value-input-${referralId}`);
     const value = parseFloat(input.value);
     if (isNaN(value) || value < 0) {
-        alert('Please enter a valid positive number.');
+        showToast('Please enter a valid positive number.', 'error');
         return;
     }
 
@@ -364,12 +364,12 @@ function saveValue(referralId) {
             // Reload the page to show updated value
             window.location.reload();
         } else {
-            alert('Error: ' + data.message);
+            showToast('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while updating the referral value.');
+        showToast('An error occurred while updating the referral value.', 'error');
     });
 }
 
@@ -393,12 +393,12 @@ function closeReferral(referralId) {
             // Reload the page to show updated status
             window.location.reload();
         } else {
-            alert('Error: ' + data.message);
+            showToast('Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while closing the referral.');
+        showToast('An error occurred while closing the referral.', 'error');
     });
 }
 </script>
