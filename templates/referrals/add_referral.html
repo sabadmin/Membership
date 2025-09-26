@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}{{ tenant_display_name }} - Add Referral{% endblock %}
+{% block title %}{{ tenant_display_name }} - Create Referral{% endblock %}
 
 {% block content %}
 <div class="w-full mx-auto px-4 py-4">
     <div class="bg-white p-4 rounded-lg shadow-md">
         <div class="mb-4">
-            <h1 class="text-2xl font-bold text-gray-800">Add New Referral</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Create Referral</h1>
             <p class="text-gray-600 mt-2">Create a referral record for tracking your networking activities.</p>
         </div>
 
@@ -28,7 +28,7 @@
         <form method="POST" action="{{ url_for('referrals.add_referral', tenant_id=tenant_id) }}" id="referralForm">
             <!-- Single Line Layout -->
             <div class="bg-gray-50 p-4 rounded-md mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-7 gap-3 mb-4">
                     <!-- Referral Type -->
                     <div>
                         <label for="referral_type_id" class="block text-gray-700 text-sm font-bold mb-2">Type:</label>
@@ -41,6 +41,14 @@
                             </option>
                             {% endfor %}
                         </select>
+                    </div>
+
+                    <!-- Date -->
+                    <div id="dateField" style="display: block;">
+                        <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
+                        <input type="date" id="date_referred" name="date_referred" required
+                            value="{{ today.strftime('%Y-%m-%d') }}"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
                     </div>
 
                     <!-- Field 1: Member/Contact Name/Prior Referral -->
@@ -127,14 +135,6 @@
                             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
                             placeholder="Discussion topic">
                     </div>
-                </div>
-
-                <!-- Date -->
-                <div id="dateField" style="display: block;">
-                    <label for="date_referred" class="block text-gray-700 text-sm font-bold mb-2">Date:</label>
-                    <input type="date" id="date_referred" name="date_referred" required
-                        value="{{ today.strftime('%Y-%m-%d') }}"
-                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm">
                 </div>
                 </div>
 
