@@ -556,7 +556,8 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
     # Write summary
     writer.writerow([])  # Empty row
     writer.writerow([f'Total Records: {len(records)}'])
-    writer.writerow([f'Total Amount Paid: ${sum(r.amount_paid for r in records):".2f"'])
+    total_amount = sum(r.amount_paid for r in records)
+    writer.writerow([f'Total Amount Paid: ${total_amount".2f"}'])
 
     # Prepare response
     output.seek(0)
@@ -614,10 +615,11 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
             ])
 
         # Summary row
+        total_amount_pdf = sum(r.amount_paid for r in records)
         data.append([
             'TOTAL',
             f'{len(records)} Records',
-            f"${sum(r.amount_paid for r in records):".2f"}",
+            f"${total_amount_pdf:.2f}",
             '',
             '',
             ''
