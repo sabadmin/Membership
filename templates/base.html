@@ -125,10 +125,9 @@
                                 <a href="{{ url_for('dues.my_dues_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues History</a>
                                 {% if session.get('user_permissions', {}).get('can_edit_dues', False) %}
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Financial
-                                    Reports</a>
+                                <a href="{{ url_for('dues.dues_paid_report', tenant_id=g.tenant_id) }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Dues Paid Report</a>
                                 {% else %}
-                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Financial Reports</span>
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">Dues Paid Report</span>
                                 {% endif %}
                             </div>
                         </div>
