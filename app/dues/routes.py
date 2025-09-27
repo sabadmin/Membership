@@ -547,7 +547,7 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
         writer.writerow([
             f"{record.member.first_name} {record.member.last_name}",
             record.dues_type.dues_type,
-            f"${record.amount_paid".2f"}",
+            f"${record.amount_paid:.2f}",
             record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
             record.document_number or '',
             record.due_date.strftime('%Y-%m-%d')
@@ -608,7 +608,7 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
             data.append([
                 f"{record.member.first_name} {record.member.last_name}",
                 record.dues_type.dues_type,
-                f"${record.amount_paid".2f"}",
+                f"${record.amount_paid:.2f}",
                 record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
                 record.document_number or '',
                 record.due_date.strftime('%Y-%m-%d')
