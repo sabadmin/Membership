@@ -134,17 +134,7 @@
 </div>
 
 <script>
-// Auto-submit form when filter values change
-document.getElementById('start_date').addEventListener('change', function() {
-    this.form.submit();
-});
-
-document.getElementById('end_date').addEventListener('change', function() {
-    this.form.submit();
-});
-
-document.getElementById('sort_by').addEventListener('change', function() {
-    this.form.submit();
-});
+// Form submission is handled by the Filter button
+// Users can now set multiple filters before clicking Filter
 </script>
 {% endblock %}
