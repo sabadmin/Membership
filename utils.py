@@ -20,7 +20,7 @@ def login_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             flash('Please log in to access this page.', 'info')
-            return redirect(url_for('main.login'))
+            return redirect(url_for('auth.login', tenant_id=g.tenant_id))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -37,8 +37,7 @@ def role_required(roles):
             user = g.db_session.query(User).get(session['user_id'])
             if not user or user.role not in roles:
                 flash("You don't have permission to access that page.", 'error')
-                return redirect(url_for('main.dashboard')) # Or a specific unauthorized page
+                return redirect(url_for('members.dashboard', tenant_id=g.tenant_id)) # Or a specific unauthorized page
             return f(*args, **kwargs)
         return decorated_function
     return decorator
-

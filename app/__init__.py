@@ -14,7 +14,7 @@ def create_app():
     try:
         logger.info("Starting Flask app creation...")
         
-        template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+        template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates'))
         static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static'))
         logger.info(f"Template dir: {template_dir}")
         logger.info(f"Static dir: {static_dir}")
