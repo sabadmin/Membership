@@ -441,85 +441,94 @@ def member_dues_history(tenant_id, member_id):
 
 @dues_bp.route('/<tenant_id>/paid_report', methods=['GET', 'POST'])
 def dues_paid_report(tenant_id):
-    if 'user_id' not in session or session['tenant_id'] != tenant_id:
-        flash("You must be logged in to view this page.", "danger")
-        return redirect(url_for('auth.login', tenant_id=tenant_id))
+    try:
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-    # Check if user has permission to view dues reports
-    user_permissions = session.get('user_permissions', {})
-    if not user_permissions.get('can_edit_dues', False):
-        flash("You do not have permission to view dues reports.", "danger")
+        # Check if user has permission to view dues reports
+        user_permissions = session.get('user_permissions', {})
+        if not user_permissions.get('can_edit_dues', False):
+            flash("You do not have permission to view dues reports.", "danger")
+            return redirect(url_for('dues.dues', tenant_id=tenant_id))
+
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+        # Get filter parameters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        report_format = request.args.get('format', 'html')  # html, pdf, csv
+        sort_by = request.args.get('sort_by', 'member')  # member, amount, date
+
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                start_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                end_date = None
+
+        with get_tenant_db_session(tenant_id) as s:
+            # Get current user for report header
+            current_user = s.query(User).get(session['user_id'])
+            if not current_user:
+                flash("User not found.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+            # Build query for paid dues records only
+            query = s.query(DuesRecord).join(User).join(DuesType).filter(
+                DuesRecord.amount_paid > 0  # Only records with payments
+            )
+
+            # Apply date range filter if provided
+            if start_date:
+                query = query.filter(DuesRecord.payment_received_date >= start_date)
+            if end_date:
+                query = query.filter(DuesRecord.payment_received_date <= end_date)
+
+            # Apply sorting
+            if sort_by == 'member':
+                query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
+            elif sort_by == 'amount':
+                query = query.order_by(DuesRecord.amount_paid.desc(), User.last_name, User.first_name)
+            elif sort_by == 'date':
+                query = query.order_by(DuesRecord.payment_received_date.desc(), User.last_name, User.first_name)
+            else:
+                query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
+
+            paid_dues_records = query.all()
+
+            # Calculate summary totals
+            total_amount_paid = sum(record.amount_paid for record in paid_dues_records)
+            total_records = len(paid_dues_records)
+
+            # Generate reports based on format
+            if report_format == 'csv':
+                return generate_csv_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
+            elif report_format == 'pdf':
+                return generate_pdf_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
+            else:
+                # HTML format - show the form and results
+                return render_template('dues_paid_report.html',
+                                     tenant_id=tenant_id,
+                                     tenant_display_name=tenant_display_name,
+                                     paid_dues_records=paid_dues_records,
+                                     total_amount_paid=total_amount_paid,
+                                     total_records=total_records,
+                                     start_date=start_date_str,
+                                     end_date=end_date_str,
+                                     sort_by=sort_by)
+
+    except Exception as e:
+        logger.error(f"Error in dues_paid_report: {str(e)}")
+        flash("An error occurred while generating the dues paid report.", "danger")
         return redirect(url_for('dues.dues', tenant_id=tenant_id))
-
-    tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
-
-    # Get filter parameters
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
-    report_format = request.args.get('format', 'html')  # html, pdf, csv
-    sort_by = request.args.get('sort_by', 'member')  # member, amount, date
-
-    # Parse dates if provided
-    start_date = None
-    end_date = None
-    if start_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            start_date = None
-    if end_date_str:
-        try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-        except ValueError:
-            end_date = None
-
-    with get_tenant_db_session(tenant_id) as s:
-        # Get current user for report header
-        current_user = s.query(User).get(session['user_id'])
-
-        # Build query for paid dues records only
-        query = s.query(DuesRecord).join(User).join(DuesType).filter(
-            DuesRecord.amount_paid > 0  # Only records with payments
-        )
-
-        # Apply date range filter if provided
-        if start_date:
-            query = query.filter(DuesRecord.payment_received_date >= start_date)
-        if end_date:
-            query = query.filter(DuesRecord.payment_received_date <= end_date)
-
-        # Apply sorting
-        if sort_by == 'member':
-            query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
-        elif sort_by == 'amount':
-            query = query.order_by(DuesRecord.amount_paid.desc(), User.last_name, User.first_name)
-        elif sort_by == 'date':
-            query = query.order_by(DuesRecord.payment_received_date.desc(), User.last_name, User.first_name)
-        else:
-            query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
-
-        paid_dues_records = query.all()
-
-        # Calculate summary totals
-        total_amount_paid = sum(record.amount_paid for record in paid_dues_records)
-        total_records = len(paid_dues_records)
-
-        # Generate reports based on format
-        if report_format == 'csv':
-            return generate_csv_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
-        elif report_format == 'pdf':
-            return generate_pdf_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
-        else:
-            # HTML format - show the form and results
-            return render_template('dues_paid_report.html',
-                                 tenant_id=tenant_id,
-                                 tenant_display_name=tenant_display_name,
-                                 paid_dues_records=paid_dues_records,
-                                 total_amount_paid=total_amount_paid,
-                                 total_records=total_records,
-                                 start_date=start_date_str,
-                                 end_date=end_date_str,
-                                 sort_by=sort_by)
 
 
 def generate_csv_report(records, tenant_name, current_user, start_date, end_date):
