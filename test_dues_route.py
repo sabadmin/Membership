@@ -25,10 +25,7 @@ try:
                     if not membership_type:
                         membership_type = MembershipType(
                             name='Test Member',
-                            can_edit_attendance=True,
-                            can_edit_demographics=True,
-                            can_edit_dues=True,
-                            can_edit_referrals=True
+                            can_edit_attendance=True
                         )
                         session.add(membership_type)
                         session.commit()
@@ -48,7 +45,7 @@ try:
                     auth_details = UserAuthDetails(
                         user_id=test_user.id,
                         can_edit_attendance=True,
-                        can_edit_demographics=True,
+                        can_edit_members=True,
                         can_edit_dues=True,
                         can_edit_referrals=True,
                         can_edit_security=True
