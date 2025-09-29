@@ -10,6 +10,18 @@ try:
     print('App created successfully')
 
     with app.test_client() as client:
+        # Set up a proper authenticated session
+        with client.session_transaction() as sess:
+            sess['user_id'] = 1  # Mock user ID
+            sess['tenant_id'] = 'tenant1'
+            sess['user_permissions'] = {
+                'can_edit_attendance': True,
+                'can_edit_demographics': True,
+                'can_edit_dues': True,
+                'can_edit_referrals': True,
+                'can_edit_security': True
+            }
+
         # Try to access the correct dues paid report route with /dues prefix
         response = client.get('/dues/tenant1/paid_report')
         print(f'Response status: {response.status_code}')
