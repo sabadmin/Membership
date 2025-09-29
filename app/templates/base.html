@@ -39,7 +39,7 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('dashboard.dashboard', tenant_id=g.tenant_id) }}">
+            <a class="navbar-brand" href="{{ url_for('members.dashboard', tenant_id=g.tenant_id) }}">
                 <i class="fas fa-users me-2"></i>{{ tenant_display_name or 'Membership System' }}
             </a>
 
@@ -50,7 +50,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('dashboard.dashboard', tenant_id=g.tenant_id) }}">
+                        <a class="nav-link" href="{{ url_for('members.dashboard', tenant_id=g.tenant_id) }}">
                             <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                         </a>
                     </li>
