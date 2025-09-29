@@ -78,7 +78,7 @@ echo ""
 echo "Step 4: Running application tests..."
 if [ -f "./test_application.py" ]; then
     echo "Running application tests..."
-    if python3 test_application.py; then
+    if ./venv/bin/python test_application.py; then
         print_status "Application tests passed"
     else
         print_warning "Application tests failed - check output above"
