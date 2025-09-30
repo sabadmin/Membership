@@ -46,22 +46,22 @@
 
                 <!-- Output Format -->
                 <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Output Format:</label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
                     <div class="space-y-2">
                         <div class="flex items-center">
-                            <input type="radio" id="format_report" name="output_format" value="report"
-                                   {% if request.form.get('output_format', 'report') == 'report' %}checked{% endif %}
+                            <input type="radio" id="format_html" name="output_format" value="html"
+                                   {% if request.form.get('output_format', 'csv') == 'html' %}checked{% endif %}
                                    class="mr-2">
-                            <label for="format_report" class="text-sm text-gray-700">
-                                Formatted Report - View results in a web page
+                            <label for="format_html" class="text-sm text-gray-700">
+                                HTML Report - Download formatted web page
                             </label>
                         </div>
                         <div class="flex items-center">
                             <input type="radio" id="format_csv" name="output_format" value="csv"
-                                   {% if request.form.get('output_format') == 'csv' %}checked{% endif %}
+                                   {% if request.form.get('output_format', 'csv') == 'csv' %}checked{% endif %}
                                    class="mr-2">
                             <label for="format_csv" class="text-sm text-gray-700">
-                                CSV Export - Download as spreadsheet file
+                                CSV Export - Download spreadsheet file
                             </label>
                         </div>
                     </div>
