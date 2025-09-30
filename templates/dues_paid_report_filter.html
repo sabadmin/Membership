@@ -61,24 +61,24 @@
                     </select>
                 </div>
 
-                <!-- Output Format -->
+                <!-- Report Type -->
                 <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Output Format:</label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Report Type:</label>
                     <div class="space-y-2">
                         <div class="flex items-center">
-                            <input type="radio" id="format_report" name="output_format" value="report"
-                                   {% if request.form.get('output_format', 'report') == 'report' %}checked{% endif %}
+                            <input type="radio" id="report_paid" name="report_type" value="paid"
+                                   {% if request.form.get('report_type', 'paid') == 'paid' %}checked{% endif %}
                                    class="mr-2">
-                            <label for="format_report" class="text-sm text-gray-700">
-                                Formatted Report - View results in a web page
+                            <label for="report_paid" class="text-sm text-gray-700">
+                                Paid Dues Only - Show only payments that have been made
                             </label>
                         </div>
                         <div class="flex items-center">
-                            <input type="radio" id="format_csv" name="output_format" value="csv"
-                                   {% if request.form.get('output_format') == 'csv' %}checked{% endif %}
+                            <input type="radio" id="report_all" name="report_type" value="all"
+                                   {% if request.form.get('report_type') == 'all' %}checked{% endif %}
                                    class="mr-2">
-                            <label for="format_csv" class="text-sm text-gray-700">
-                                CSV Export - Download as spreadsheet file
+                            <label for="report_all" class="text-sm text-gray-700">
+                                All Dues - Include both paid amounts and open balances
                             </label>
                         </div>
                     </div>

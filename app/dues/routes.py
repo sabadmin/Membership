@@ -460,9 +460,9 @@ def dues_paid_report_filter(tenant_id):
             end_date = request.form.get('end_date')
             member_filter = request.form.get('member_filter', '')
             sort_by = request.form.get('sort_by', 'member')
-            output_format = request.form.get('output_format', 'report')  # report or csv
+            report_type = request.form.get('report_type', 'paid')  # paid or all
 
-            # Build query parameters
+            # Build query parameters for CSV download
             params = []
             if start_date:
                 params.append(f'start_date={start_date}')
@@ -472,12 +472,11 @@ def dues_paid_report_filter(tenant_id):
                 params.append(f'member_filter={member_filter}')
             if sort_by:
                 params.append(f'sort_by={sort_by}')
-            if output_format:
-                params.append(f'format={output_format}')
+            params.append('format=csv')  # Always CSV
 
             query_string = '&'.join(params)
 
-            # Redirect to results page
+            # Redirect directly to CSV download
             return redirect(url_for('dues.dues_paid_report', tenant_id=tenant_id) + '?' + query_string)
 
         with get_tenant_db_session(tenant_id) as s:
@@ -514,7 +513,8 @@ def dues_paid_report(tenant_id):
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
         member_filter = request.args.get('member_filter', '')  # member id or empty for all
-        report_format = request.args.get('format', 'html')  # html, pdf, csv
+        report_format = request.args.get('format', 'csv')  # csv is default now
+        report_type = request.args.get('report_type', 'paid')  # paid or all
         sort_by = request.args.get('sort_by', 'member')  # member, amount, date
 
         # Parse dates if provided
@@ -541,30 +541,53 @@ def dues_paid_report(tenant_id):
             # Get all members for the filter dropdown
             all_members = s.query(User).order_by(User.last_name, User.first_name).all()
 
-            # Build query for paid dues records only
-            query = s.query(DuesRecord).join(User).join(DuesType).filter(
-                DuesRecord.amount_paid > 0  # Only records with payments
-            )
+            # Build query based on report type
+            if report_type == 'all':
+                # All dues records (paid and unpaid)
+                query = s.query(DuesRecord).join(User).join(DuesType)
+                # Apply date range filter to due date for all records
+                if start_date:
+                    query = query.filter(DuesRecord.due_date >= start_date)
+                if end_date:
+                    query = query.filter(DuesRecord.due_date <= end_date)
+            else:
+                # Paid dues only
+                query = s.query(DuesRecord).join(User).join(DuesType).filter(
+                    DuesRecord.amount_paid > 0  # Only records with payments
+                )
+                # Apply date range filter to payment date for paid records
+                if start_date:
+                    query = query.filter(DuesRecord.payment_received_date >= start_date)
+                if end_date:
+                    query = query.filter(DuesRecord.payment_received_date <= end_date)
 
             # Apply member filter if provided
             if member_filter:
                 query = query.filter(DuesRecord.member_id == member_filter)
 
-            # Apply date range filter if provided
-            if start_date:
-                query = query.filter(DuesRecord.payment_received_date >= start_date)
-            if end_date:
-                query = query.filter(DuesRecord.payment_received_date <= end_date)
-
             # Apply sorting
             if sort_by == 'member':
-                query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
+                query = query.order_by(User.last_name, User.first_name)
+                # Add secondary sort based on report type
+                if report_type == 'all':
+                    query = query.order_by(DuesRecord.due_date)
+                else:
+                    query = query.order_by(DuesRecord.payment_received_date)
             elif sort_by == 'amount':
                 query = query.order_by(DuesRecord.amount_paid.desc(), User.last_name, User.first_name)
             elif sort_by == 'date':
-                query = query.order_by(DuesRecord.payment_received_date.desc(), User.last_name, User.first_name)
+                # Sort by payment date for paid records, due date for all records
+                if report_type == 'all':
+                    query = query.order_by(DuesRecord.due_date.desc(), User.last_name, User.first_name)
+                else:
+                    query = query.order_by(DuesRecord.payment_received_date.desc(), User.last_name, User.first_name)
             else:
-                query = query.order_by(User.last_name, User.first_name, DuesRecord.payment_received_date)
+                query = query.order_by(User.last_name, User.first_name)
+                # Add secondary sort based on report type
+                if report_type == 'all':
+                    query = query.order_by(DuesRecord.due_date)
+                else:
+                    query = query.order_by(DuesRecord.payment_received_date)
 
             paid_dues_records = query.all()
 
