@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - Dues Paid Report Filter{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">{{ tenant_display_name }} - Dues Paid Report</h1>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>Report Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="row g-3">
+                        <!-- Date Range Section -->
+                        <div class="col-12">
+                            <h6 class="section-title">
+                                <i class="fas fa-calendar-alt me-2"></i>Date Range
+                            </h6>
+                            <hr class="mt-2">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date"
+                                   value="{{ request.form.get('start_date', '') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date"
+                                   value="{{ request.form.get('end_date', '') }}" required>
+                        </div>
+
+                        <!-- Member Filter Section -->
+                        <div class="col-12 mt-3">
+                            <h6 class="section-title">
+                                <i class="fas fa-users me-2"></i>Member Selection
+                            </h6>
+                            <hr class="mt-2">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="member_filter" class="form-label">Filter by Member (optional)</label>
+                            <select class="form-select" id="member_filter" name="member_filter">
+                                <option value="">All Members</option>
+                                {% for member in all_members %}
+                                <option value="{{ member.id }}"
+                                    {% if request.form.get('member_filter') == member.id|string %}selected{% endif %}>
+                                    {{ member.first_name }} {{ member.last_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Leave blank to include all members in the report.</div>
+                        </div>
+
+                        <!-- Sort Options Section -->
+                        <div class="col-12 mt-3">
+                            <h6 class="section-title">
+                                <i class="fas fa-sort me-2"></i>Sort Options
+                            </h6>
+                            <hr class="mt-2">
+                        </div>
+
+                        <div class="col-12">
+                            <label for="sort_by" class="form-label">Sort Results By</label>
+                            <select class="form-select" id="sort_by" name="sort_by">
+                                <option value="member" {% if request.form.get('sort_by') == 'member' %}selected{% endif %}>
+                                    Member Name
+                                </option>
+                                <option value="amount" {% if request.form.get('sort_by') == 'amount' %}selected{% endif %}>
+                                    Amount Paid
+                                </option>
+                                <option value="date" {% if request.form.get('sort_by') == 'date' %}selected{% endif %}>
+                                    Payment Date
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Output Format Section -->
+                        <div class="col-12 mt-3">
+                            <h6 class="section-title">
+                                <i class="fas fa-file-alt me-2"></i>Output Format
+                            </h6>
+                            <hr class="mt-2">
+                        </div>
+
+                        <div class="col-12">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="output_format"
+                                               id="format_report" value="report"
+                                               {% if request.form.get('output_format', 'report') == 'report' %}checked{% endif %}>
+                                        <label class="form-check-label" for="format_report">
+                                            <i class="fas fa-chart-bar me-1"></i>Formatted Report
+                                        </label>
+                                        <div class="form-text">View results in a formatted web page with tables and summaries.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="output_format"
+                                               id="format_csv" value="csv"
+                                               {% if request.form.get('output_format') == 'csv' %}checked{% endif %}>
+                                        <label class="form-check-label" for="format_csv">
+                                            <i class="fas fa-file-csv me-1"></i>CSV Export
+                                        </label>
+                                        <div class="form-text">Download results as a CSV file for use in Excel or other applications.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="col-12 mt-4">
+                            <hr>
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ url_for('dues.dues', tenant_id=tenant_id) }}" class="btn btn-secondary me-md-2">
+                                    <i class="fas fa-times me-1"></i>Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-play me-1"></i>Generate Report
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Tips -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Quick Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Use date range to filter payments by period</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Select specific member to see only their payments</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Sort by amount to see largest payments first</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>Choose Formatted Report for web viewing</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Choose CSV Export for Excel/spreadsheet use</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Report shows only payments that have been recorded</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.section-title {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.form-check-input:checked {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.form-text {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

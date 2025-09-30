@@ -439,6 +439,62 @@ def member_dues_history(tenant_id, member_id):
                              total_balance=total_balance)
 
 
+@dues_bp.route('/<tenant_id>/paid_report_filter', methods=['GET', 'POST'])
+def dues_paid_report_filter(tenant_id):
+    try:
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+        # Check if user has permission to view dues reports
+        user_permissions = session.get('user_permissions', {})
+        if not user_permissions.get('can_edit_dues', False):
+            flash("You do not have permission to view dues reports.", "danger")
+            return redirect(url_for('dues.dues', tenant_id=tenant_id))
+
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+        if request.method == 'POST':
+            # Get form data
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+            member_filter = request.form.get('member_filter', '')
+            sort_by = request.form.get('sort_by', 'member')
+            output_format = request.form.get('output_format', 'report')  # report or csv
+
+            # Build query parameters
+            params = []
+            if start_date:
+                params.append(f'start_date={start_date}')
+            if end_date:
+                params.append(f'end_date={end_date}')
+            if member_filter:
+                params.append(f'member_filter={member_filter}')
+            if sort_by:
+                params.append(f'sort_by={sort_by}')
+            if output_format:
+                params.append(f'format={output_format}')
+
+            query_string = '&'.join(params)
+
+            # Redirect to results page
+            return redirect(url_for('dues.dues_paid_report', tenant_id=tenant_id) + '?' + query_string)
+
+        with get_tenant_db_session(tenant_id) as s:
+            # Get all members for the filter dropdown
+            all_members = s.query(User).order_by(User.last_name, User.first_name).all()
+
+        return render_template('dues_paid_report_filter.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_members=all_members)
+
+    except Exception as e:
+        logger.error(f"Error in dues_paid_report_filter: {str(e)}")
+        flash("An error occurred while loading the report filter.", "danger")
+        return redirect(url_for('dues.dues', tenant_id=tenant_id))
+
+
 @dues_bp.route('/<tenant_id>/paid_report', methods=['GET', 'POST'])
 def dues_paid_report(tenant_id):
     try:
