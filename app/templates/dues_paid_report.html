@@ -10,27 +10,35 @@
         </div>
     </div>
 
-    <!-- Filter Form -->
+    <!-- Filter Form - Always Visible -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">Report Filters</h5>
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-filter me-2"></i>Report Filters
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <form method="GET" class="row g-3">
+                    <form method="GET" class="row g-3" id="filterForm">
                         <div class="col-md-3">
-                            <label for="start_date" class="form-label">Start Date</label>
+                            <label for="start_date" class="form-label">
+                                <i class="fas fa-calendar-alt me-1"></i>Start Date
+                            </label>
                             <input type="date" class="form-control" id="start_date" name="start_date"
-                                   value="{{ start_date or '' }}">
+                                   value="{{ start_date or '' }}" placeholder="Select start date">
                         </div>
                         <div class="col-md-3">
-                            <label for="end_date" class="form-label">End Date</label>
+                            <label for="end_date" class="form-label">
+                                <i class="fas fa-calendar-alt me-1"></i>End Date
+                            </label>
                             <input type="date" class="form-control" id="end_date" name="end_date"
-                                   value="{{ end_date or '' }}">
+                                   value="{{ end_date or '' }}" placeholder="Select end date">
                         </div>
                         <div class="col-md-2">
-                            <label for="sort_by" class="form-label">Sort By</label>
+                            <label for="sort_by" class="form-label">
+                                <i class="fas fa-sort me-1"></i>Sort By
+                            </label>
                             <select class="form-select" id="sort_by" name="sort_by">
                                 <option value="member" {% if sort_by == 'member' %}selected{% endif %}>Member Name</option>
                                 <option value="amount" {% if sort_by == 'amount' %}selected{% endif %}>Amount Paid</option>
@@ -39,16 +47,42 @@
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">&nbsp;</label>
-                            <button type="submit" class="btn btn-primary d-block">Filter</button>
+                            <button type="submit" class="btn btn-primary d-block w-100">
+                                <i class="fas fa-search me-1"></i>Apply Filters
+                            </button>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label">&nbsp;</label>
                             <div class="d-grid">
-                                <a href="{{ url_for('dues.dues_paid_report', tenant_id=tenant_id, format='csv', start_date=start_date, end_date=end_date, sort_by=sort_by) }}"
-                                   class="btn btn-success">Export CSV</a>
+                                <button type="button" class="btn btn-success" onclick="exportReport('csv')">
+                                    <i class="fas fa-file-csv me-1"></i>Export CSV
+                                </button>
                             </div>
                         </div>
                     </form>
+
+                    <!-- Quick Filter Buttons -->
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickFilter('today')">
+                                    <i class="fas fa-calendar-day me-1"></i>Today
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickFilter('week')">
+                                    <i class="fas fa-calendar-week me-1"></i>This Week
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickFilter('month')">
+                                    <i class="fas fa-calendar-alt me-1"></i>This Month
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="setQuickFilter('year')">
+                                    <i class="fas fa-calendar me-1"></i>This Year
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" onclick="clearFilters()">
+                                    <i class="fas fa-times me-1"></i>Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -134,7 +168,80 @@
 </div>
 
 <script>
-// Form submission is handled by the Filter button
-// Users can now set multiple filters before clicking Filter
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default if no dates are set
+    if (!document.getElementById('start_date').value && !document.getElementById('end_date').value) {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('end_date').value = today;
+    }
+});
+
+// Quick filter functions
+function setQuickFilter(period) {
+    const today = new Date();
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+
+    switch(period) {
+        case 'today':
+            startDate.value = today.toISOString().split('T')[0];
+            endDate.value = today.toISOString().split('T')[0];
+            break;
+        case 'week':
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            startDate.value = weekStart.toISOString().split('T')[0];
+            endDate.value = weekEnd.toISOString().split('T')[0];
+            break;
+        case 'month':
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            startDate.value = monthStart.toISOString().split('T')[0];
+            endDate.value = monthEnd.toISOString().split('T')[0];
+            break;
+        case 'year':
+            const yearStart = new Date(today.getFullYear(), 0, 1);
+            const yearEnd = new Date(today.getFullYear(), 11, 31);
+            startDate.value = yearStart.toISOString().split('T')[0];
+            endDate.value = yearEnd.toISOString().split('T')[0];
+            break;
+    }
+
+    // Auto-submit the form after setting quick filter
+    document.getElementById('filterForm').submit();
+}
+
+function clearFilters() {
+    document.getElementById('start_date').value = '';
+    document.getElementById('end_date').value = '';
+    document.getElementById('sort_by').value = 'member';
+    document.getElementById('filterForm').submit();
+}
+
+function exportReport(format) {
+    const startDate = document.getElementById('start_date').value;
+    const endDate = document.getElementById('end_date').value;
+    const sortBy = document.getElementById('sort_by').value;
+
+    let url = `{{ url_for('dues.dues_paid_report', tenant_id=tenant_id, format='${format}') }}`;
+    const params = new URLSearchParams();
+
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    if (sortBy) params.append('sort_by', sortBy);
+
+    if (params.toString()) {
+        url += '?' + params.toString();
+    }
+
+    window.location.href = url;
+}
+
+// Auto-submit form when sort order changes
+document.getElementById('sort_by').addEventListener('change', function() {
+    document.getElementById('filterForm').submit();
+});
 </script>
 {% endblock %}
