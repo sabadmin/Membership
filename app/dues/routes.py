@@ -618,6 +618,30 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
     writer.writerow([f'Total Amount Due: ${total_due:.2f}'])
     writer.writerow([f'Total Amount Paid: ${total_paid:.2f}'])
 
+    # Write dues type breakdown
+    writer.writerow([])  # Empty row
+    writer.writerow(['Dues Type Breakdown:'])
+
+    # Group records by dues type and calculate totals
+    dues_type_totals = {}
+    for record in records:
+        dues_type = record.dues_type.dues_type
+        if dues_type not in dues_type_totals:
+            dues_type_totals[dues_type] = {'count': 0, 'amount_due': 0, 'amount_paid': 0}
+
+        dues_type_totals[dues_type]['count'] += 1
+        dues_type_totals[dues_type]['amount_due'] += record.dues_amount
+        dues_type_totals[dues_type]['amount_paid'] += record.amount_paid
+
+    # Write breakdown for each dues type
+    for dues_type, totals in dues_type_totals.items():
+        writer.writerow([
+            f'  {dues_type}',
+            f'{totals["count"]} records',
+            f'${totals["amount_due"]:.2f} due',
+            f'${totals["amount_paid"]:.2f} paid'
+        ])
+
     # Prepare response
     output.seek(0)
     response = Response(
@@ -864,6 +888,45 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         ]))
 
         story.append(table)
+
+        # Add dues type breakdown section
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("Dues Type Breakdown:", styles['Heading2']))
+
+        # Group records by dues type and calculate totals
+        dues_type_totals = {}
+        for record in records:
+            dues_type = record.dues_type.dues_type
+            if dues_type not in dues_type_totals:
+                dues_type_totals[dues_type] = {'count': 0, 'amount_due': 0, 'amount_paid': 0}
+
+            dues_type_totals[dues_type]['count'] += 1
+            dues_type_totals[dues_type]['amount_due'] += record.dues_amount
+            dues_type_totals[dues_type]['amount_paid'] += record.amount_paid
+
+        # Create breakdown table data
+        breakdown_data = [['Dues Type', 'Records', 'Amount Due', 'Amount Paid']]
+        for dues_type, totals in dues_type_totals.items():
+            breakdown_data.append([
+                dues_type,
+                str(totals['count']),
+                f"${totals['amount_due']:.2f}",
+                f"${totals['amount_paid']:.2f}"
+            ])
+
+        # Create breakdown table
+        breakdown_table = Table(breakdown_data)
+        breakdown_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+
+        story.append(breakdown_table)
 
         # Build PDF
         doc.build(story)
