@@ -597,16 +597,16 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
     writer.writerow([])  # Empty row
 
     # Write column headers
-    writer.writerow(['Member Name', 'Dues Type', 'Amount Paid', 'Payment Date', 'Document Number', 'Due Date'])
+    writer.writerow(['Member Name', 'Dues Type', 'Amount Due', 'Amount Paid', 'Payment Date', 'Due Date'])
 
     # Write data rows
     for record in records:
         writer.writerow([
             f"{record.member.first_name} {record.member.last_name}",
             record.dues_type.dues_type,
-            f"${record.amount_paid:.2f}",
+            f"${record.dues_amount:.2f}",  # Amount Due (total amount that should be paid)
+            f"${record.amount_paid:.2f}",  # Amount Paid (how much has been paid)
             record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
-            record.document_number or '',
             record.due_date.strftime('%Y-%m-%d')
         ])
 
@@ -807,15 +807,15 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
             story.append(Spacer(1, 12))
 
         # Table data
-        data = [['Member Name', 'Dues Type', 'Amount Paid', 'Payment Date', 'Document Number', 'Due Date']]
+        data = [['Member Name', 'Dues Type', 'Amount Due', 'Amount Paid', 'Payment Date', 'Due Date']]
 
         for record in records:
             data.append([
                 f"{record.member.first_name} {record.member.last_name}",
                 record.dues_type.dues_type,
-                f"${record.amount_paid:.2f}",
+                f"${record.dues_amount:.2f}",  # Amount Due (total amount that should be paid)
+                f"${record.amount_paid:.2f}",  # Amount Paid (how much has been paid)
                 record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
-                record.document_number or '',
                 record.due_date.strftime('%Y-%m-%d')
             ])
 
