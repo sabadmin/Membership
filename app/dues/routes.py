@@ -549,12 +549,13 @@ def dues_paid_report(tenant_id):
             if member_filter:
                 query = query.filter(DuesRecord.member_id == member_filter)
 
-            # Apply baked-in sorting: Open balances first, then Name, Date, then closed balances, Name, Date
+            # Apply sorting: Open balances first (by due date, then name), then closed balances (by due date, then name)
             query = query.order_by(
                 DuesRecord.amount_paid < DuesRecord.dues_amount,  # Open balances first
-                User.last_name,
-                User.first_name,
-                DuesRecord.due_date
+                DuesRecord.due_date,  # Sort open balances by due date
+                User.last_name,       # Then by last name
+                User.first_name,      # Then by first name
+                DuesRecord.amount_paid.desc()  # For closed balances, sort by amount paid (highest first)
             )
 
             paid_dues_records = query.all()
@@ -610,13 +611,11 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
             record.due_date.strftime('%Y-%m-%d')
         ])
 
-    # Write summary
+    # Write summary - Totals on same line
     writer.writerow([])  # Empty row
-    writer.writerow([f'Total Records: {len(records)}'])
     total_due = sum(r.dues_amount for r in records)
     total_paid = sum(r.amount_paid for r in records)
-    writer.writerow([f'Total Amount Due: ${total_due:.2f}'])
-    writer.writerow([f'Total Amount Paid: ${total_paid:.2f}'])
+    writer.writerow([f'Totals: ${total_due:.2f} due, ${total_paid:.2f} paid'])
 
     # Write dues type breakdown
     writer.writerow([])  # Empty row
@@ -845,30 +844,14 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
                 record.due_date.strftime('%Y-%m-%d')
             ])
 
-        # Summary rows
+        # Summary row - Totals on same line
         total_due_pdf = sum(r.dues_amount for r in records)
         total_paid_pdf = sum(r.amount_paid for r in records)
         data.append([
-            'TOTAL RECORDS',
-            f'{len(records)}',
+            'Totals',
+            f'${total_due_pdf:.2f} due',
+            f'${total_paid_pdf:.2f} paid',
             '',
-            '',
-            '',
-            ''
-        ])
-        data.append([
-            'TOTAL AMOUNT DUE',
-            '',
-            f"${total_due_pdf:.2f}",
-            '',
-            '',
-            ''
-        ])
-        data.append([
-            'TOTAL AMOUNT PAID',
-            '',
-            '',
-            f"${total_paid_pdf:.2f}",
             '',
             ''
         ])
