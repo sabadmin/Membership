@@ -457,6 +457,7 @@ def dues_paid_report(tenant_id):
         # Get filter parameters
         start_date_str = request.args.get('start_date')
         end_date_str = request.args.get('end_date')
+        member_filter = request.args.get('member_filter', '')  # member id or empty for all
         report_format = request.args.get('format', 'html')  # html, pdf, csv
         sort_by = request.args.get('sort_by', 'member')  # member, amount, date
 
@@ -481,10 +482,17 @@ def dues_paid_report(tenant_id):
                 flash("User not found.", "danger")
                 return redirect(url_for('auth.login', tenant_id=tenant_id))
 
+            # Get all members for the filter dropdown
+            all_members = s.query(User).order_by(User.last_name, User.first_name).all()
+
             # Build query for paid dues records only
             query = s.query(DuesRecord).join(User).join(DuesType).filter(
                 DuesRecord.amount_paid > 0  # Only records with payments
             )
+
+            # Apply member filter if provided
+            if member_filter:
+                query = query.filter(DuesRecord.member_id == member_filter)
 
             # Apply date range filter if provided
             if start_date:

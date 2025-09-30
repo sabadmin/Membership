@@ -35,6 +35,19 @@
                             <input type="date" class="form-control" id="end_date" name="end_date"
                                    value="{{ end_date or '' }}" placeholder="Select end date">
                         </div>
+                        <div class="col-md-3">
+                            <label for="member_filter" class="form-label">
+                                <i class="fas fa-user me-1"></i>Member Filter
+                            </label>
+                            <select class="form-select" id="member_filter" name="member_filter">
+                                <option value="">All Members</option>
+                                {% for member in all_members %}
+                                <option value="{{ member.id }}" {% if member_filter == member.id|string %}selected{% endif %}>
+                                    {{ member.first_name }} {{ member.last_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <div class="col-md-2">
                             <label for="sort_by" class="form-label">
                                 <i class="fas fa-sort me-1"></i>Sort By
