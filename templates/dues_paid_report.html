@@ -229,6 +229,7 @@ function setQuickFilter(period) {
 function clearFilters() {
     document.getElementById('start_date').value = '';
     document.getElementById('end_date').value = '';
+    document.getElementById('member_filter').value = '';
     document.getElementById('sort_by').value = 'member';
     document.getElementById('filterForm').submit();
 }
@@ -236,6 +237,7 @@ function clearFilters() {
 function exportReport(format) {
     const startDate = document.getElementById('start_date').value;
     const endDate = document.getElementById('end_date').value;
+    const memberFilter = document.getElementById('member_filter').value;
     const sortBy = document.getElementById('sort_by').value;
 
     let url = `{{ url_for('dues.dues_paid_report', tenant_id=tenant_id, format='${format}') }}`;
@@ -243,6 +245,7 @@ function exportReport(format) {
 
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (memberFilter) params.append('member_filter', memberFilter);
     if (sortBy) params.append('sort_by', sortBy);
 
     if (params.toString()) {

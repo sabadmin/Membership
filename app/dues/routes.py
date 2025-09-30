@@ -531,6 +531,8 @@ def dues_paid_report(tenant_id):
                                      total_records=total_records,
                                      start_date=start_date_str,
                                      end_date=end_date_str,
+                                     member_filter=member_filter,
+                                     all_members=all_members,
                                      sort_by=sort_by)
 
     except Exception as e:
