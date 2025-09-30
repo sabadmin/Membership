@@ -566,13 +566,11 @@ def dues_paid_report(tenant_id):
             # Generate reports based on format - all are downloads now
             if report_format == 'csv':
                 return generate_csv_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
-            elif report_format == 'html':
-                return generate_html_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date, start_date_str, end_date_str, member_filter, all_members, tenant_id)
             elif report_format == 'pdf':
                 return generate_pdf_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
             else:
-                # Default to CSV download
-                return generate_csv_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
+                # Default to PDF download
+                return generate_pdf_report(paid_dues_records, tenant_display_name, current_user, start_date, end_date)
 
     except Exception as e:
         logger.error(f"Error in dues_paid_report: {str(e)}")
