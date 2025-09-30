@@ -549,10 +549,10 @@ def dues_paid_report(tenant_id):
             if member_filter:
                 query = query.filter(DuesRecord.member_id == member_filter)
 
-            # Apply sorting: Open balances first (by due date, then name), then closed balances (by due date, then name)
+            # Apply sorting: Primary sort by amount owed (largest to smallest), then by due date, then name
             query = query.order_by(
-                DuesRecord.amount_paid < DuesRecord.dues_amount,  # Open balances first (FALSE=0 comes before TRUE=1)
-                DuesRecord.due_date,  # Sort by due date (earliest first)
+                (DuesRecord.dues_amount - DuesRecord.amount_paid).desc(),  # Amount owed (largest first)
+                DuesRecord.due_date,  # Then by due date (earliest first)
                 User.last_name,       # Then by last name
                 User.first_name       # Then by first name
             )
@@ -597,17 +597,17 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
     writer.writerow([])  # Empty row
 
     # Write column headers
-    writer.writerow(['Member Name', 'Dues Type', 'Amount Due', 'Amount Paid', 'Payment Date', 'Due Date'])
+    writer.writerow(['Member Name', 'Dues Type', 'Due Date', 'Amount Due', 'Amount Paid', 'Payment Date'])
 
     # Write data rows
     for record in records:
         writer.writerow([
             f"{record.member.first_name} {record.member.last_name}",
             record.dues_type.dues_type,
+            record.due_date.strftime('%Y-%m-%d'),  # Due Date moved between Dues Type and Amount Due
             f"${record.dues_amount:.2f}",  # Amount Due (total amount that should be paid)
             f"${record.amount_paid:.2f}",  # Amount Paid (how much has been paid)
-            record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
-            record.due_date.strftime('%Y-%m-%d')
+            record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else ''
         ])
 
     # Write summary - Totals on same line
@@ -838,16 +838,16 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         story.append(Spacer(1, 12))
 
         # Table data
-        data = [['Member Name', 'Dues Type', 'Amount Due', 'Amount Paid', 'Payment Date', 'Due Date']]
+        data = [['Member Name', 'Dues Type', 'Due Date', 'Amount Due', 'Amount Paid', 'Payment Date']]
 
         for record in records:
             data.append([
                 f"{record.member.first_name} {record.member.last_name}",
                 record.dues_type.dues_type,
+                record.due_date.strftime('%Y-%m-%d'),  # Due Date moved between Dues Type and Amount Due
                 f"${record.dues_amount:.2f}",  # Amount Due (total amount that should be paid)
                 f"${record.amount_paid:.2f}",  # Amount Paid (how much has been paid)
-                record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else '',
-                record.due_date.strftime('%Y-%m-%d')
+                record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else ''
             ])
 
         # Summary row - Totals on same line
