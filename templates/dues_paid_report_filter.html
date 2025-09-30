@@ -44,41 +44,24 @@
                     </select>
                 </div>
 
-                <!-- Sort Options -->
+                <!-- Output Format -->
                 <div>
-                    <label for="sort_by" class="block text-gray-700 text-sm font-bold mb-2">Sort Results By:</label>
-                    <select id="sort_by" name="sort_by"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="member" {% if request.form.get('sort_by') == 'member' %}selected{% endif %}>
-                            Member Name
-                        </option>
-                        <option value="amount" {% if request.form.get('sort_by') == 'amount' %}selected{% endif %}>
-                            Amount Paid
-                        </option>
-                        <option value="date" {% if request.form.get('sort_by') == 'date' %}selected{% endif %}>
-                            Payment Date
-                        </option>
-                    </select>
-                </div>
-
-                <!-- Report Type -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Report Type:</label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Output Format:</label>
                     <div class="space-y-2">
                         <div class="flex items-center">
-                            <input type="radio" id="report_paid" name="report_type" value="paid"
-                                   {% if request.form.get('report_type', 'paid') == 'paid' %}checked{% endif %}
+                            <input type="radio" id="format_report" name="output_format" value="report"
+                                   {% if request.form.get('output_format', 'report') == 'report' %}checked{% endif %}
                                    class="mr-2">
-                            <label for="report_paid" class="text-sm text-gray-700">
-                                Paid Dues Only - Show only payments that have been made
+                            <label for="format_report" class="text-sm text-gray-700">
+                                Formatted Report - View results in a web page
                             </label>
                         </div>
                         <div class="flex items-center">
-                            <input type="radio" id="report_all" name="report_type" value="all"
-                                   {% if request.form.get('report_type') == 'all' %}checked{% endif %}
+                            <input type="radio" id="format_csv" name="output_format" value="csv"
+                                   {% if request.form.get('output_format') == 'csv' %}checked{% endif %}
                                    class="mr-2">
-                            <label for="report_all" class="text-sm text-gray-700">
-                                All Dues - Include both paid amounts and open balances
+                            <label for="format_csv" class="text-sm text-gray-700">
+                                CSV Export - Download as spreadsheet file
                             </label>
                         </div>
                     </div>
