@@ -809,17 +809,17 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         styles = getSampleStyleSheet()
         story = []
 
-        # Ultra-compact centered title (minimal spacing)
+        # Minimal centered title (ultra-compact spacing)
         title = Paragraph(f"<para align='center'>{tenant_name}</para>", styles['Heading1'])
         story.append(title)
-        story.append(Spacer(1, 3))  # Reduced from 6 to 3
+        story.append(Spacer(1, 2))  # Reduced from 3 to 2
 
-        # Ultra-compact report title
+        # Minimal report title
         report_title = Paragraph("<para align='center'>Dues Paid Report</para>", styles['Heading2'])
         story.append(report_title)
-        story.append(Spacer(1, 3))  # Reduced from 6 to 3
+        story.append(Spacer(1, 2))  # Reduced from 3 to 2
 
-        # Ultra-compact date range (if provided)
+        # Minimal date range (if provided)
         if start_date or end_date:
             date_range_text = ''
             if start_date:
@@ -828,12 +828,12 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
                 date_range_text += f' To {end_date}'
             date_range = Paragraph(f"<para align='center'>{date_range_text}</para>", styles['Normal'])
             story.append(date_range)
-            story.append(Spacer(1, 2))  # Reduced from 3 to 2
+            story.append(Spacer(1, 1))  # Reduced from 2 to 1
 
-        # Ultra-compact generation info - date/time only
+        # Minimal generation info - date/time only
         gen_info = Paragraph(f"<para align='center'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</para>", styles['Normal'])
         story.append(gen_info)
-        story.append(Spacer(1, 5))  # Reduced from 8 to 5
+        story.append(Spacer(1, 3))  # Reduced from 5 to 3
 
         # Table data
         data = [['Member Name', 'Dues Type', 'Due Date', 'Amount Due', 'Amount Paid', 'Payment Date']]
