@@ -3,6 +3,7 @@ from flask import Blueprint, request, render_template, redirect, url_for, sessio
 from config import Config
 from database import get_tenant_db_session
 from app.models import User, DuesRecord, DuesType
+from app.attendance.models import AttendanceRecord, AttendanceType
 from app.members.forms import DuesCreateForm, DuesPaymentForm, DuesUpdateForm
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
@@ -485,10 +486,121 @@ def dues_paid_report_filter(tenant_id):
                              tenant_display_name=tenant_display_name,
                              all_members=all_members)
 
+
+@dues_bp.route('/<tenant_id>/pale_report_filter', methods=['GET', 'POST'])
+def pale_report_filter(tenant_id):
+    try:
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+        # Check if user has permission to view attendance reports
+        user_permissions = session.get('user_permissions', {})
+        if not user_permissions.get('can_edit_attendance', False):
+            flash("You do not have permission to view attendance reports.", "danger")
+            return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+        if request.method == 'POST':
+            # Get form data
+            start_date = request.form.get('start_date')
+            end_date = request.form.get('end_date')
+            member_filter = request.form.get('member_filter', '')
+            output_format = request.form.get('output_format', 'pdf')
+
+            # Build query parameters
+            params = []
+            if start_date:
+                params.append(f'start_date={start_date}')
+            if end_date:
+                params.append(f'end_date={end_date}')
+            if member_filter:
+                params.append(f'member_filter={member_filter}')
+            params.append(f'format={output_format}')
+
+            query_string = '&'.join(params)
+
+            # Redirect to results page
+            return redirect(url_for('dues.pale_report', tenant_id=tenant_id) + '?' + query_string)
+
+        with get_tenant_db_session(tenant_id) as s:
+            # Get all members for the filter dropdown
+            all_members = s.query(User).order_by(User.last_name, User.first_name).all()
+
+        return render_template('pale_report_filter.html',
+                             tenant_id=tenant_id,
+                             tenant_display_name=tenant_display_name,
+                             all_members=all_members)
+
     except Exception as e:
-        logger.error(f"Error in dues_paid_report_filter: {str(e)}")
+        logger.error(f"Error in pale_report_filter: {str(e)}")
         flash("An error occurred while loading the report filter.", "danger")
-        return redirect(url_for('dues.dues', tenant_id=tenant_id))
+        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+
+
+@dues_bp.route('/<tenant_id>/pale_report', methods=['GET', 'POST'])
+def pale_report(tenant_id):
+    try:
+        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+            flash("You must be logged in to view this page.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+        # Check if user has permission to view attendance reports
+        user_permissions = session.get('user_permissions', {})
+        if not user_permissions.get('can_edit_attendance', False):
+            flash("You do not have permission to view attendance reports.", "danger")
+            return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+
+        tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
+
+        # Get filter parameters
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
+        member_filter = request.args.get('member_filter', '')  # member id or empty for all
+        report_format = request.args.get('format', 'pdf')
+
+        # Parse dates if provided
+        start_date = None
+        end_date = None
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                start_date = None
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                end_date = None
+
+        with get_tenant_db_session(tenant_id) as s:
+            # Get current user for report header
+            current_user = s.query(User).get(session['user_id'])
+            if not current_user:
+                flash("User not found.", "danger")
+                return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+            # Get all members for the filter dropdown
+            all_members = s.query(User).order_by(User.last_name, User.first_name).all()
+
+            # Build attendance summary data
+            # This will aggregate attendance records by member and attendance type
+            attendance_summary = generate_pale_summary(s, start_date, end_date, member_filter)
+
+            # Generate reports based on format
+            if report_format == 'csv':
+                return generate_pale_csv_report(attendance_summary, tenant_display_name, current_user, start_date, end_date)
+            elif report_format == 'pdf':
+                return generate_pale_pdf_report(attendance_summary, tenant_display_name, current_user, start_date, end_date)
+            else:
+                # Default to PDF download
+                return generate_pale_pdf_report(attendance_summary, tenant_display_name, current_user, start_date, end_date)
+
+    except Exception as e:
+        logger.error(f"Error in pale_report: {str(e)}")
+        flash("An error occurred while generating the PALE report.", "danger")
+        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
 
 
 @dues_bp.route('/<tenant_id>/paid_report', methods=['GET', 'POST'])
@@ -936,3 +1048,240 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
     except ImportError:
         flash("PDF generation requires reportlab library. Please install it first.", "danger")
         return redirect(url_for('dues.dues_paid_report', tenant_id=tenant_id))
+
+
+def generate_pale_summary(session, start_date, end_date, member_filter):
+    """Generate PALE attendance summary data"""
+    try:
+        # Query attendance records with filters
+        query = session.query(AttendanceRecord).join(User).join(AttendanceType)
+
+        # Apply date range filter to attendance date
+        if start_date:
+            query = query.filter(AttendanceRecord.attendance_date >= start_date)
+        if end_date:
+            query = query.filter(AttendanceRecord.attendance_date <= end_date)
+
+        # Apply member filter if provided
+        if member_filter:
+            query = query.filter(AttendanceRecord.member_id == member_filter)
+
+        attendance_records = query.all()
+
+        # Group by member and aggregate attendance types
+        member_summary = {}
+
+        for record in attendance_records:
+            member_id = record.member_id
+            if member_id not in member_summary:
+                member_summary[member_id] = {
+                    'member': record.member,
+                    'counts': {'P': 0, 'A': 0, 'L': 0, 'E': 0}
+                }
+
+            # Map attendance status to P/A/L/E codes
+            status = record.attendance_status.upper()
+            if status == 'PRESENT':
+                member_summary[member_id]['counts']['P'] += 1
+            elif status == 'ABSENT':
+                member_summary[member_id]['counts']['A'] += 1
+            elif status == 'LATE':
+                member_summary[member_id]['counts']['L'] += 1
+            elif status == 'EXCUSED':
+                member_summary[member_id]['counts']['E'] += 1
+
+        # Convert to list format for reporting
+        summary_data = []
+        for member_id, data in member_summary.items():
+            member = data['member']
+            counts = data['counts']
+
+            # Get all phone numbers
+            phone_numbers = []
+            if member.phone:
+                phone_numbers.append(member.phone)
+            if hasattr(member, 'phone2') and member.phone2:
+                phone_numbers.append(member.phone2)
+
+            summary_data.append({
+                'member_name': f"{member.first_name} {member.last_name}",
+                'company': getattr(member, 'company', ''),
+                'phone_numbers': ', '.join(phone_numbers),
+                'present_count': counts['P'],
+                'absent_count': counts['A'],
+                'late_count': counts['L'],
+                'excused_count': counts['E']
+            })
+
+        # Sort by member name
+        summary_data.sort(key=lambda x: x['member_name'])
+
+        return summary_data
+
+    except Exception as e:
+        logger.error(f"Error generating PALE summary: {str(e)}")
+        return []
+
+
+def generate_pale_csv_report(summary_data, tenant_name, current_user, start_date, end_date):
+    """Generate CSV report for PALE attendance summary"""
+    output = StringIO()
+    writer = csv.writer(output)
+
+    # Write headers
+    writer.writerow([tenant_name])
+    writer.writerow(['PALE Attendance Report'])
+    if start_date or end_date:
+        date_range = ''
+        if start_date:
+            date_range += f'From {start_date}'
+        if end_date:
+            date_range += f' To {end_date}'
+        writer.writerow([date_range])
+    writer.writerow([f'{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}'])
+    writer.writerow([])  # Empty row
+
+    # Write column headers
+    writer.writerow(['Member Name', 'Company', 'Phone Numbers', 'P', 'A', 'L', 'E'])
+
+    # Write data rows
+    for record in summary_data:
+        writer.writerow([
+            record['member_name'],
+            record['company'],
+            record['phone_numbers'],
+            record['present_count'],
+            record['absent_count'],
+            record['late_count'],
+            record['excused_count']
+        ])
+
+    # Write summary
+    writer.writerow([])  # Empty row
+    total_present = sum(r['present_count'] for r in summary_data)
+    total_absent = sum(r['absent_count'] for r in summary_data)
+    total_late = sum(r['late_count'] for r in summary_data)
+    total_excused = sum(r['excused_count'] for r in summary_data)
+    total_records = len(summary_data)
+
+    writer.writerow([f'Totals: {total_records} members, P: {total_present}, A: {total_absent}, L: {total_late}, E: {total_excused}'])
+
+    # Prepare response
+    output.seek(0)
+    response = Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-disposition': f'attachment; filename=pale_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'}
+    )
+    return response
+
+
+def generate_pale_pdf_report(summary_data, tenant_name, current_user, start_date, end_date):
+    """Generate PDF report for PALE attendance summary"""
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib import colors
+
+        buffer = BytesIO()
+        # Set margins to 0.75 inches for better table fit
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=letter,
+            topMargin=0.75*72,    # 0.75 inches
+            bottomMargin=0.75*72, # 0.75 inches
+            leftMargin=0.75*72,   # 0.75 inches
+            rightMargin=0.75*72   # 0.75 inches
+        )
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Ultra-minimal centered title (maximum paper efficiency)
+        title = Paragraph(f"<para align='center'>{tenant_name}</para>", styles['Heading1'])
+        story.append(title)
+        story.append(Spacer(1, 1))
+
+        # Ultra-minimal report title
+        report_title = Paragraph("<para align='center'>PALE Attendance Report</para>", styles['Heading2'])
+        story.append(report_title)
+        story.append(Spacer(1, 1))
+
+        # Ultra-minimal date range (if provided)
+        if start_date or end_date:
+            date_range_text = ''
+            if start_date:
+                date_range_text += f'From {start_date}'
+            if end_date:
+                date_range_text += f' To {end_date}'
+            date_range = Paragraph(f"<para align='center'>{date_range_text}</para>", styles['Normal'])
+            story.append(date_range)
+            story.append(Spacer(1, 1))
+
+        # Ultra-minimal generation info - date/time only
+        gen_info = Paragraph(f"<para align='center'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</para>", styles['Normal'])
+        story.append(gen_info)
+        story.append(Spacer(1, 3))
+
+        # Table data - PALE format with attendance type columns
+        data = [['Member Name', 'Company', 'Phone Numbers', 'P', 'A', 'L', 'E']]
+
+        for record in summary_data:
+            data.append([
+                record['member_name'],
+                record['company'],
+                record['phone_numbers'],
+                str(record['present_count']),
+                str(record['absent_count']),
+                str(record['late_count']),
+                str(record['excused_count'])
+            ])
+
+        # Summary row
+        total_present = sum(r['present_count'] for r in summary_data)
+        total_absent = sum(r['absent_count'] for r in summary_data)
+        total_late = sum(r['late_count'] for r in summary_data)
+        total_excused = sum(r['excused_count'] for r in summary_data)
+        total_members = len(summary_data)
+
+        data.append([
+            f'Totals: {total_members} members',
+            '',
+            '',
+            str(total_present),
+            str(total_absent),
+            str(total_late),
+            str(total_excused)
+        ])
+
+        # Create clean table without grid lines or backgrounds
+        table = Table(data)
+        table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 14),  # Headers: 14pt
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),  # Header padding: 10pt
+            ('FONTSIZE', (0, 1), (-1, -2), 12),  # Data: 12pt
+            ('BOTTOMPADDING', (0, 1), (-1, -2), 8),  # Data padding: 8pt
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 12),  # Totals: 12pt
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 8)  # Totals padding: 8pt
+        ]))
+
+        story.append(table)
+
+        # Build PDF
+        doc.build(story)
+
+        # Prepare response
+        buffer.seek(0)
+        response = Response(
+            buffer.getvalue(),
+            mimetype='application/pdf',
+            headers={'Content-disposition': f'attachment; filename=pale_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'}
+        )
+        return response
+
+    except ImportError:
+        flash("PDF generation requires reportlab library. Please install it first.", "danger")
+        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tenant_display_name }} - PALE Attendance Report{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-4">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-gray-800">PALE Attendance Report</h1>
+        </div>
+
+        <!-- Filter Form -->
+        <div class="bg-gray-50 p-4 rounded-md mb-6">
+            <h2 class="text-lg font-semibold text-gray-700 mb-4">Report Configuration</h2>
+            <form method="POST" class="space-y-4">
+                <!-- Date Range -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date:</label>
+                        <input type="date" id="start_date" name="start_date"
+                               value="{{ request.form.get('start_date', '') }}" required
+                               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                    <div>
+                        <label for="end_date" class="block text-gray-700 text-sm font-bold mb-2">End Date:</label>
+                        <input type="date" id="end_date" name="end_date"
+                               value="{{ request.form.get('end_date', '') }}" required
+                               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                    </div>
+                </div>
+
+                <!-- Quick Date Range Buttons -->
+                <div class="mt-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Quick Date Ranges:</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('today')">
+                            Today
+                        </button>
+                        <button type="button" class="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('week')">
+                            This Week
+                        </button>
+                        <button type="button" class="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('month')">
+                            This Month
+                        </button>
+                        <button type="button" class="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('quarter')">
+                            This Quarter
+                        </button>
+                        <button type="button" class="bg-green-500 hover:bg-green-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('year')">
+                            This Year
+                        </button>
+                        <button type="button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('last_month')">
+                            Last Month
+                        </button>
+                        <button type="button" class="bg-blue-500 hover:bg-blue-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="setQuickFilter('last_quarter')">
+                            Last Quarter
+                        </button>
+                        <button type="button" class="bg-red-500 hover:bg-red-700 text-white text-sm font-bold py-1 px-3 rounded transition duration-150"
+                                onclick="clearFilters()">
+                            Clear Dates
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Member Filter -->
+                <div>
+                    <label for="member_filter" class="block text-gray-700 text-sm font-bold mb-2">Filter by Member (optional):</label>
+                    <select id="member_filter" name="member_filter"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">All Members</option>
+                        {% for member in all_members %}
+                        <option value="{{ member.id }}"
+                            {% if request.form.get('member_filter') == member.id|string %}selected{% endif %}>
+                            {{ member.first_name }} {{ member.last_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Output Format -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="radio" id="format_pdf" name="output_format" value="pdf"
+                                   {% if request.form.get('output_format', 'pdf') == 'pdf' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="format_pdf" class="text-sm text-gray-700">
+                                PDF Report - Download formatted PDF document
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="format_csv" name="output_format" value="csv"
+                                   {% if request.form.get('output_format') == 'csv' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="format_csv" class="text-sm text-gray-700">
+                                CSV Export - Download spreadsheet file
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-2 pt-4">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Generate Report
+                    </button>
+                    <a href="{{ url_for('attendance.attendance', tenant_id=tenant_id) }}"
+                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default if no dates are set
+    if (!document.getElementById('start_date').value && !document.getElementById('end_date').value) {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('end_date').value = today;
+    }
+});
+
+// Quick filter functions
+function setQuickFilter(period) {
+    const today = new Date();
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+
+    switch(period) {
+        case 'today':
+            startDate.value = today.toISOString().split('T')[0];
+            endDate.value = today.toISOString().split('T')[0];
+            break;
+        case 'week':
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            startDate.value = weekStart.toISOString().split('T')[0];
+            endDate.value = weekEnd.toISOString().split('T')[0];
+            break;
+        case 'month':
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            startDate.value = monthStart.toISOString().split('T')[0];
+            endDate.value = monthEnd.toISOString().split('T')[0];
+            break;
+        case 'quarter':
+            const quarter = Math.floor(today.getMonth() / 3);
+            const quarterStart = new Date(today.getFullYear(), quarter * 3, 1);
+            const quarterEnd = new Date(today.getFullYear(), quarter * 3 + 3, 0);
+            startDate.value = quarterStart.toISOString().split('T')[0];
+            endDate.value = quarterEnd.toISOString().split('T')[0];
+            break;
+        case 'year':
+            const yearStart = new Date(today.getFullYear(), 0, 1);
+            const yearEnd = new Date(today.getFullYear(), 11, 31);
+            startDate.value = yearStart.toISOString().split('T')[0];
+            endDate.value = yearEnd.toISOString().split('T')[0];
+            break;
+        case 'last_month':
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+            startDate.value = lastMonth.toISOString().split('T')[0];
+            endDate.value = lastMonthEnd.toISOString().split('T')[0];
+            break;
+        case 'last_quarter':
+            const lastQuarter = Math.floor((today.getMonth() - 3) / 3);
+            const lastQuarterStart = new Date(today.getFullYear(), lastQuarter * 3, 1);
+            const lastQuarterEnd = new Date(today.getFullYear(), lastQuarter * 3 + 3, 0);
+            startDate.value = lastQuarterStart.toISOString().split('T')[0];
+            endDate.value = lastQuarterEnd.toISOString().split('T')[0];
+            break;
+    }
+}
+
+function clearFilters() {
+    document.getElementById('start_date').value = '';
+    document.getElementById('end_date').value = '';
+    document.getElementById('member_filter').value = '';
+}
+</script>
+{% endblock %}
