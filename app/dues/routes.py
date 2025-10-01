@@ -610,11 +610,11 @@ def generate_csv_report(records, tenant_name, current_user, start_date, end_date
             record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else ''
         ])
 
-    # Write summary - Totals on same line
+    # Write summary - Totals on same line (no words)
     writer.writerow([])  # Empty row
     total_due = sum(r.dues_amount for r in records)
     total_paid = sum(r.amount_paid for r in records)
-    writer.writerow([f'Totals: ${total_due:.2f} due, ${total_paid:.2f} paid'])
+    writer.writerow([f'Totals: ${total_due:.2f}, ${total_paid:.2f}'])
 
     # Write dues type breakdown (no records column)
     writer.writerow([])  # Empty row
@@ -848,13 +848,13 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
                 record.payment_received_date.strftime('%Y-%m-%d') if record.payment_received_date else ''
             ])
 
-        # Summary row - Totals on same line
+        # Summary row - Totals on same line (no words)
         total_due_pdf = sum(r.dues_amount for r in records)
         total_paid_pdf = sum(r.amount_paid for r in records)
         data.append([
-            'Totals',
-            f'${total_due_pdf:.2f} due',
-            f'${total_paid_pdf:.2f} paid',
+            ' Totals',
+            f'${total_due_pdf:.2f}',
+            f'${total_paid_pdf:.2f}',
             '',
             '',
             ''
