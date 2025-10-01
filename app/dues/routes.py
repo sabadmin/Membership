@@ -809,17 +809,17 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         styles = getSampleStyleSheet()
         story = []
 
-        # Centered title
-        title = Paragraph(f"<para align='center'>{tenant_name}</para>", styles['Title'])
+        # Compact centered title (smaller font, less spacing)
+        title = Paragraph(f"<para align='center'>{tenant_name}</para>", styles['Heading1'])
         story.append(title)
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 6))
 
-        # Centered report title
-        report_title = Paragraph("<para align='center'>Dues Paid Report</para>", styles['Heading1'])
+        # Compact report title (smaller font)
+        report_title = Paragraph("<para align='center'>Dues Paid Report</para>", styles['Heading2'])
         story.append(report_title)
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 6))
 
-        # Centered date range (if provided)
+        # Compact date range (if provided)
         if start_date or end_date:
             date_range_text = ''
             if start_date:
@@ -828,12 +828,12 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
                 date_range_text += f' To {end_date}'
             date_range = Paragraph(f"<para align='center'>{date_range_text}</para>", styles['Normal'])
             story.append(date_range)
-            story.append(Spacer(1, 6))
+            story.append(Spacer(1, 3))
 
-        # Centered generation info - date/time only
+        # Compact generation info - date/time only
         gen_info = Paragraph(f"<para align='center'>{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</para>", styles['Normal'])
         story.append(gen_info)
-        story.append(Spacer(1, 12))
+        story.append(Spacer(1, 8))
 
         # Table data
         data = [['Member Name', 'Dues Type', 'Due Date', 'Amount Due', 'Amount Paid', 'Payment Date']]
@@ -860,18 +860,22 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
             ''
         ])
 
-        # Create table
+        # Create compact table (smaller fonts, less padding)
         table = Table(data)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 14),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),  # Smaller header font
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),  # Less header padding
+            ('FONTSIZE', (0, 1), (-1, -2), 8),  # Smaller data font
+            ('BOTTOMPADDING', (0, 1), (-1, -2), 4),  # Less data padding
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('FONTSIZE', (0, -1), (-1, -1), 8),  # Smaller totals font
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 4),  # Less totals padding
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black)  # Thinner grid lines
         ]))
 
         story.append(table)
