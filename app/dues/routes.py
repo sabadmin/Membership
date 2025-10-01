@@ -805,7 +805,8 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         from reportlab.lib import colors
 
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        # Set top margin to 0.5 inches for maximum paper efficiency
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*72)  # 0.5 inches in points
         styles = getSampleStyleSheet()
         story = []
 
