@@ -29,44 +29,6 @@
                     </div>
                 </div>
 
-                <!-- Member Filter -->
-                <div>
-                    <label for="member_filter" class="block text-gray-700 text-sm font-bold mb-2">Filter by Member (optional):</label>
-                    <select id="member_filter" name="member_filter"
-                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                        <option value="">All Members</option>
-                        {% for member in all_members %}
-                        <option value="{{ member.id }}"
-                            {% if request.form.get('member_filter') == member.id|string %}selected{% endif %}>
-                            {{ member.first_name }} {{ member.last_name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Output Format -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
-                    <div class="space-y-2">
-                        <div class="flex items-center">
-                            <input type="radio" id="format_pdf" name="output_format" value="pdf"
-                                   {% if request.form.get('output_format', 'csv') == 'pdf' %}checked{% endif %}
-                                   class="mr-2">
-                            <label for="format_pdf" class="text-sm text-gray-700">
-                                PDF Report - Download formatted PDF document
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="radio" id="format_csv" name="output_format" value="csv"
-                                   {% if request.form.get('output_format', 'csv') == 'csv' %}checked{% endif %}
-                                   class="mr-2">
-                            <label for="format_csv" class="text-sm text-gray-700">
-                                CSV Export - Download spreadsheet file
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Quick Date Range Buttons -->
                 <div class="mt-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Quick Date Ranges:</label>
@@ -103,6 +65,44 @@
                                 onclick="clearFilters()">
                             Clear Dates
                         </button>
+                    </div>
+                </div>
+
+                <!-- Member Filter -->
+                <div>
+                    <label for="member_filter" class="block text-gray-700 text-sm font-bold mb-2">Filter by Member (optional):</label>
+                    <select id="member_filter" name="member_filter"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <option value="">All Members</option>
+                        {% for member in all_members %}
+                        <option value="{{ member.id }}"
+                            {% if request.form.get('member_filter') == member.id|string %}selected{% endif %}>
+                            {{ member.first_name }} {{ member.last_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Output Format -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="radio" id="format_pdf" name="output_format" value="pdf"
+                                   {% if request.form.get('output_format', 'csv') == 'pdf' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="format_pdf" class="text-sm text-gray-700">
+                                PDF Report - Download formatted PDF document
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="format_csv" name="output_format" value="csv"
+                                   {% if request.form.get('output_format', 'csv') == 'csv' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="format_csv" class="text-sm text-gray-700">
+                                CSV Export - Download spreadsheet file
+                            </label>
+                        </div>
                     </div>
                 </div>
 
