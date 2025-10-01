@@ -868,22 +868,22 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
             ''
         ])
 
-        # Create compact table (smaller fonts, less padding)
+        # Create table with enhanced readability
         table = Table(data)
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),  # Smaller header font
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),  # Less header padding
-            ('FONTSIZE', (0, 1), (-1, -2), 8),  # Smaller data font
-            ('BOTTOMPADDING', (0, 1), (-1, -2), 4),  # Less data padding
+            ('FONTSIZE', (0, 0), (-1, 0), 14),  # Headers: 14pt (increased from 12pt)
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),  # Header padding: 10pt (increased from 8pt)
+            ('FONTSIZE', (0, 1), (-1, -2), 12),  # Data: 12pt (increased from 9pt)
+            ('BOTTOMPADDING', (0, 1), (-1, -2), 8),  # Data padding: 8pt (increased from 6pt)
             ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
             ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, -1), (-1, -1), 8),  # Smaller totals font
-            ('BOTTOMPADDING', (0, -1), (-1, -1), 4),  # Less totals padding
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black)  # Thinner grid lines
+            ('FONTSIZE', (0, -1), (-1, -1), 12),  # Totals: 12pt (increased from 9pt)
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 8),  # Totals padding: 8pt (increased from 6pt)
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)  # Grid lines: 1pt
         ]))
 
         story.append(table)
