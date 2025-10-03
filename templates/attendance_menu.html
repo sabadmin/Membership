@@ -48,6 +48,24 @@
                     </a>
                 </div>
             </div>
+            <!-- PALE Report Option -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-6 hover:shadow-md transition duration-150">
+                <div class="text-center">
+                    <div class="mb-4">
+                        <svg class="w-16 h-16 text-purple-600 mx-auto" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-xl font-semibold text-gray-800 mb-3">PALE Report</h2>
+                    <p class="text-gray-600 mb-4 text-sm">Generate attendance summary report (Present/Absent/Late/Excused). Requires attendance permissions.</p>
+                    <a href="{{ url_for('dues.pale_report_filter', tenant_id=tenant_id) }}"
+                        class="inline-block bg-purple-500 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150">
+                        Generate PALE Report
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Quick Stats (Optional) -->
