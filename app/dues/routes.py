@@ -485,6 +485,11 @@ def dues_paid_report_filter(tenant_id):
                              tenant_id=tenant_id,
                              tenant_display_name=tenant_display_name,
                              all_members=all_members)
+    except Exception as e:
+        logger.error(f"Error in dues_paid_report_filter: {str(e)}")
+        flash("An error occurred while loading the report filter.", "danger")
+        return redirect(url_for('dues.dues', tenant_id=tenant_id))
+
 
 
 @dues_bp.route('/<tenant_id>/pale_report_filter', methods=['GET', 'POST'])
