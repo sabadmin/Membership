@@ -1006,7 +1006,7 @@ def generate_pale_detail(db_session, start_date, end_date, member_filter):
        attendance_records = query.order_by(User.last_name, User.first_name, AttendanceRecord.event_date).all()
        logger.info(f"Found {len(attendance_records)} attendance records for detail report")
 
-       # Convert to detail format
+       # Convert to detail format with P/A/L/E columns
        detail_data = []
        for record in attendance_records:
            member = record.user
@@ -1018,26 +1018,22 @@ def generate_pale_detail(db_session, start_date, end_date, member_filter):
            if hasattr(member, 'company_phone') and member.company_phone:
                phone_numbers.append(member.company_phone)
 
-           # Map status to single letter
+           # Map status to P/A/L/E marks
            status = record.status.upper().strip()
-           if status == 'PRESENT' or status == 'P':
-               status_code = 'P'
-           elif status == 'ABSENT' or status == 'A':
-               status_code = 'A'
-           elif status == 'LATE' or status == 'L':
-               status_code = 'L'
-           elif status == 'EXCUSED' or status == 'E':
-               status_code = 'E'
-           else:
-               status_code = '?'
+           p_mark = 'X' if status in ('PRESENT', 'P') else ''
+           a_mark = 'X' if status in ('ABSENT', 'A') else ''
+           l_mark = 'X' if status in ('LATE', 'L') else ''
+           e_mark = 'X' if status in ('EXCUSED', 'E') else ''
 
            detail_data.append({
                'member_name': f"{member.first_name} {member.last_name}",
                'company': getattr(member, 'company', ''),
                'phone_numbers': ', '.join(phone_numbers),
                'event_date': record.event_date,
-               'status': status_code,
-               'status_full': status
+               'p_mark': p_mark,
+               'a_mark': a_mark,
+               'l_mark': l_mark,
+               'e_mark': e_mark
            })
 
        return detail_data

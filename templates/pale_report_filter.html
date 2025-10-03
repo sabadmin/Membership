@@ -83,29 +83,6 @@
                     </select>
                 </div>
 
-                <!-- Report Type -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Report Type:</label>
-                    <div class="space-y-2">
-                        <div class="flex items-center">
-                            <input type="radio" id="report_summary" name="report_type" value="summary"
-                                   {% if request.form.get('report_type', 'summary') == 'summary' %}checked{% endif %}
-                                   class="mr-2">
-                            <label for="report_summary" class="text-sm text-gray-700">
-                                <strong>Summary Report</strong> - Shows total counts (P/A/L/E) for each member
-                            </label>
-                        </div>
-                        <div class="flex items-center">
-                            <input type="radio" id="report_detail" name="report_type" value="detail"
-                                   {% if request.form.get('report_type') == 'detail' %}checked{% endif %}
-                                   class="mr-2">
-                            <label for="report_detail" class="text-sm text-gray-700">
-                                <strong>Detail Report</strong> - Shows every attendance record with date and status
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Output Format -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
@@ -130,12 +107,23 @@
                 </div>
 
                 <!-- Action Buttons -->
-                <div class="flex gap-2 pt-4">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                        Generate Report
+                <div class="flex gap-3 pt-4">
+                    <button type="submit" name="report_type" value="summary"
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition duration-150 flex-1">
+                        <div class="text-center">
+                            <div class="text-lg">Generate Summary Report</div>
+                            <div class="text-xs mt-1 opacity-90">Total counts (P/A/L/E) per member</div>
+                        </div>
+                    </button>
+                    <button type="submit" name="report_type" value="detail"
+                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-3 px-6 rounded transition duration-150 flex-1">
+                        <div class="text-center">
+                            <div class="text-lg">Generate Detail Report</div>
+                            <div class="text-xs mt-1 opacity-90">All records with dates and P/A/L/E marks</div>
+                        </div>
                     </button>
                     <a href="{{ url_for('attendance.attendance_history', tenant_id=tenant_id) }}"
-                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                       class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded transition duration-150">
                         Cancel
                     </a>
                 </div>
