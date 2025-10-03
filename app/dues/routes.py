@@ -517,7 +517,7 @@ def pale_report_filter(tenant_id):
         if not user_permissions.get('can_edit_attendance', False):
             logger.warning(f"Permission denied for PALE report access - User ID: {session.get('user_id')}")
             flash("You do not have permission to view attendance reports.", "danger")
-            return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+            return redirect(url_for('attendance.attendance_history', tenant_id=tenant_id))
 
         # Get tenant display name with fallback
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
@@ -536,10 +536,10 @@ def pale_report_filter(tenant_id):
             return redirect(url_for('dues.pale_report', tenant_id=tenant_id) + '?' + query_params)
 
         # GET request - retrieve members for filter dropdown
-        with get_tenant_db_session(tenant_id) as session:
+        with get_tenant_db_session(tenant_id) as db_session:
             try:
                 # Get all active members for the filter dropdown with proper error handling
-                all_members = session.query(User).filter_by(is_active=True).order_by(
+                all_members = db_session.query(User).filter_by(is_active=True).order_by(
                     User.last_name, User.first_name
                 ).all()
 
@@ -559,7 +559,7 @@ def pale_report_filter(tenant_id):
     except Exception as e:
         logger.error(f"Unexpected error in pale_report_filter for tenant {tenant_id}: {str(e)}")
         flash("An error occurred while loading the report filter.", "danger")
-        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+        return redirect(url_for('attendance.attendance_history', tenant_id=tenant_id))
 
 
 def _validate_pale_report_form():
@@ -695,7 +695,7 @@ def pale_report(tenant_id):
         user_permissions = session.get('user_permissions', {})
         if not user_permissions.get('can_edit_attendance', False):
             flash("You do not have permission to view attendance reports.", "danger")
-            return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+            return redirect(url_for('attendance.attendance_history', tenant_id=tenant_id))
 
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
@@ -745,7 +745,7 @@ def pale_report(tenant_id):
     except Exception as e:
         logger.error(f"Error in pale_report: {str(e)}")
         flash("An error occurred while generating the PALE report.", "danger")
-        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+        return redirect(url_for('attendance.attendance_history', tenant_id=tenant_id))
 
 
 @dues_bp.route('/<tenant_id>/paid_report', methods=['GET', 'POST'])
