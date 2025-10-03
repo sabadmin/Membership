@@ -489,44 +489,63 @@ def dues_paid_report_filter(tenant_id):
 
 @dues_bp.route('/<tenant_id>/pale_report_filter', methods=['GET', 'POST'])
 def pale_report_filter(tenant_id):
+    """
+    Handle PALE report filter form and display.
+
+    This function provides a secure interface for generating PALE (Present/Absent/Late/Excused)
+    attendance reports with proper input validation and permission checks.
+    """
     try:
-        if 'user_id' not in session or session['tenant_id'] != tenant_id:
+        # Validate tenant_id parameter
+        if not tenant_id or not isinstance(tenant_id, str):
+            logger.warning(f"Invalid tenant_id parameter: {tenant_id}")
+            flash("Invalid tenant identifier.", "danger")
+            return redirect(url_for('auth.login', tenant_id=tenant_id))
+
+        # Authenticate user session
+        if 'user_id' not in session or session.get('tenant_id') != tenant_id:
+            logger.warning(f"Unauthorized access attempt for tenant: {tenant_id}")
             flash("You must be logged in to view this page.", "danger")
             return redirect(url_for('auth.login', tenant_id=tenant_id))
 
-        # Check if user has permission to view attendance reports
+        # Check user permissions for attendance reports
         user_permissions = session.get('user_permissions', {})
         if not user_permissions.get('can_edit_attendance', False):
+            logger.warning(f"Permission denied for PALE report access - User ID: {session.get('user_id')}")
             flash("You do not have permission to view attendance reports.", "danger")
             return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
 
+        # Get tenant display name with fallback
         tenant_display_name = Config.TENANT_DISPLAY_NAMES.get(tenant_id, tenant_id.capitalize())
 
         if request.method == 'POST':
-            # Get form data
-            start_date = request.form.get('start_date')
-            end_date = request.form.get('end_date')
-            member_filter = request.form.get('member_filter', '')
-            output_format = request.form.get('output_format', 'pdf')
+            # Validate and sanitize form inputs
+            form_data = _validate_pale_report_form()
+            if not form_data['is_valid']:
+                flash(form_data['error_message'], "danger")
+                return redirect(url_for('dues.pale_report_filter', tenant_id=tenant_id))
 
-            # Build query parameters
-            params = []
-            if start_date:
-                params.append(f'start_date={start_date}')
-            if end_date:
-                params.append(f'end_date={end_date}')
-            if member_filter:
-                params.append(f'member_filter={member_filter}')
-            params.append(f'format={output_format}')
+            # Build secure query parameters
+            query_params = _build_pale_report_query_params(form_data['data'])
 
-            query_string = '&'.join(params)
+            # Redirect to results page with validated parameters
+            return redirect(url_for('dues.pale_report', tenant_id=tenant_id) + '?' + query_params)
 
-            # Redirect to results page
-            return redirect(url_for('dues.pale_report', tenant_id=tenant_id) + '?' + query_string)
+        # GET request - retrieve members for filter dropdown
+        with get_tenant_db_session(tenant_id) as session:
+            try:
+                # Get all active members for the filter dropdown with proper error handling
+                all_members = session.query(User).filter_by(is_active=True).order_by(
+                    User.last_name, User.first_name
+                ).all()
 
-        with get_tenant_db_session(tenant_id) as s:
-            # Get all members for the filter dropdown
-            all_members = s.query(User).order_by(User.last_name, User.first_name).all()
+                # Log successful data retrieval
+                logger.info(f"PALE report filter loaded successfully for tenant: {tenant_id}")
+
+            except Exception as db_error:
+                logger.error(f"Database error retrieving members for PALE report filter: {str(db_error)}")
+                flash("Error retrieving member list. Please try again.", "danger")
+                all_members = []
 
         return render_template('pale_report_filter.html',
                              tenant_id=tenant_id,
@@ -534,9 +553,131 @@ def pale_report_filter(tenant_id):
                              all_members=all_members)
 
     except Exception as e:
-        logger.error(f"Error in pale_report_filter: {str(e)}")
+        logger.error(f"Unexpected error in pale_report_filter for tenant {tenant_id}: {str(e)}")
         flash("An error occurred while loading the report filter.", "danger")
         return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+
+
+def _validate_pale_report_form():
+    """
+    Validate and sanitize PALE report form inputs.
+
+    Returns:
+        dict: {'is_valid': bool, 'data': dict or 'error_message': str}
+    """
+    try:
+        start_date = request.form.get('start_date', '').strip()
+        end_date = request.form.get('end_date', '').strip()
+        member_filter = request.form.get('member_filter', '').strip()
+        output_format = request.form.get('output_format', 'pdf').strip()
+
+        # Validate date formats if provided
+        if start_date and not _is_valid_date_format(start_date):
+            return {
+                'is_valid': False,
+                'error_message': "Invalid start date format. Please use YYYY-MM-DD format."
+            }
+
+        if end_date and not _is_valid_date_format(end_date):
+            return {
+                'is_valid': False,
+                'error_message': "Invalid end date format. Please use YYYY-MM-DD format."
+            }
+
+        # Validate date range logic
+        if start_date and end_date:
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d').date()
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d').date()
+            if start_dt > end_dt:
+                return {
+                    'is_valid': False,
+                    'error_message': "Start date must be before or equal to end date."
+                }
+
+        # Validate output format
+        valid_formats = ['pdf', 'csv']
+        if output_format not in valid_formats:
+            return {
+                'is_valid': False,
+                'error_message': f"Invalid output format. Must be one of: {', '.join(valid_formats)}"
+            }
+
+        # Validate member_filter is either empty or a valid integer
+        if member_filter:
+            try:
+                member_id = int(member_filter)
+                if member_id <= 0:
+                    return {
+                        'is_valid': False,
+                        'error_message': "Invalid member selection."
+                    }
+            except ValueError:
+                return {
+                    'is_valid': False,
+                    'error_message': "Invalid member selection."
+                }
+
+        return {
+            'is_valid': True,
+            'data': {
+                'start_date': start_date,
+                'end_date': end_date,
+                'member_filter': member_filter,
+                'output_format': output_format
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error validating PALE report form: {str(e)}")
+        return {
+            'is_valid': False,
+            'error_message': "An error occurred while processing the form data."
+        }
+
+
+def _is_valid_date_format(date_string):
+    """
+    Validate date string format (YYYY-MM-DD).
+
+    Args:
+        date_string (str): Date string to validate
+
+    Returns:
+        bool: True if valid format, False otherwise
+    """
+    try:
+        datetime.strptime(date_string, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
+
+
+def _build_pale_report_query_params(form_data):
+    """
+    Build secure query parameters for PALE report.
+
+    Args:
+        form_data (dict): Validated form data
+
+    Returns:
+        str: URL-encoded query string
+    """
+    from urllib.parse import urlencode
+
+    params = {}
+
+    # Only include non-empty parameters
+    if form_data.get('start_date'):
+        params['start_date'] = form_data['start_date']
+    if form_data.get('end_date'):
+        params['end_date'] = form_data['end_date']
+    if form_data.get('member_filter'):
+        params['member_filter'] = form_data['member_filter']
+
+    # Always include format, defaulting to pdf if not specified
+    params['format'] = form_data.get('output_format', 'pdf')
+
+    return urlencode(params)
 
 
 @dues_bp.route('/<tenant_id>/pale_report', methods=['GET', 'POST'])
