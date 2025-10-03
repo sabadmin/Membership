@@ -701,6 +701,20 @@ def pale_report(tenant_id):
 def generate_pale_summary(db_session, start_date, end_date, member_filter):
    """Generate PALE attendance summary data"""
    try:
+       # Get all active members (or specific member if filtered)
+       if member_filter:
+           members = db_session.query(User).filter_by(id=member_filter, is_active=True).all()
+       else:
+           members = db_session.query(User).filter_by(is_active=True).order_by(User.last_name, User.first_name).all()
+
+       # Initialize member summary with all members set to zero counts
+       member_summary = {}
+       for member in members:
+           member_summary[member.id] = {
+               'member': member,
+               'counts': {'P': 0, 'A': 0, 'L': 0, 'E': 0}
+           }
+
        # Query attendance records with filters
        query = db_session.query(AttendanceRecord).join(User)
 
@@ -713,30 +727,26 @@ def generate_pale_summary(db_session, start_date, end_date, member_filter):
        # Apply member filter if provided
        if member_filter:
            query = query.filter(AttendanceRecord.user_id == member_filter)
+       else:
+           # Only get records for active members
+           query = query.filter(User.is_active == True)
 
        attendance_records = query.all()
 
-       # Group by member and aggregate attendance types
-       member_summary = {}
-
+       # Aggregate attendance records into the member summary
        for record in attendance_records:
            member_id = record.user_id
-           if member_id not in member_summary:
-               member_summary[member_id] = {
-                   'member': record.user,
-                   'counts': {'P': 0, 'A': 0, 'L': 0, 'E': 0}
-               }
-
-           # Map attendance status to P/A/L/E codes
-           status = record.status.upper()
-           if status == 'PRESENT':
-               member_summary[member_id]['counts']['P'] += 1
-           elif status == 'ABSENT':
-               member_summary[member_id]['counts']['A'] += 1
-           elif status == 'LATE':
-               member_summary[member_id]['counts']['L'] += 1
-           elif status == 'EXCUSED':
-               member_summary[member_id]['counts']['E'] += 1
+           if member_id in member_summary:
+               # Map attendance status to P/A/L/E codes
+               status = record.status.upper()
+               if status == 'PRESENT':
+                   member_summary[member_id]['counts']['P'] += 1
+               elif status == 'ABSENT':
+                   member_summary[member_id]['counts']['A'] += 1
+               elif status == 'LATE':
+                   member_summary[member_id]['counts']['L'] += 1
+               elif status == 'EXCUSED':
+                   member_summary[member_id]['counts']['E'] += 1
 
        # Convert to list format for reporting
        summary_data = []
