@@ -95,6 +95,12 @@
                                 <a href="{{ url_for('attendance.attendance_history', tenant_id=g.tenant_id) }}"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Attendance
                                     History</a>
+                                {% if session.get('user_permissions', {}).get('can_edit_attendance', False) %}
+                                <a href="{{ url_for('dues.pale_report_filter', tenant_id=g.tenant_id) }}"
+                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">PALE Report</a>
+                                {% else %}
+                                <span class="block px-4 py-2 text-sm text-gray-400 cursor-not-allowed">PALE Report</span>
+                                {% endif %}
                             </div>
                         </div>
 
