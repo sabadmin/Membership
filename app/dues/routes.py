@@ -1187,8 +1187,13 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         return response
 
     except ImportError:
-        flash("PDF generation requires reportlab library. Please install it first.", "danger")
-        return redirect(url_for('dues.dues_paid_report', tenant_id=tenant_id))
+        # Return a simple error response since we don't have access to tenant_id or flash in this context
+        error_response = Response(
+            "PDF generation requires reportlab library. Please install it first.",
+            status=500,
+            mimetype='text/plain'
+        )
+        return error_response
 
 
 def generate_pale_summary(session, start_date, end_date, member_filter):
@@ -1424,5 +1429,10 @@ def generate_pale_pdf_report(summary_data, tenant_name, current_user, start_date
         return response
 
     except ImportError:
-        flash("PDF generation requires reportlab library. Please install it first.", "danger")
-        return redirect(url_for('attendance.attendance', tenant_id=tenant_id))
+        # Return a simple error response since we don't have access to tenant_id or flash in this context
+        error_response = Response(
+            "PDF generation requires reportlab library. Please install it first.",
+            status=500,
+            mimetype='text/plain'
+        )
+        return error_response
