@@ -83,6 +83,29 @@
                     </select>
                 </div>
 
+                <!-- Report Type -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Report Type:</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="radio" id="report_summary" name="report_type" value="summary"
+                                   {% if request.form.get('report_type', 'summary') == 'summary' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="report_summary" class="text-sm text-gray-700">
+                                <strong>Summary Report</strong> - Shows total counts (P/A/L/E) for each member
+                            </label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="radio" id="report_detail" name="report_type" value="detail"
+                                   {% if request.form.get('report_type') == 'detail' %}checked{% endif %}
+                                   class="mr-2">
+                            <label for="report_detail" class="text-sm text-gray-700">
+                                <strong>Detail Report</strong> - Shows every attendance record with date and status
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Output Format -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Download Format:</label>
