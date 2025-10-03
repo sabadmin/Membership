@@ -2,8 +2,7 @@ import logging
 from flask import Blueprint, request, render_template, redirect, url_for, session, flash, g, Response
 from config import Config
 from database import get_tenant_db_session
-from app.models import User, DuesRecord, DuesType
-from app.attendance.models import AttendanceRecord, AttendanceType
+from app.models import User, DuesRecord, DuesType, AttendanceRecord, AttendanceType
 from app.members.forms import DuesCreateForm, DuesPaymentForm, DuesUpdateForm
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
