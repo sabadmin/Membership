@@ -1130,6 +1130,8 @@ def generate_pdf_report(records, tenant_name, current_user, start_date, end_date
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align Member Name column
+            ('ALIGN', (3, 1), (3, -1), 'RIGHT'),  # Right align Amount Due column
+            ('ALIGN', (4, 1), (4, -1), 'RIGHT'),  # Right align Amount Paid column
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 14),  # Headers: 14pt
             ('BOTTOMPADDING', (0, 0), (-1, 0), 10),  # Header padding: 10pt
