@@ -1062,7 +1062,7 @@ def generate_pale_detail_csv(detail_data, tenant_name, current_user, start_date,
    writer.writerow([])  # Empty row
 
    # Write column headers
-   writer.writerow(['Member Name', 'Company', 'Phone Numbers', 'Event Date', 'Status'])
+   writer.writerow(['Member Name', 'Company', 'Phone Numbers', 'Event Date', 'P', 'A', 'L', 'E'])
 
    # Write data rows
    for record in detail_data:
@@ -1071,7 +1071,10 @@ def generate_pale_detail_csv(detail_data, tenant_name, current_user, start_date,
            record['company'],
            record['phone_numbers'],
            record['event_date'].strftime('%Y-%m-%d'),
-           record['status']
+           record['p_mark'],
+           record['a_mark'],
+           record['l_mark'],
+           record['e_mark']
        ])
 
    # Write summary
@@ -1136,7 +1139,7 @@ def generate_pale_detail_pdf(detail_data, tenant_name, current_user, start_date,
        story.append(Spacer(1, 3))
 
        # Table data
-       data = [['Member Name', 'Company', 'Phone Numbers', 'Event Date', 'Status']]
+       data = [['Member Name', 'Company', 'Phone Numbers', 'Event Date', 'P', 'A', 'L', 'E']]
 
        for record in detail_data:
            data.append([
@@ -1144,13 +1147,19 @@ def generate_pale_detail_pdf(detail_data, tenant_name, current_user, start_date,
                record['company'],
                record['phone_numbers'],
                record['event_date'].strftime('%Y-%m-%d'),
-               record['status']
+               record['p_mark'],
+               record['a_mark'],
+               record['l_mark'],
+               record['e_mark']
            ])
 
        # Summary row
        total_records = len(detail_data)
        data.append([
            f'Total Records: {total_records}',
+           '',
+           '',
+           '',
            '',
            '',
            '',
