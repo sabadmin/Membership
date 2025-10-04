@@ -948,6 +948,8 @@ def generate_pale_pdf_report(summary_data, tenant_name, current_user, start_date
        table = Table(data)
        table.setStyle(TableStyle([
            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+           ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align Member Name column
+           ('ALIGN', (1, 0), (1, -1), 'LEFT'),  # Left align Company column
            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
            ('FONTSIZE', (0, 0), (-1, 0), 14),
            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
@@ -1002,8 +1004,8 @@ def generate_pale_detail(db_session, start_date, end_date, member_filter):
            # Only get records for active members
            query = query.filter(User.is_active == True)
 
-       # Order by member name, then date
-       attendance_records = query.order_by(User.last_name, User.first_name, AttendanceRecord.event_date).all()
+       # Order by event date, then member name
+       attendance_records = query.order_by(AttendanceRecord.event_date, User.last_name, User.first_name).all()
        logger.info(f"Found {len(attendance_records)} attendance records for detail report")
 
        # Convert to detail format with P/A/L/E columns
@@ -1170,6 +1172,8 @@ def generate_pale_detail_pdf(detail_data, tenant_name, current_user, start_date,
        table = Table(data)
        table.setStyle(TableStyle([
            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+           ('ALIGN', (0, 0), (0, -1), 'LEFT'),  # Left align Member Name column
+           ('ALIGN', (1, 0), (1, -1), 'LEFT'),  # Left align Company column
            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
            ('FONTSIZE', (0, 0), (-1, 0), 14),
            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
